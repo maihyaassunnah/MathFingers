@@ -111,7 +111,7 @@ export function StudentManager({
       {/* Header and Add Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className={`text-2xl font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Database Siswa Math Finggers</h2>
+          <h2 className={`text-2xl font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Database Siswa Math Fingers</h2>
           <p className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-sm`}>Kelola pendaftaran, level bimbingan, dan data kontak wali siswa.</p>
         </div>
         <button
@@ -324,7 +324,7 @@ export function StudentManager({
                 }`}>
                   <th className="p-4">Nama Siswa</th>
                   <th className="p-4">Orang Tua / HP</th>
-                  <th className="p-4">Level Math Finggers</th>
+                  <th className="p-4">Level Math Fingers</th>
                   <th className="p-4">Gabung Sejak</th>
                   <th className="p-4">Status</th>
                   <th className="p-4 text-center">Aksi</th>
@@ -332,7 +332,7 @@ export function StudentManager({
               </thead>
               <tbody className={`divide-y text-sm ${isLight ? 'divide-slate-200 text-slate-700' : 'divide-slate-800/80 text-slate-300'}`}>
                 {filteredStudents.map((student) => {
-                  const waText = `Halo Ibu/Bapak ${student.parentName}, salam kenal dari Math Finggers. Ada perkembangan les yang ingin kami infokan terkait ananda ${student.name}.`;
+                  const waText = `Halo Ibu/Bapak ${student.parentName}, salam kenal dari Math Fingers. Ada perkembangan les yang ingin kami infokan terkait ananda ${student.name}.`;
                   const waLink = getWhatsAppLink(student.parentPhone, waText);
 
                   return (

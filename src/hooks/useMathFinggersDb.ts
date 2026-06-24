@@ -36,10 +36,10 @@ export function useMathFinggersDb() {
     return getLocalData<AppSettings>('settings', {
       bankName: 'Bank BCA',
       bankAccountNo: '1234567890',
-      bankAccountHolder: 'Admin Math Finggers',
+      bankAccountHolder: 'Admin Math Fingers',
       defaultSppAmount: 250000,
       accentColor: 'emerald',
-      defaultTeacherName: 'Admin Math Finggers'
+      defaultTeacherName: 'Admin Math Fingers'
     });
   });
 

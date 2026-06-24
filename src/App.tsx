@@ -93,7 +93,7 @@ export default function App() {
           <div className="w-16 h-16 border-4 border-slate-300 border-t-emerald-500 rounded-full animate-spin"></div>
           <Sparkles className="absolute top-5 left-5 text-emerald-500 animate-pulse" size={24} />
         </div>
-        <h2 className={`text-xl font-bold font-sans ${theme === 'dark' ? 'text-white' : 'text-slate-800'} mt-6 tracking-wide`}>Math Finggers</h2>
+        <h2 className={`text-xl font-bold font-sans ${theme === 'dark' ? 'text-white' : 'text-slate-800'} mt-6 tracking-wide`}>Math Fingers</h2>
         <p className={`${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} text-sm mt-1.5 font-medium italic`}>"Berhitung cepat tanpa alat hanya sekejap"</p>
         <p className="text-xs text-slate-500 mt-10">Sinkronisasi Database Supabase...</p>
       </div>
@@ -240,7 +240,7 @@ export default function App() {
             <Sparkles size={18} />
           </div>
           <div>
-            <span className={`font-extrabold text-base tracking-tight block ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Math Finggers</span>
+            <span className={`font-extrabold text-base tracking-tight block ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Math Fingers</span>
             <span className="text-[9px] text-slate-500 font-medium block">Berhitung cepat tanpa alat hanya sekejap</span>
           </div>
         </div>
@@ -285,7 +285,7 @@ export default function App() {
             <Sparkles size={28} />
           </div>
           <div>
-            <h1 className={`text-xl font-black tracking-tight font-sans ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Math Finggers</h1>
+            <h1 className={`text-xl font-black tracking-tight font-sans ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Math Fingers</h1>
             <p className="text-[10px] text-slate-500 font-medium leading-relaxed mt-0.5 px-2">
               Berhitung cepat tanpa alat hanya sekejap
             </p>
@@ -360,7 +360,7 @@ export default function App() {
 
         {/* Footer info panel */}
         <div className={`p-4 border-t text-[10px] text-slate-500 text-center ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'}`}>
-          &copy; {new Date().getFullYear()} Math Finggers System v1.1.0
+          &copy; {new Date().getFullYear()} Math Fingers System v1.1.0
         </div>
       </aside>
 
@@ -418,7 +418,7 @@ export default function App() {
             </nav>
 
             <div className={`p-4 border-t text-[10px] text-slate-500 text-center ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
-              Math Finggers Privat Tutor
+              Math Fingers Privat Tutor
             </div>
           </div>
         </div>

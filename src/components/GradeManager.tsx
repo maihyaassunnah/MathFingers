@@ -92,7 +92,7 @@ export function GradeManager({
     const badge = getAgilityBadge(grade.score, grade.speedSeconds).text;
     const optionalNotes = grade.notes.trim() ? `\n\n_Catatan Guru: "${grade.notes}"_` : '';
 
-    const message = `Halo Ibu/Bapak *${student.parentName}*,\n\nKabar gembira! 🎉 Ananda *${student.name}* baru saja menyelesaikan sesi latihan uji berhitung cepat *Math Finggers*:\n\n📚 Materi Uji: *${grade.topic}*\n🎯 Skor Akurasi: *${grade.score} / 100*\n⚡ Kecepatan Berhitung: *${grade.speedSeconds} detik*\n🏆 Lencana Kelincahan: *${badge}*${optionalNotes}\n\n_Sungguh perkembangan yang luar biasa! Mari terus semangati ananda untuk menggerakkan jarinya setiap hari agar makin terampil. Berhitung cepat tanpa alat hanya sekejap!_ ⚡🌟\n\nSalam Hangat,\n*Tim Math Finggers*`;
+    const message = `Halo Ibu/Bapak *${student.parentName}*,\n\nKabar gembira! 🎉 Ananda *${student.name}* baru saja menyelesaikan sesi latihan uji berhitung cepat *Math Fingers*:\n\n📚 Materi Uji: *${grade.topic}*\n🎯 Skor Akurasi: *${grade.score} / 100*\n⚡ Kecepatan Berhitung: *${grade.speedSeconds} detik*\n🏆 Lencana Kelincahan: *${badge}*${optionalNotes}\n\n_Sungguh perkembangan yang luar biasa! Mari terus semangati ananda untuk menggerakkan jarinya setiap hari agar makin terampil. Berhitung cepat tanpa alat hanya sekejap!_ ⚡🌟\n\nSalam Hangat,\n*Tim Math Fingers*`;
 
     const waLink = getWhatsAppLink(student.parentPhone, message);
     window.open(waLink, '_blank', 'noreferrer');

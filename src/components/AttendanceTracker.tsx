@@ -120,7 +120,7 @@ export function AttendanceTracker({
     const readableStatus = statusMap[state.status];
     const notesString = state.notes.trim() ? `\nCatatan Guru: "${state.notes}"` : '';
     
-    const message = `Halo Ibu/Bapak *${student.parentName}*,\n\nKami menginfokan kehadiran ananda *${student.name}* untuk bimbingan Les Privat *Math Finggers* pada:\n\n📅 Tanggal: ${selectedDate}\n📌 Status Kehadiran: *${readableStatus}*${notesString}\n\nTerima kasih atas kepercayaannya. Mari belajar berhitung cepat tanpa alat hanya sekejap! ✨`;
+    const message = `Halo Ibu/Bapak *${student.parentName}*,\n\nKami menginfokan kehadiran ananda *${student.name}* untuk bimbingan Les Privat *Math Fingers* pada:\n\n📅 Tanggal: ${selectedDate}\n📌 Status Kehadiran: *${readableStatus}*${notesString}\n\nTerima kasih atas kepercayaannya. Mari belajar berhitung cepat tanpa alat hanya sekejap! ✨`;
     
     const waLink = getWhatsAppLink(student.parentPhone, message);
     window.open(waLink, '_blank', 'noreferrer');
@@ -134,7 +134,7 @@ export function AttendanceTracker({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className={`text-2xl font-bold font-sans ${isLight ? 'text-slate-800' : 'text-white'}`}>Absensi Siswa</h2>
-          <p className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-sm`}>Pencatatan kehadiran harian les privat Math Finggers.</p>
+          <p className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-sm`}>Pencatatan kehadiran harian les privat Math Fingers.</p>
         </div>
         
         <div className="flex items-center gap-3 self-start sm:self-center">

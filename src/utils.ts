@@ -27,7 +27,7 @@ export function getWhatsAppLink(phone: string, text: string): string {
   return `https://wa.me/${formattedPhone}?text=${encodeURIComponent(text)}`;
 }
 
-// Default/Seed Learning Materials for Math Finggers
+// Default/Seed Learning Materials for Math Fingers
 export const SEED_MATERIALS: LearningMaterial[] = [
   {
     id: 'mat-1',
@@ -123,7 +123,7 @@ export const SEED_MATERIALS: LearningMaterial[] = [
     ],
     steps: [
       'Ajarkan trik perkalian 9 terlebih dahulu untuk membangun kepercayaan diri siswa.',
-      'Untuk perkalian umum, latih siswa membayangkan penjumlahan berulang beruntun dengan metode Math Finggers tingkat tinggi.'
+      'Untuk perkalian umum, latih siswa membayangkan penjumlahan berulang beruntun dengan metode Math Fingers tingkat tinggi.'
     ]
   }
 ];

@@ -1,0 +1,25 @@
+{
+  "name": "Math Fingers",
+  "short_name": "MathFingers",
+  "description": "Aplikasi manajemen Les Privat Math Fingers dengan motto 'Berhitung cepat tanpa alat hanya sekejap'.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#10b981",
+  "orientation": "portrait-primary",
+  "categories": ["education", "finance", "productivity"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

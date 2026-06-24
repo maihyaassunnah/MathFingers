@@ -122,9 +122,9 @@ export function SppInvoiceManager({
 
     let message = '';
     if (invoice.status === 'unpaid') {
-      message = `Halo Ibu/Bapak *${student.parentName}*,\n\nSemoga sehat selalu. Kami menginfokan *Invoice SPP bimbingan Les Privat Math Finggers* ananda *${student.name}* untuk periode *${invoice.month}*:\n\n🧾 No Invoice: ${invoice.invoiceNo}\n💵 Jumlah Tagihan: *${formatRupiah(invoice.amount)}*\n📅 Tanggal Jatuh Tempo: ${invoice.dueDate}\n\n*Informasi Rekening Pembayaran:*\n🏦 Bank ${settings.bankName}: *${settings.bankAccountNo}*\n👤 Atas Nama: *${settings.bankAccountHolder}*\n\n_(Mohon kirimkan konfirmasi berupa foto bukti transfer jika pembayaran telah dilakukan. Terima kasih!_ 🙏🌸)\n\n*Math Finggers* - Berhitung cepat tanpa alat hanya sekejap! ✨`;
+      message = `Halo Ibu/Bapak *${student.parentName}*,\n\nSemoga sehat selalu. Kami menginfokan *Invoice SPP bimbingan Les Privat Math Fingers* ananda *${student.name}* untuk periode *${invoice.month}*:\n\n🧾 No Invoice: ${invoice.invoiceNo}\n💵 Jumlah Tagihan: *${formatRupiah(invoice.amount)}*\n📅 Tanggal Jatuh Tempo: ${invoice.dueDate}\n\n*Informasi Rekening Pembayaran:*\n🏦 Bank ${settings.bankName}: *${settings.bankAccountNo}*\n👤 Atas Nama: *${settings.bankAccountHolder}*\n\n_(Mohon kirimkan konfirmasi berupa foto bukti transfer jika pembayaran telah dilakukan. Terima kasih!_ 🙏🌸)\n\n*Math Fingers* - Berhitung cepat tanpa alat hanya sekejap! ✨`;
     } else {
-      message = `Halo Ibu/Bapak *${student.parentName}*,\n\nTerima kasih! Kami telah menerima pembayaran SPP Les Privat *Math Finggers* ananda *${student.name}* periode *${invoice.month}*. Berikut kuitansi tanda terima digital:\n\n🧾 No Invoice: ${invoice.invoiceNo}\n💵 Jumlah Pembayaran: *${formatRupiah(invoice.amount)}*\n📅 Tanggal Bayar: ${invoice.paidAt || '-'}\n💳 Metode Pembayaran: *${invoice.paymentMethod || 'Transfer'}*\n📌 Status: *LUNAS (PAID)* ✅\n\nTerima kasih banyak atas dukungannya. Mari terus dukung motivasi belajar matematika ananda! ⚡\n\nSalam Hangat,\n*${settings.defaultTeacherName}*`;
+      message = `Halo Ibu/Bapak *${student.parentName}*,\n\nTerima kasih! Kami telah menerima pembayaran SPP Les Privat *Math Fingers* ananda *${student.name}* periode *${invoice.month}*. Berikut kuitansi tanda terima digital:\n\n🧾 No Invoice: ${invoice.invoiceNo}\n💵 Jumlah Pembayaran: *${formatRupiah(invoice.amount)}*\n📅 Tanggal Bayar: ${invoice.paidAt || '-'}\n💳 Metode Pembayaran: *${invoice.paymentMethod || 'Transfer'}*\n📌 Status: *LUNAS (PAID)* ✅\n\nTerima kasih banyak atas dukungannya. Mari terus dukung motivasi belajar matematika ananda! ⚡\n\nSalam Hangat,\n*${settings.defaultTeacherName}*`;
     }
 
     const waLink = getWhatsAppLink(student.parentPhone, message);
@@ -161,7 +161,7 @@ export function SppInvoiceManager({
     
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(10);
-    doc.text("MATH FINGGERS - Berhitung cepat tanpa alat hanya sekejap", 15, 25);
+    doc.text("MATH FINGERS - Berhitung cepat tanpa alat hanya sekejap", 15, 25);
     doc.text("Sistem Manajemen Keuangan Les Privat", 15, 30);
     
     // Invoice details right aligned
@@ -218,7 +218,7 @@ export function SppInvoiceManager({
     y += 10;
     doc.setFont("Helvetica", "normal");
     doc.setTextColor(71, 85, 105);
-    doc.text(`Iuran Bulanan (SPP) Math Finggers - Periode ${invoice.month}`, 20, y);
+    doc.text(`Iuran Bulanan (SPP) Math Fingers - Periode ${invoice.month}`, 20, y);
     doc.setFont("Helvetica", "bold");
     doc.text(formatRupiah(invoice.amount), 150, y);
     
@@ -265,7 +265,7 @@ export function SppInvoiceManager({
     
     doc.setFont("Helvetica", "italic");
     doc.setFontSize(8);
-    doc.text("Sistem Kuitansi Finansial Otomatis Math Finggers. Pembayaran yang sah memerlukan validasi sistem.", 15, y + 5);
+    doc.text("Sistem Kuitansi Finansial Otomatis Math Fingers. Pembayaran yang sah memerlukan validasi sistem.", 15, y + 5);
     
     doc.setFont("Helvetica", "bold");
     doc.text(`${settings.defaultTeacherName},`, 150, y + 10);

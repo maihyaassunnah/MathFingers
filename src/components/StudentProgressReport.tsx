@@ -211,11 +211,11 @@ export function StudentProgressReport({ students, attendance, notes, grades, the
     
     doc.setFont("Helvetica", "italic");
     doc.setFontSize(8);
-    doc.text("Math Finggers - Berhitung cepat tanpa alat hanya sekejap. Seluruh hak cipta dilindungi.", 15, y + 5);
+    doc.text("Math Fingers - Berhitung cepat tanpa alat hanya sekejap. Seluruh hak cipta dilindungi.", 15, y + 5);
     
     doc.setFont("Helvetica", "bold");
     doc.text("Diverifikasi Oleh,", 150, y + 10);
-    doc.text("Sistem Math Finggers", 150, y + 25);
+    doc.text("Sistem Math Fingers", 150, y + 25);
     
     doc.save(`Rapor_${currentStudent.name.replace(/\s+/g, '_')}.pdf`);
   };

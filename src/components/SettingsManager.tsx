@@ -9,7 +9,9 @@ import {
   Check, 
   Sparkles, 
   Save, 
-  RefreshCw 
+  RefreshCw,
+  Smartphone,
+  Download
 } from 'lucide-react';
 
 interface SettingsManagerProps {
@@ -55,10 +57,10 @@ export function SettingsManager({ settings, onUpdateSettings, theme = 'dark' }: 
   const handleReset = () => {
     setBankName('Bank BCA');
     setBankAccountNo('1234567890');
-    setBankAccountHolder('Admin Math Finggers');
+    setBankAccountHolder('Admin Math Fingers');
     setDefaultSppAmount(250000);
     setAccentColor('emerald');
-    setDefaultTeacherName('Admin Math Finggers');
+    setDefaultTeacherName('Admin Math Fingers');
   };
 
   const isLight = theme === 'light';
@@ -227,7 +229,7 @@ export function SettingsManager({ settings, onUpdateSettings, theme = 'dark' }: 
                   <input
                     type="text"
                     required
-                    placeholder="Contoh: Admin Math Finggers"
+                    placeholder="Contoh: Admin Math Fingers"
                     value={bankAccountHolder}
                     onChange={(e) => setBankAccountHolder(e.target.value)}
                     className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-1 text-sm font-semibold ${
@@ -315,6 +317,68 @@ export function SettingsManager({ settings, onUpdateSettings, theme = 'dark' }: 
         </div>
 
       </form>
+
+      {/* PWA / Install App Guide */}
+      <div className={`mt-8 p-6 rounded-2xl border shadow-sm space-y-6 ${
+        isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+      }`}>
+        <h3 className={`text-sm font-bold uppercase tracking-wider ${isLight ? 'text-slate-500' : 'text-slate-400'} flex items-center gap-2 border-b pb-3 ${isLight ? 'border-slate-100' : 'border-slate-800/80'}`}>
+          <Smartphone size={16} className={getAccentTextClass()} />
+          <span>Pasang Aplikasi di HP (Instal PWA)</span>
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Android Guide */}
+          <div className={`p-4 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200/60' : 'bg-slate-950/30 border-slate-800/50'}`}>
+            <div className="flex items-center gap-2.5 mb-3">
+              <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.523 15.3414C17.0601 15.3414 16.6853 14.9666 16.6853 14.5037C16.6853 14.0408 17.0601 13.666 17.523 13.666C17.9859 13.666 18.3607 14.0408 18.3607 14.5037C18.3607 14.9666 17.9859 15.3414 17.523 15.3414ZM6.47702 15.3414C6.0141 15.3414 5.63934 14.9666 5.63934 14.5037C5.63934 14.0408 6.0141 13.666 6.47702 13.666C6.93994 13.666 7.3147 14.0408 7.3147 14.5037C7.3147 14.9666 6.93994 15.3414 6.47702 15.3414ZM17.9621 9.94314L19.7891 6.77884C19.9231 6.54673 19.8435 6.24949 19.6114 6.11546C19.3793 5.98143 19.082 6.061 18.948 6.29312L17.0911 9.50937C15.626 8.84103 13.9103 8.46191 12 8.46191C10.0897 8.46191 8.37402 8.84103 6.90892 9.50937L5.05202 6.29312C4.918 6.061 4.62075 5.98143 4.38864 6.11546C4.15653 6.24949 4.07696 6.54673 4.21098 6.77884L6.03792 9.94314C2.62886 11.8341 0.355153 15.2101 0.0528277 19.2312C0.0308006 19.524 0.250554 19.778 0.543593 19.7997C0.558309 19.8008 0.573024 19.8014 0.587637 19.8014H23.4124C23.7067 19.8014 23.9452 19.5629 23.9452 19.2686C23.6429 15.2101 21.3711 11.8341 17.9621 9.94314Z"/>
+                </svg>
+              </div>
+              <h4 className="text-xs font-bold text-emerald-500 uppercase tracking-wider">Android (Google Chrome)</h4>
+            </div>
+            <ol className="text-xs space-y-2.5 text-slate-400 list-decimal pl-4 font-medium leading-relaxed">
+              <li>Buka aplikasi lewat browser <strong>Google Chrome</strong> di HP Anda.</li>
+              <li>Ketuk tombol menu <strong>Tiga Titik (⋮)</strong> di kanan atas browser Chrome.</li>
+              <li>Pilih opsi <strong className={isLight ? 'text-slate-800' : 'text-slate-200'}>"Tambahkan ke Layar Utama"</strong> atau <strong className={isLight ? 'text-slate-800' : 'text-slate-200'}>"Instal Aplikasi"</strong>.</li>
+              <li>Ikuti petunjuk di layar, dan aplikasi siap dibuka langsung melalui beranda HP Anda layaknya aplikasi Play Store.</li>
+            </ol>
+          </div>
+
+          {/* iOS / iPhone Guide */}
+          <div className={`p-4 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200/60' : 'bg-slate-950/30 border-slate-800/50'}`}>
+            <div className="flex items-center gap-2.5 mb-3">
+              <div className="p-1.5 rounded-lg bg-sky-500/10 text-sky-500">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 18a3.75 3.75 0 0 0 .495-7.467 5.99 5.99 0 0 0-1.925 3.546 5.974 5.974 0 0 1-2.133-1A3.75 3.75 0 0 0 12 18Z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 10.742c.03-.11.047-.225.047-.344a3.342 3.342 0 0 0-1.722-2.915 3.323 3.323 0 0 0-3.155.088c-.14.08-.262.18-.363.298a3.342 3.342 0 0 0 2.24 5.373h.001c.14-.022.28-.052.418-.09M10.5 4.5V3a1.5 1.5 0 0 0-3 0v1.5M10.5 4.5H18a2.25 2.25 0 0 1 2.25 2.25v10.5A2.25 2.25 0 0 1 18 19.5H10.5M10.5 4.5v15M10.5 19.5H6a2.25 2.25 0 0 1-2.25-2.25V14.25" />
+                </svg>
+              </div>
+              <h4 className="text-xs font-bold text-sky-500 uppercase tracking-wider">Apple iOS (Safari iPhone/iPad)</h4>
+            </div>
+            <ol className="text-xs space-y-2.5 text-slate-400 list-decimal pl-4 font-medium leading-relaxed">
+              <li>Buka aplikasi lewat browser <strong>Safari</strong> bawaan di iPhone Anda.</li>
+              <li>Ketuk tombol <strong className={isLight ? 'text-slate-800' : 'text-slate-200'}>Bagikan (Share / <span className="inline-block border px-1 rounded bg-slate-800 text-[9px]">↑</span>)</strong> di bar bagian bawah layar.</li>
+              <li>Geser ke bawah dan pilih menu <strong className={isLight ? 'text-slate-800' : 'text-slate-200'}>"Tambahkan ke Layar Utama"</strong> (Add to Home Screen).</li>
+              <li>Ketuk <strong className={isLight ? 'text-slate-800' : 'text-slate-200'}>"Tambah"</strong> di kanan atas, maka ikon aplikasi Math Fingers akan muncul di beranda iPhone Anda.</li>
+            </ol>
+          </div>
+        </div>
+
+        {/* Dynamic prompt message about installation support */}
+        <div className={`p-4 rounded-xl flex items-start gap-3 border ${
+          isLight ? 'bg-emerald-50/50 border-emerald-100/50' : 'bg-emerald-950/10 border-emerald-900/30'
+        }`}>
+          <Download className="text-emerald-500 mt-0.5 flex-shrink-0" size={16} />
+          <div>
+            <h5 className="text-xs font-bold text-slate-300">Mengapa Menggunakan PWA?</h5>
+            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              Dengan menginstal aplikasi sebagai PWA, Anda dapat membuka Math Fingers langsung dengan layar penuh (tanpa batas bilah browser) layaknya aplikasi natif, loading instan, hemat baterai, dan berjalan dengan sangat responsif di perangkat seluler Anda.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

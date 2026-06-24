@@ -1,6 +1,6 @@
 {
-  "name": "Math Finggers",
-  "description": "Aplikasi manajemen Les Privat Math Finggers dengan motto 'Berhitung cepat tanpa alat hanya sekejap'.",
+  "name": "Math Fingers",
+  "description": "Aplikasi manajemen Les Privat Math Fingers dengan motto 'Berhitung cepat tanpa alat hanya sekejap'.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

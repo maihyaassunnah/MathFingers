@@ -71,7 +71,7 @@ export function TeacherNotes({
     const student = students.find(s => s.id === note.studentId);
     if (!student) return;
 
-    const message = `Halo Ibu/Bapak *${student.parentName}*,\n\nIni adalah *Catatan Harian Belajar* ananda *${student.name}* hari ini di les privat *Math Fingers*:\n\n📅 Tanggal: ${note.date}\n📚 Topik Belajar: *${note.topic}*\n📝 Catatan Guru: "${note.content}"\n\n_Mari dampingi ananda melatih gerakan jarinya di rumah ya Bapak/Ibu! Berhitung cepat tanpa alat hanya sekejap!_ ⚡\n\nSalam Hangat,\n*${note.teacherName}* - Math Fingers`;
+    const message = `Halo Ibu/Bapak *${student.parentName}*,\n\nIni adalah *Catatan Harian Belajar* ananda *${student.name}* hari ini di les privat *Math Fingers*:\n\n📅 Tanggal: ${note.date}\n📚 Topik Belajar: *${note.topic}*\n📝 Catatan Guru: "${note.content}"\n\n_Mari dampingi ananda melatih gerakan jarinya di rumah ya Bapak/Ibu! Berhitung Cepat & Akurat Tanpa Alat!_ ⚡\n\nSalam Hangat,\n*${note.teacherName}* - Math Fingers`;
 
     const waLink = getWhatsAppLink(student.parentPhone, message);
     window.open(waLink, '_blank', 'noreferrer');

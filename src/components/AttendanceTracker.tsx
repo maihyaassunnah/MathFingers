@@ -120,7 +120,7 @@ export function AttendanceTracker({
     const readableStatus = statusMap[state.status];
     const notesString = state.notes.trim() ? `\nCatatan Guru: "${state.notes}"` : '';
     
-    const message = `Halo Ibu/Bapak *${student.parentName}*,\n\nKami menginfokan kehadiran ananda *${student.name}* untuk bimbingan Les Privat *Math Fingers* pada:\n\n📅 Tanggal: ${selectedDate}\n📌 Status Kehadiran: *${readableStatus}*${notesString}\n\nTerima kasih atas kepercayaannya. Mari belajar berhitung cepat tanpa alat hanya sekejap! ✨`;
+    const message = `Halo Ibu/Bapak *${student.parentName}*,\n\nKami menginfokan kehadiran ananda *${student.name}* untuk bimbingan Les Privat *Math Fingers* pada:\n\n📅 Tanggal: ${selectedDate}\n📌 Status Kehadiran: *${readableStatus}*${notesString}\n\nTerima kasih atas kepercayaannya. Mari belajar berhitung cepat & akurat tanpa alat! ✨`;
     
     const waLink = getWhatsAppLink(student.parentPhone, message);
     window.open(waLink, '_blank', 'noreferrer');

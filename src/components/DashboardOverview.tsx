@@ -100,7 +100,7 @@ export function DashboardOverview({
     const student = students.find(s => s.id === invoice.studentId);
     if (!student) return;
 
-    const message = `Halo Ibu/Bapak *${student.parentName}*,\n\nSemoga sehat selalu. Mengingatkan kembali untuk tagihan *SPP Les Privat Math Fingers* ananda *${student.name}* periode *${invoice.month}* yang jatuh tempo pada *${invoice.dueDate}*:\n\n🧾 No Invoice: ${invoice.invoiceNo}\n💵 Jumlah Tagihan: *${formatRupiah(invoice.amount)}*\n\n*Informasi Rekening Pembayaran:*\n🏦 Bank ${settings.bankName}: *${settings.bankAccountNo}*\n👤 Atas Nama: *${settings.bankAccountHolder}*\n\n_(Harap konfirmasi dengan mengirimkan bukti transfer jika pembayaran telah dilakukan. Terima kasih banyak!_ 🙏🌸)\n\n*Math Fingers* - Berhitung cepat tanpa alat hanya sekejap! ✨`;
+    const message = `Halo Ibu/Bapak *${student.parentName}*,\n\nSemoga sehat selalu. Mengingatkan kembali untuk tagihan *SPP Les Privat Math Fingers* ananda *${student.name}* periode *${invoice.month}* yang jatuh tempo pada *${invoice.dueDate}*:\n\n🧾 No Invoice: ${invoice.invoiceNo}\n💵 Jumlah Tagihan: *${formatRupiah(invoice.amount)}*\n\n*Informasi Rekening Pembayaran:*\n🏦 Bank ${settings.bankName}: *${settings.bankAccountNo}*\n👤 Atas Nama: *${settings.bankAccountHolder}*\n\n_(Harap konfirmasi dengan mengirimkan bukti transfer jika pembayaran telah dilakukan. Terima kasih banyak!_ 🙏🌸)\n\n*Math Fingers* - Berhitung Cepat & Akurat Tanpa Alat! ✨`;
     const waLink = getWhatsAppLink(student.parentPhone, message);
     window.open(waLink, '_blank', 'noreferrer');
   };
@@ -151,7 +151,7 @@ export function DashboardOverview({
             <MathFingerLogo size={80} textSize="xl" theme={theme === 'dark' ? 'dark' : 'light'} />
           </div>
           <p className={`${isLight ? 'text-slate-500' : 'text-slate-300'} text-sm sm:text-base font-medium italic`}>
-            "Berhitung cepat tanpa alat hanya sekejap"
+            "Berhitung Cepat & Akurat Tanpa Alat"
           </p>
           <div className="pt-3 flex flex-wrap gap-2">
             <button

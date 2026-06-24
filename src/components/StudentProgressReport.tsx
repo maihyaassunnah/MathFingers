@@ -91,7 +91,7 @@ export function StudentProgressReport({ students, attendance, notes, grades, the
     
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(10);
-    doc.text("Berhitung cepat tanpa alat hanya sekejap", 15, 24);
+    doc.text("Berhitung Cepat & Akurat Tanpa Alat", 15, 24);
     doc.text("Sistem Rapor Keterampilan Berhitung Jari Digital", 15, 29);
     
     doc.setFontSize(14);
@@ -211,7 +211,7 @@ export function StudentProgressReport({ students, attendance, notes, grades, the
     
     doc.setFont("Helvetica", "italic");
     doc.setFontSize(8);
-    doc.text("Math Fingers - Berhitung cepat tanpa alat hanya sekejap. Seluruh hak cipta dilindungi.", 15, y + 5);
+    doc.text("Math Fingers - Berhitung Cepat & Akurat Tanpa Alat. Seluruh hak cipta dilindungi.", 15, y + 5);
     
     doc.setFont("Helvetica", "bold");
     doc.text("Diverifikasi Oleh,", 150, y + 10);

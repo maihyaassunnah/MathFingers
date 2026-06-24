@@ -122,7 +122,7 @@ export function SppInvoiceManager({
 
     let message = '';
     if (invoice.status === 'unpaid') {
-      message = `Halo Ibu/Bapak *${student.parentName}*,\n\nSemoga sehat selalu. Kami menginfokan *Invoice SPP bimbingan Les Privat Math Fingers* ananda *${student.name}* untuk periode *${invoice.month}*:\n\n🧾 No Invoice: ${invoice.invoiceNo}\n💵 Jumlah Tagihan: *${formatRupiah(invoice.amount)}*\n📅 Tanggal Jatuh Tempo: ${invoice.dueDate}\n\n*Informasi Rekening Pembayaran:*\n🏦 Bank ${settings.bankName}: *${settings.bankAccountNo}*\n👤 Atas Nama: *${settings.bankAccountHolder}*\n\n_(Mohon kirimkan konfirmasi berupa foto bukti transfer jika pembayaran telah dilakukan. Terima kasih!_ 🙏🌸)\n\n*Math Fingers* - Berhitung cepat tanpa alat hanya sekejap! ✨`;
+      message = `Halo Ibu/Bapak *${student.parentName}*,\n\nSemoga sehat selalu. Kami menginfokan *Invoice SPP bimbingan Les Privat Math Fingers* ananda *${student.name}* untuk periode *${invoice.month}*:\n\n🧾 No Invoice: ${invoice.invoiceNo}\n💵 Jumlah Tagihan: *${formatRupiah(invoice.amount)}*\n📅 Tanggal Jatuh Tempo: ${invoice.dueDate}\n\n*Informasi Rekening Pembayaran:*\n🏦 Bank ${settings.bankName}: *${settings.bankAccountNo}*\n👤 Atas Nama: *${settings.bankAccountHolder}*\n\n_(Mohon kirimkan konfirmasi berupa foto bukti transfer jika pembayaran telah dilakukan. Terima kasih!_ 🙏🌸)\n\n*Math Fingers* - Berhitung Cepat & Akurat Tanpa Alat! ✨`;
     } else {
       message = `Halo Ibu/Bapak *${student.parentName}*,\n\nTerima kasih! Kami telah menerima pembayaran SPP Les Privat *Math Fingers* ananda *${student.name}* periode *${invoice.month}*. Berikut kuitansi tanda terima digital:\n\n🧾 No Invoice: ${invoice.invoiceNo}\n💵 Jumlah Pembayaran: *${formatRupiah(invoice.amount)}*\n📅 Tanggal Bayar: ${invoice.paidAt || '-'}\n💳 Metode Pembayaran: *${invoice.paymentMethod || 'Transfer'}*\n📌 Status: *LUNAS (PAID)* ✅\n\nTerima kasih banyak atas dukungannya. Mari terus dukung motivasi belajar matematika ananda! ⚡\n\nSalam Hangat,\n*${settings.defaultTeacherName}*`;
     }
@@ -342,7 +342,7 @@ function angkaKeTerbilang(nominal: number): string {
     doc.setFont("Helvetica", "italic");
     doc.setFontSize(7.5);
     doc.setTextColor(148, 163, 184);
-    doc.text('"Berhitung Cepat, Tanpa Alat & Akurat"', mottoX, footerY + 6, { align: 'center' });
+    doc.text('"Berhitung Cepat & Akurat Tanpa Alat"', mottoX, footerY + 6, { align: 'center' });
     
     // Little hand icon decoration in middle
     doc.setFillColor(209, 250, 229); // Emerald-100

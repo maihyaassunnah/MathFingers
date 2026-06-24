@@ -152,6 +152,18 @@ export function StudentManager({
         </button>
       </div>
 
+      {/* Informational database notice */}
+      <div className={`p-4 rounded-xl border flex items-start gap-3 text-xs leading-relaxed ${
+        isLight 
+          ? 'bg-emerald-500/5 border-emerald-500/15 text-emerald-800' 
+          : 'bg-emerald-500/10 border-emerald-500/10 text-emerald-300'
+      }`}>
+        <AlertCircle size={16} className="mt-0.5 shrink-0" />
+        <div>
+          <span className="font-semibold">Info Pembaruan Database:</span> Formulir pendaftaran kini mendukung data lengkap (Tempat & Tanggal Lahir, Jenis Paket, Jenis Kelamin, dan Alamat Rumah). Jika Anda menggunakan Supabase, pastikan untuk menyalin & menjalankan skrip pembaruan tabel dari menu <strong>Pengaturan</strong> agar data baru disinkronkan secara online. Sementara waktu, seluruh data pendaftaran baru tersimpan dengan aman secara lokal.
+        </div>
+      </div>
+
       {/* Filter and Search Bar */}
       <div className={`p-4 rounded-2xl shadow-sm border flex flex-col md:flex-row gap-4 items-center ${
         isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'

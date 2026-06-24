@@ -197,9 +197,32 @@ export function useMathFinggersDb() {
     if (supabase && !isOfflineFallback) {
       try {
         const { error } = await supabase.from('students').insert([newStudent]);
-        if (error) throw error;
+        if (error) {
+          // If failure is due to missing columns in user's older database schema
+          if (error.message && (error.message.includes('column') || error.code === 'PGRST204')) {
+            console.warn('Supabase is missing new student columns. Retrying with legacy fields. Please run SQL setup script in Settings.', error);
+            const legacyStudent = {
+              id: newStudent.id,
+              name: newStudent.name,
+              parentName: newStudent.parentName,
+              parentPhone: newStudent.parentPhone,
+              joinDate: newStudent.joinDate,
+              level: newStudent.level,
+              status: newStudent.status,
+              createdAt: newStudent.createdAt
+            };
+            const { error: retryError } = await supabase.from('students').insert([legacyStudent]);
+            if (retryError) {
+              console.warn('Retry with legacy fields failed:', retryError);
+            } else {
+              console.log('Successfully saved basic student info to Supabase (new columns missing, stored locally)');
+            }
+          } else {
+            throw error;
+          }
+        }
       } catch (err) {
-        console.error('Failed to add student to Supabase:', err);
+        console.warn('Failed to add student to Supabase (saved locally instead):', err);
       }
     }
   };
@@ -212,9 +235,31 @@ export function useMathFinggersDb() {
     if (supabase && !isOfflineFallback) {
       try {
         const { error } = await supabase.from('students').update(updatedFields).eq('id', id);
-        if (error) throw error;
+        if (error) {
+          // If failure is due to missing columns in user's older database schema
+          if (error.message && (error.message.includes('column') || error.code === 'PGRST204')) {
+            console.warn('Supabase is missing updated student columns. Retrying with legacy fields. Please run SQL setup script in Settings.', error);
+            const legacyFields: any = {};
+            const allowedKeys: (keyof Student)[] = ['name', 'parentName', 'parentPhone', 'joinDate', 'level', 'status'];
+            allowedKeys.forEach(key => {
+              if (updatedFields[key] !== undefined) {
+                legacyFields[key] = updatedFields[key];
+              }
+            });
+            if (Object.keys(legacyFields).length > 0) {
+              const { error: retryError } = await supabase.from('students').update(legacyFields).eq('id', id);
+              if (retryError) {
+                console.warn('Retry update with legacy fields failed:', retryError);
+              } else {
+                console.log('Successfully updated basic student info in Supabase (new columns missing, stored locally)');
+              }
+            }
+          } else {
+            throw error;
+          }
+        }
       } catch (err) {
-        console.error('Failed to update student in Supabase:', err);
+        console.warn('Failed to update student in Supabase (saved locally instead):', err);
       }
     }
   };

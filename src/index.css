@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+body {
+  background-color: #0f172a;
+  color: #cbd5e1;
+}
+
+/* Custom scrollbars for a sleek dark feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #020617;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}

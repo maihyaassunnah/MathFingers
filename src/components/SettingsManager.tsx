@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AppSettings } from '../types';
+import { supabase } from '../supabase';
 import { 
   Settings, 
   Receipt, 
@@ -12,7 +13,8 @@ import {
   RefreshCw,
   Smartphone,
   Download,
-  Database
+  Database,
+  Trash2
 } from 'lucide-react';
 
 interface SettingsManagerProps {
@@ -39,6 +41,12 @@ export function SettingsManager({ settings, onUpdateSettings, theme = 'dark' }: 
   const [defaultTeacherName, setDefaultTeacherName] = useState(settings.defaultTeacherName);
   
   const [isSaved, setIsSaved] = useState(false);
+  
+  // Custom database URL and Anon Key states
+  const [dbUrl, setDbUrl] = useState(() => typeof window !== 'undefined' ? (localStorage.getItem('MATH_FINGERS_SUPABASE_URL') || '') : '');
+  const [dbKey, setDbKey] = useState(() => typeof window !== 'undefined' ? (localStorage.getItem('MATH_FINGERS_SUPABASE_ANON_KEY') || '') : '');
+  const [dbSaveSuccess, setDbSaveSuccess] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -379,6 +387,150 @@ export function SettingsManager({ settings, onUpdateSettings, theme = 'dark' }: 
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Database Connection Settings */}
+      <div className={`mt-8 p-6 rounded-2xl border shadow-sm space-y-6 ${
+        isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+      }`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+          <h3 className={`text-sm font-bold uppercase tracking-wider ${isLight ? 'text-slate-500' : 'text-slate-400'} flex items-center gap-2`}>
+            <Database size={16} className={getAccentTextClass()} />
+            <span>Koneksi Database Utama (Supabase)</span>
+          </h3>
+          
+          <div className="flex items-center gap-2">
+            {localStorage.getItem('MATH_FINGERS_SUPABASE_URL') ? (
+              <span className="px-2.5 py-1 text-[10px] font-bold rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                Kredensial Kustom Aktif
+              </span>
+            ) : (
+              <span className="px-2.5 py-1 text-[10px] font-bold rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                Kredensial Bawaan (Default)
+              </span>
+            )}
+
+            {supabase ? (
+              <span className="px-2.5 py-1 text-[10px] font-bold rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/20 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span>
+                Online
+              </span>
+            ) : (
+              <span className="px-2.5 py-1 text-[10px] font-bold rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/20 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                Lokal / Offline
+              </span>
+            )}
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-400 leading-relaxed">
+          Secara default, aplikasi berjalan di database cloud bersama milik Math Fingers. Jika ingin menggunakan database milik Anda sendiri agar data Anda tersimpan terpisah secara pribadi, masukkan kredensial proyek Supabase Anda di bawah ini.
+        </p>
+
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          if (dbUrl.trim() && dbKey.trim()) {
+            localStorage.setItem('MATH_FINGERS_SUPABASE_URL', dbUrl.trim());
+            localStorage.setItem('MATH_FINGERS_SUPABASE_ANON_KEY', dbKey.trim());
+            setDbSaveSuccess(true);
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+          } else {
+            alert('Harap isi kedua bidang Supabase URL dan Anon Key.');
+          }
+        }} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                Supabase Project URL
+              </label>
+              <input
+                type="url"
+                required
+                placeholder="https://your-project.supabase.co"
+                value={dbUrl}
+                onChange={(e) => setDbUrl(e.target.value)}
+                className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-1 text-sm font-mono ${
+                  isLight 
+                    ? 'bg-slate-50 border-slate-200 text-slate-800' 
+                    : 'bg-slate-950/40 border-slate-800 text-white'
+                } ${getAccentBorderClass()}`}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                Supabase Anon / Public Key
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="eyJhbGciOiJIUzI1NiIsInR5..."
+                value={dbKey}
+                onChange={(e) => setDbKey(e.target.value)}
+                className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-1 text-sm font-mono ${
+                  isLight 
+                    ? 'bg-slate-50 border-slate-200 text-slate-800' 
+                    : 'bg-slate-950/40 border-slate-800 text-white'
+                } ${getAccentBorderClass()}`}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+            <div className="text-[10px] text-slate-500 text-center sm:text-left leading-relaxed">
+              * Aplikasi akan melakukan penyegaran halaman (reload) setelah perubahan disimpan untuk menyambungkan koneksi baru.
+            </div>
+
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              {localStorage.getItem('MATH_FINGERS_SUPABASE_URL') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm('Apakah Anda yakin ingin menghapus konfigurasi database pribadi Anda dan kembali menggunakan database cloud bawaan?')) {
+                      setIsClearing(true);
+                      localStorage.removeItem('MATH_FINGERS_SUPABASE_URL');
+                      localStorage.removeItem('MATH_FINGERS_SUPABASE_ANON_KEY');
+                      setDbUrl('');
+                      setDbKey('');
+                      setTimeout(() => {
+                        window.location.reload();
+                      }, 1000);
+                    }
+                  }}
+                  disabled={isClearing}
+                  className={`flex items-center justify-center gap-2 font-bold text-xs px-4 py-2.5 rounded-xl border transition ${
+                    isLight 
+                      ? 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100' 
+                      : 'bg-rose-950/20 border-rose-900/30 text-rose-400 hover:bg-rose-950/40'
+                  }`}
+                >
+                  <Trash2 size={14} />
+                  <span>{isClearing ? 'Menghapus...' : 'Kembali ke Default'}</span>
+                </button>
+              )}
+
+              <button
+                type="submit"
+                className={`flex items-center justify-center gap-2 font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-md w-full sm:w-auto ${getAccentBgClass()}`}
+              >
+                {dbSaveSuccess ? (
+                  <>
+                    <Check size={14} />
+                    <span>Menghubungkan...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save size={14} />
+                    <span>Simpan & Hubungkan</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </form>
       </div>
 
       {/* SQL Setup Script Guide */}

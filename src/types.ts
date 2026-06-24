@@ -7,6 +7,11 @@ export interface Student {
   level: string; // e.g. "Level 1: Basic"
   status: 'active' | 'inactive';
   keterangan?: string; // notes / description when registering
+  tempatLahir?: string;
+  tanggalLahir?: string; // YYYY-MM-DD
+  jenisPaket?: string; // e.g. "Reguler", "Privat", "Kelompok"
+  jenisKelamin?: 'Laki-laki' | 'Perempuan';
+  alamat?: string;
   createdAt: number;
 }
 

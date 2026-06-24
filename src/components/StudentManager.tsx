@@ -34,6 +34,11 @@ export function StudentManager({
   const [level, setLevel] = useState('');
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
   const [keterangan, setKeterangan] = useState('');
+  const [tempatLahir, setTempatLahir] = useState('');
+  const [tanggalLahir, setTanggalLahir] = useState('');
+  const [jenisPaket, setJenisPaket] = useState('Reguler');
+  const [jenisKelamin, setJenisKelamin] = useState<'Laki-laki' | 'Perempuan'>('Laki-laki');
+  const [alamat, setAlamat] = useState('');
 
   const levels = materials && materials.length > 0 
     ? materials.map(m => m.level)
@@ -54,6 +59,11 @@ export function StudentManager({
     setLevel(levels[0] || 'Level 1: Dasar Satuan (0 - 9)');
     setStatus('active');
     setKeterangan('');
+    setTempatLahir('');
+    setTanggalLahir('');
+    setJenisPaket('Reguler');
+    setJenisKelamin('Laki-laki');
+    setAlamat('');
     setIsFormOpen(true);
   };
 
@@ -66,6 +76,11 @@ export function StudentManager({
     setLevel(student.level || levels[0] || 'Level 1: Dasar Satuan (0 - 9)');
     setStatus(student.status);
     setKeterangan(student.keterangan || '');
+    setTempatLahir(student.tempatLahir || '');
+    setTanggalLahir(student.tanggalLahir || '');
+    setJenisPaket(student.jenisPaket || 'Reguler');
+    setJenisKelamin(student.jenisKelamin || 'Laki-laki');
+    setAlamat(student.alamat || '');
     setIsFormOpen(true);
   };
 
@@ -83,7 +98,12 @@ export function StudentManager({
       joinDate,
       level: level || levels[0] || 'Level 1: Dasar Satuan (0 - 9)',
       status,
-      keterangan
+      keterangan,
+      tempatLahir,
+      tanggalLahir,
+      jenisPaket,
+      jenisKelamin,
+      alamat
     };
 
     if (editingStudent) {
@@ -293,6 +313,75 @@ export function StudentManager({
                 </select>
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Tempat Lahir</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Jakarta"
+                    value={tempatLahir}
+                    onChange={(e) => setTempatLahir(e.target.value)}
+                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                      isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Tanggal Lahir</label>
+                  <input
+                    type="date"
+                    value={tanggalLahir}
+                    onChange={(e) => setTanggalLahir(e.target.value)}
+                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                      isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+                    }`}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Jenis Paket</label>
+                  <select
+                    value={jenisPaket}
+                    onChange={(e) => setJenisPaket(e.target.value)}
+                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                      isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
+                    }`}
+                  >
+                    <option value="Reguler" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Reguler</option>
+                    <option value="Privat" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Privat</option>
+                    <option value="Intensif" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Intensif</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Jenis Kelamin</label>
+                  <select
+                    value={jenisKelamin}
+                    onChange={(e) => setJenisKelamin(e.target.value as 'Laki-laki' | 'Perempuan')}
+                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                      isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
+                    }`}
+                  >
+                    <option value="Laki-laki" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Laki-laki</option>
+                    <option value="Perempuan" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Perempuan</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Alamat Rumah</label>
+                <textarea
+                  placeholder="Masukkan alamat lengkap rumah"
+                  value={alamat}
+                  onChange={(e) => setAlamat(e.target.value)}
+                  rows={2}
+                  className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm placeholder:text-slate-500 ${
+                    isLight ? 'bg-slate-100 border-slate-200 text-slate-850' : 'bg-slate-900 border-slate-800 text-slate-200'
+                  }`}
+                />
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Keterangan Tambahan (Opsional)</label>
                 <textarea
@@ -359,10 +448,41 @@ export function StudentManager({
                   return (
                     <tr key={student.id} className={`transition duration-150 ${isLight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/20'}`}>
                       <td className="p-4">
-                        <div className={`font-semibold text-sm sm:text-base ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`font-semibold text-sm sm:text-base ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</span>
+                          {student.jenisKelamin && (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                              student.jenisKelamin === 'Laki-laki' 
+                                ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/15'
+                                : 'bg-rose-500/10 text-rose-600 dark:text-rose-450 border border-rose-500/15'
+                            }`}>
+                              {student.jenisKelamin === 'Laki-laki' ? 'L' : 'P'}
+                            </span>
+                          )}
+                          {student.jenisPaket && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/15">
+                              {student.jenisPaket}
+                            </span>
+                          )}
+                        </div>
                         <div className="text-slate-400 text-xs font-mono">ID: {student.id.slice(0, 8)}</div>
+                        
+                        {/* TTL */}
+                        {(student.tempatLahir || student.tanggalLahir) && (
+                          <div className="text-slate-400 text-xs mt-1">
+                            <span className="opacity-70">Lahir:</span> {student.tempatLahir || '-'}{student.tanggalLahir ? `, ${student.tanggalLahir}` : ''}
+                          </div>
+                        )}
+
+                        {/* Alamat */}
+                        {student.alamat && (
+                          <div className="text-slate-400 text-xs mt-0.5 truncate max-w-[240px]" title={student.alamat}>
+                            <span className="opacity-70">Alamat:</span> {student.alamat}
+                          </div>
+                        )}
+
                         {student.keterangan && (
-                          <div className={`text-xs mt-1 px-2 py-0.5 rounded-md border inline-block max-w-[220px] truncate ${
+                          <div className={`text-xs mt-1.5 px-2 py-0.5 rounded-md border inline-block max-w-[220px] truncate ${
                             isLight 
                               ? 'bg-amber-500/5 border-amber-500/20 text-amber-700' 
                               : 'bg-amber-500/10 border-amber-500/10 text-amber-300'

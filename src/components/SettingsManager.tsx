@@ -11,7 +11,8 @@ import {
   Save, 
   RefreshCw,
   Smartphone,
-  Download
+  Download,
+  Database
 } from 'lucide-react';
 
 interface SettingsManagerProps {
@@ -377,6 +378,142 @@ export function SettingsManager({ settings, onUpdateSettings, theme = 'dark' }: 
               Dengan menginstal aplikasi sebagai PWA, Anda dapat membuka Math Fingers langsung dengan layar penuh (tanpa batas bilah browser) layaknya aplikasi natif, loading instan, hemat baterai, dan berjalan dengan sangat responsif di perangkat seluler Anda.
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* SQL Setup Script Guide */}
+      <div className={`mt-8 p-6 rounded-2xl border shadow-sm space-y-4 ${
+        isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+      }`}>
+        <h3 className={`text-sm font-bold uppercase tracking-wider ${isLight ? 'text-slate-500' : 'text-slate-400'} flex items-center gap-2 border-b pb-3 ${isLight ? 'border-slate-100' : 'border-slate-800/80'}`}>
+          <Database size={16} className={getAccentTextClass()} />
+          <span>Skrip SQL Setup Database (Supabase)</span>
+        </h3>
+
+        <p className="text-xs text-slate-400 leading-relaxed">
+          Gunakan skrip SQL di bawah ini untuk mengonfigurasi tabel database di dashboard <strong>Supabase SQL Editor</strong> Anda. Skrip ini mencakup seluruh kolom data pendaftaran lengkap (Tempat & Tanggal Lahir, Paket, Jenis Kelamin, dan Alamat).
+        </p>
+
+        <div className="relative">
+          <textarea
+            readOnly
+            rows={8}
+            value={`CREATE TABLE IF NOT EXISTS students (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    "parentName" TEXT NOT NULL,
+    "parentPhone" TEXT NOT NULL,
+    "joinDate" TEXT NOT NULL,
+    level TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    keterangan TEXT,
+    "tempatLahir" TEXT,
+    "tanggalLahir" TEXT,
+    "jenisPaket" TEXT,
+    "jenisKelamin" TEXT,
+    alamat TEXT,
+    "createdAt" BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS materials (
+    id TEXT PRIMARY KEY,
+    level TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    formulas TEXT[] DEFAULT '{}'::TEXT[],
+    steps TEXT[] DEFAULT '{}'::TEXT[]
+);
+
+CREATE TABLE IF NOT EXISTS attendance (
+    id TEXT PRIMARY KEY,
+    "studentId" TEXT REFERENCES students(id) ON DELETE CASCADE,
+    "studentName" TEXT NOT NULL,
+    date TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('present', 'absent', 'permission')),
+    notes TEXT
+);`}
+            className={`w-full p-3 font-mono text-xs rounded-xl focus:outline-none border ${
+              isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950/60 border-slate-800 text-slate-300'
+            }`}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText(`CREATE TABLE IF NOT EXISTS students (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    "parentName" TEXT NOT NULL,
+    "parentPhone" TEXT NOT NULL,
+    "joinDate" TEXT NOT NULL,
+    level TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    keterangan TEXT,
+    "tempatLahir" TEXT,
+    "tanggalLahir" TEXT,
+    "jenisPaket" TEXT,
+    "jenisKelamin" TEXT,
+    alamat TEXT,
+    "createdAt" BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS materials (
+    id TEXT PRIMARY KEY,
+    level TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    formulas TEXT[] DEFAULT '{}'::TEXT[],
+    steps TEXT[] DEFAULT '{}'::TEXT[]
+);
+
+CREATE TABLE IF NOT EXISTS attendance (
+    id TEXT PRIMARY KEY,
+    "studentId" TEXT REFERENCES students(id) ON DELETE CASCADE,
+    "studentName" TEXT NOT NULL,
+    date TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('present', 'absent', 'permission')),
+    notes TEXT
+);
+
+CREATE TABLE IF NOT EXISTS notes (
+    id TEXT PRIMARY KEY,
+    "studentId" TEXT REFERENCES students(id) ON DELETE CASCADE,
+    "studentName" TEXT NOT NULL,
+    date TEXT NOT NULL,
+    topic TEXT NOT NULL,
+    content TEXT NOT NULL,
+    "teacherName" TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS invoices (
+    id TEXT PRIMARY KEY,
+    "invoiceNo" TEXT NOT NULL,
+    "studentId" TEXT REFERENCES students(id) ON DELETE CASCADE,
+    "studentName" TEXT NOT NULL,
+    amount NUMERIC NOT NULL,
+    month TEXT NOT NULL,
+    "dueDate" TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('paid', 'unpaid')),
+    "paidAt" TEXT,
+    "paymentMethod" TEXT CHECK ("paymentMethod" IN ('Transfer', 'Tunai')),
+    "createdAt" BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS grades (
+    id TEXT PRIMARY KEY,
+    "studentId" TEXT REFERENCES students(id) ON DELETE CASCADE,
+    "studentName" TEXT NOT NULL,
+    date TEXT NOT NULL,
+    topic TEXT NOT NULL,
+    score INTEGER NOT NULL,
+    "speedSeconds" INTEGER NOT NULL,
+    notes TEXT
+);`);
+              alert('Skrip SQL berhasil disalin ke papan klip!');
+            }}
+            className="absolute right-3.5 top-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11px] px-3 py-1 rounded-lg transition shadow"
+          >
+            Salin SQL
+          </button>
         </div>
       </div>
     </div>

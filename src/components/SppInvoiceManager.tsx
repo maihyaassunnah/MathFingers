@@ -131,146 +131,276 @@ export function SppInvoiceManager({
     window.open(waLink, '_blank', 'noreferrer');
   };
 
+// Helper to convert number to Indonesian words (Terbilang)
+function angkaKeTerbilang(nominal: number): string {
+  const words = ["", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas"];
+  if (nominal < 12) return words[nominal];
+  if (nominal < 20) return angkaKeTerbilang(nominal - 10) + " Belas";
+  if (nominal < 100) return angkaKeTerbilang(Math.floor(nominal / 10)) + " Puluh " + angkaKeTerbilang(nominal % 10);
+  if (nominal < 200) return "Seratus " + angkaKeTerbilang(nominal - 100);
+  if (nominal < 1000) return angkaKeTerbilang(Math.floor(nominal / 100)) + " Ratus " + angkaKeTerbilang(nominal % 100);
+  if (nominal < 2000) return "Seribu " + angkaKeTerbilang(nominal - 1000);
+  if (nominal < 1000000) return angkaKeTerbilang(Math.floor(nominal / 1000)) + " Ribu " + angkaKeTerbilang(nominal % 1000);
+  if (nominal < 1000000000) return angkaKeTerbilang(Math.floor(nominal / 1000000)) + " Juta " + angkaKeTerbilang(nominal % 1000000);
+  return nominal.toString();
+}
+
   // jsPDF Receipt Invoice function
   const downloadInvoicePDF = (invoice: Invoice) => {
     const student = students.find(s => s.id === invoice.studentId);
     
-    const doc = new jsPDF();
+    // Landscape A5 dimensions: width 210mm, height 148mm
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a5'
+    });
     
-    // Header Banner
-    const getAccentColorHex = () => {
-      switch (settings.accentColor) {
-        case 'indigo': return { r: 79, g: 70, b: 229 };
-        case 'violet': return { r: 124, g: 58, b: 237 };
-        case 'amber': return { r: 217, g: 119, b: 6 };
-        case 'rose': return { r: 225, g: 29, b: 72 };
-        case 'sky': return { r: 14, g: 165, b: 233 };
-        case 'emerald':
-        default: return { r: 16, g: 185, b: 129 };
-      }
-    };
-    const accentHex = getAccentColorHex();
-    doc.setFillColor(accentHex.r, accentHex.g, accentHex.b);
-    doc.rect(0, 0, 210, 40, 'F');
+    // Draw decorative corner pastel waves/blobs
+    // Top-Left Wave
+    doc.setFillColor(254, 252, 233); // Soft yellow
+    doc.circle(0, 0, 24, 'F');
+    // Top-Right Wave
+    doc.setFillColor(232, 245, 233); // Soft green
+    doc.circle(210, 0, 18, 'F');
+    // Bottom-Left Wave
+    doc.setFillColor(255, 243, 224); // Soft orange
+    doc.circle(0, 148, 20, 'F');
+    // Bottom-Right Wave
+    doc.setFillColor(252, 228, 236); // Soft pink
+    doc.circle(210, 148, 22, 'F');
+
+    // Decor sprinkles (Stars/Plus)
+    doc.setFillColor(255, 202, 40); // Yellow star
+    doc.triangle(90, 30, 92, 34, 88, 34, 'F');
+    doc.setFillColor(244, 143, 177); // Pink star
+    doc.circle(18, 90, 1.5, 'F');
+    doc.setFillColor(144, 202, 249); // Blue plus
+    doc.setDrawColor(41, 182, 246);
+    doc.setLineWidth(0.4);
+    doc.line(60, 25, 64, 25);
+    doc.line(62, 23, 62, 27);
+
+    // 1. LEFT HEADER: EASY LEARNING HOUSE LOGO
+    const logoX = 28;
+    const logoY = 18;
     
-    // Title
-    doc.setTextColor(255, 255, 255);
+    // House roof (Green #4bae4f)
+    doc.setFillColor(75, 174, 79);
+    doc.triangle(logoX - 8, logoY + 8, logoX + 8, logoY + 8, logoX, logoY, 'F');
+    // House base (Yellow #ffca28)
+    doc.setFillColor(255, 202, 40);
+    doc.rect(logoX - 6, logoY + 8, 12, 10, 'F');
+    // House windows (White)
+    doc.setFillColor(255, 255, 255);
+    doc.rect(logoX - 4, logoY + 10, 3, 3, 'F');
+    doc.rect(logoX + 1, logoY + 10, 3, 3, 'F');
+    // Chimney / Love on house
+    doc.setFillColor(239, 83, 80); // Red
+    doc.circle(logoX + 8, logoY + 2, 1.2, 'F');
+
+    // Brand text
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(46, 125, 50); // Dark Green
+    doc.text("EASY", logoX, logoY + 23, { align: 'center' });
+    doc.setFontSize(6.5);
+    doc.text("LEARNING HOUSE", logoX, logoY + 26, { align: 'center' });
+    
+    // Small pink heart below text
+    doc.setFillColor(239, 83, 80);
+    doc.circle(logoX, logoY + 29, 0.8, 'F');
+
+    // 2. MIDDLE HEADER: KUITANSI
     doc.setFont("Helvetica", "bold");
     doc.setFontSize(22);
-    doc.text("KUITANSI & INVOICE SPP", 15, 18);
+    doc.setTextColor(46, 125, 50); // Green
+    doc.text("KUITANSI", 105, 25, { align: 'center' });
     
+    // Yellow decorative rays around KUITANSI text
+    doc.setDrawColor(255, 167, 38);
+    doc.setLineWidth(0.8);
+    // Left rays
+    doc.line(72, 20, 75, 22);
+    doc.line(70, 24, 74, 24);
+    doc.line(71, 28, 75, 26);
+    // Right rays
+    doc.line(138, 22, 135, 20);
+    doc.line(136, 24, 140, 24);
+    doc.line(135, 26, 139, 28);
+
+    // 3. RIGHT HEADER: No. & Tanggal lines
+    const fieldRightX = 150;
     doc.setFont("Helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text("MATH FINGERS - Berhitung cepat tanpa alat hanya sekejap", 15, 25);
-    doc.text("Sistem Manajemen Keuangan Les Privat", 15, 30);
+    doc.setFontSize(9.5);
+    doc.setTextColor(100, 116, 139); // Slate-500
     
-    // Invoice details right aligned
-    doc.setFontSize(12);
-    doc.setFont("Helvetica", "bold");
-    doc.text(invoice.status === 'paid' ? "STATUS: LUNAS" : "STATUS: TAGIHAN", 150, 20);
-    doc.setFontSize(9);
-    doc.setFont("Helvetica", "normal");
-    doc.text(`No: ${invoice.invoiceNo}`, 150, 25);
-    doc.text(`Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}`, 150, 30);
-    
-    // Meta box
-    doc.setDrawColor(226, 232, 240);
-    doc.setFillColor(248, 250, 252);
-    doc.rect(15, 48, 180, 45, 'F');
-    doc.rect(15, 48, 180, 45, 'S');
-    
-    doc.setTextColor(51, 65, 85);
-    doc.setFontSize(10);
-    doc.setFont("Helvetica", "bold");
-    doc.text("DETAIL PENERIMA & TAGIHAN", 20, 54);
-    doc.line(20, 56, 190, 56);
-    
-    doc.setFont("Helvetica", "normal");
-    doc.text(`Nama Siswa    : ${invoice.studentName}`, 20, 63);
-    doc.text(`Wali / Orang Tua : ${student ? student.parentName : '-'}`, 20, 69);
-    doc.text(`Nomor WhatsApp : ${student ? student.parentPhone : '-'}`, 20, 75);
-    doc.text(`Mulai Bergabung : ${student ? student.joinDate : '-'}`, 20, 81);
-    
-    doc.text(`Level Belajar  : ${student ? student.level : '-'}`, 110, 63);
-    doc.text(`Bulan Periode  : ${invoice.month}`, 110, 69);
-    doc.text(`Jatuh Tempo    : ${invoice.dueDate}`, 110, 75);
-    if (invoice.status === 'paid') {
-      doc.text(`Tanggal Bayar  : ${invoice.paidAt || '-'}`, 110, 81);
-      doc.text(`Metode Bayar   : ${invoice.paymentMethod || 'Transfer'}`, 110, 87);
-    }
-    
-    // Receipt Table
+    doc.text("No.       :", fieldRightX, 19);
+    doc.setFont("Courier", "bold");
     doc.setTextColor(30, 41, 59);
-    doc.setFont("Helvetica", "bold");
-    doc.setFontSize(12);
-    doc.text("RANGKUMAN TRANSAKSI", 15, 108);
-    doc.line(15, 110, 195, 110);
-    
-    let y = 118;
-    doc.setFontSize(9);
-    doc.setFont("Helvetica", "bold");
-    doc.setTextColor(51, 65, 85);
-    doc.text("Deskripsi Layanan", 20, y);
-    doc.text("Jumlah Tagihan", 150, y);
-    
-    doc.line(15, y + 2, 195, y + 2);
-    
-    y += 10;
+    doc.text(invoice.invoiceNo, fieldRightX + 18, 19);
+    doc.setDrawColor(203, 213, 225); // Slate-300
+    doc.setLineWidth(0.3);
+    doc.line(fieldRightX + 17, 20, 200, 20);
+
     doc.setFont("Helvetica", "normal");
-    doc.setTextColor(71, 85, 105);
-    doc.text(`Iuran Bulanan (SPP) Math Fingers - Periode ${invoice.month}`, 20, y);
+    doc.setTextColor(100, 116, 139);
+    doc.text("Tanggal :", fieldRightX, 26);
+    doc.setTextColor(30, 41, 59);
+    const dateToPrint = invoice.status === 'paid' ? (invoice.paidAt || new Date().toISOString().slice(0, 10)) : new Date().toISOString().slice(0, 10);
+    doc.text(dateToPrint, fieldRightX + 18, 26);
+    doc.line(fieldRightX + 17, 27, 200, 27);
+
+    // 4. RECEIPT FIELDS (Main rows with dotted lines)
+    const contentStartY = 45;
+    const labelX = 18;
+    const valueStartX = 55;
+    const lineEndX = 198;
+    
+    // Telah terima dari
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(51, 65, 85);
+    doc.text("Telah terima dari", labelX, contentStartY);
+    doc.text(":", valueStartX - 4, contentStartY);
+    
     doc.setFont("Helvetica", "bold");
-    doc.text(formatRupiah(invoice.amount), 150, y);
+    const parentName = student ? student.parentName : '-';
+    doc.text(`Ibu/Bapak ${parentName} (Wali ananda ${invoice.studentName})`, valueStartX, contentStartY);
     
-    doc.line(15, y + 4, 195, y + 4);
+    // Draw fine dotted line
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.2);
+    doc.line(valueStartX, contentStartY + 1, lineEndX, contentStartY + 1);
+
+    // Uang sejumlah (with a horizontal pastel light green band)
+    const bandY = contentStartY + 6;
+    doc.setFillColor(232, 245, 233); // Light green band (#e8f5e9)
+    doc.rect(valueStartX - 2, bandY, (lineEndX - valueStartX) + 4, 8, 'F');
     
-    y += 12;
+    doc.setFont("Helvetica", "normal");
+    doc.text("Uang sejumlah", labelX, bandY + 5.5);
+    doc.text(":", valueStartX - 4, bandY + 5.5);
+    
+    doc.setFont("Helvetica", "bolditalic");
+    const amountInWords = angkaKeTerbilang(invoice.amount) + " Rupiah";
+    doc.text(amountInWords, valueStartX, bandY + 5.5);
+    doc.line(valueStartX, bandY + 8, lineEndX, bandY + 8);
+
+    // Untuk pembayaran
+    const payY = contentStartY + 20;
+    doc.setFont("Helvetica", "normal");
+    doc.text("Untuk pembayaran", labelX, payY);
+    doc.text(":", valueStartX - 4, payY);
+    
+    doc.setFont("Helvetica", "semibold");
+    const paymentDesc = `Iuran Bulanan (SPP) Les Privat Math Fingers - Periode ${invoice.month}`;
+    doc.text(paymentDesc, valueStartX, payY);
+    doc.line(valueStartX, payY + 1, lineEndX, payY + 1);
+
+    // Placeholder dotted lines to look like an authentic blank kuitansi
+    doc.line(labelX, payY + 10, lineEndX, payY + 10);
+    doc.line(labelX, payY + 18, lineEndX, payY + 18);
+
+    // 5. FOOTER LEFT: RP BOX
+    const rpBoxY = payY + 26;
+    doc.setDrawColor(75, 174, 79); // Green border
+    doc.setFillColor(232, 245, 233); // Soft green background
+    doc.setLineWidth(0.6);
+    doc.rect(labelX, rpBoxY, 62, 13, 'FD');
+    
     doc.setFont("Helvetica", "bold");
-    doc.setTextColor(accentHex.r, accentHex.g, accentHex.b);
-    doc.text("TOTAL BAYAR", 20, y);
-    doc.text(formatRupiah(invoice.amount), 150, y);
+    doc.setFontSize(15);
+    doc.setTextColor(46, 125, 50); // Dark Green
+    const formattedAmount = `Rp. ${invoice.amount.toLocaleString('id-ID')},-`;
+    doc.text(formattedAmount, labelX + 31, rpBoxY + 8.5, { align: 'center' });
+
+    // 6. FOOTER MIDDLE: CUSTOM MATH FINGER LOGO
+    const logoFooterX = 110;
+    const logoFooterY = rpBoxY + 2;
     
-    // Bank Payment Instructions if unpaid
-    if (invoice.status === 'unpaid') {
-      y += 18;
-      doc.setFillColor(254, 243, 199); // Amber tint
-      doc.rect(15, y, 180, 22, 'F');
-      
-      doc.setTextColor(146, 64, 14);
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(9);
-      doc.text("PETUNJUK TRANSFER PEMBAYARAN:", 20, y + 6);
-      doc.setFont("Helvetica", "normal");
-      doc.setFontSize(8.5);
-      doc.text(`Silakan transfer ke rekening Bank ${settings.bankName}: ${settings.bankAccountNo} a.n. ${settings.bankAccountHolder}.`, 20, y + 12);
-      doc.text("Harap kirimkan kuitansi atau screenshot bukti transfer ke WhatsApp admin.", 20, y + 17);
-    } else {
-      y += 18;
-      doc.setFillColor(209, 250, 229); // Green tint
-      doc.rect(15, y, 180, 16, 'F');
-      
-      doc.setTextColor(6, 95, 70);
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(9);
-      doc.text("TERIMA KASIH!", 20, y + 6);
-      doc.setFont("Helvetica", "normal");
-      doc.setFontSize(8.5);
-      doc.text(`Pembayaran SPP Anda telah terverifikasi lunas pada tanggal ${invoice.paidAt || '-'} menggunakan ${invoice.paymentMethod || 'Transfer'}.`, 20, y + 11);
-    }
+    // Hand vector representation
+    // Palm
+    doc.setFillColor(129, 199, 132); // Green #81c784
+    doc.setDrawColor(46, 125, 50);
+    doc.setLineWidth(0.3);
+    doc.circle(logoFooterX, logoFooterY + 1, 4.5, 'FD');
     
-    // Footer / Sign block
-    y = Math.max(y + 35, 230);
-    doc.setDrawColor(226, 232, 240);
-    doc.line(15, y, 195, y);
+    // Wrist
+    doc.rect(logoFooterX - 1.5, logoFooterY + 4, 3, 2, 'FD');
+
+    // Colored Fingers (1 to 5)
+    // Thumb (Yellow)
+    doc.setFillColor(255, 202, 40);
+    doc.rect(logoFooterX - 6.5, logoFooterY - 2, 2, 3, 'FD');
+    // Index (Blue)
+    doc.setFillColor(41, 182, 246);
+    doc.rect(logoFooterX - 4, logoFooterY - 6, 1.8, 5, 'FD');
+    // Middle (Red)
+    doc.setFillColor(239, 83, 80);
+    doc.rect(logoFooterX - 1, logoFooterY - 8, 1.8, 7, 'FD');
+    // Ring (Purple)
+    doc.setFillColor(171, 71, 188);
+    doc.rect(logoFooterX + 2, logoFooterY - 6, 1.8, 5, 'FD');
+    // Pinky (Orange)
+    doc.setFillColor(255, 167, 38);
+    doc.rect(logoFooterX + 5, logoFooterY - 4, 1.8, 3, 'FD');
+
+    // Smiley face on palm (cute happy curved line)
+    doc.setDrawColor(46, 125, 50);
+    doc.setLineWidth(0.4);
+    doc.line(logoFooterX - 1.5, logoFooterY + 1, logoFooterX + 1.5, logoFooterY + 1);
+    doc.line(logoFooterX - 1.5, logoFooterY + 1, logoFooterX - 1.2, logoFooterY + 0.6);
+    doc.line(logoFooterX + 1.5, logoFooterY + 1, logoFooterX + 1.2, logoFooterY + 0.6);
+
+    // Title text: Math Finger Class in colorful letters
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(9.5);
+    // Colorful letters
+    doc.setTextColor(239, 83, 80); doc.text("M", logoFooterX - 18, logoFooterY + 10.5);
+    doc.setTextColor(255, 167, 38); doc.text("a", logoFooterX - 14.5, logoFooterY + 10.5);
+    doc.setTextColor(41, 182, 246); doc.text("t", logoFooterX - 11.5, logoFooterY + 10.5);
+    doc.setTextColor(75, 174, 79); doc.text("h", logoFooterX - 8.5, logoFooterY + 10.5);
     
+    doc.setTextColor(75, 174, 79); doc.text("F", logoFooterX - 2.5, logoFooterY + 10.5);
+    doc.setTextColor(41, 182, 246); doc.text("i", logoFooterX + 1.5, logoFooterY + 10.5);
+    doc.setTextColor(171, 71, 188); doc.text("n", logoFooterX + 3.5, logoFooterY + 10.5);
+    doc.setTextColor(75, 174, 79); doc.text("g", logoFooterX + 7.5, logoFooterY + 10.5);
+    doc.setTextColor(255, 167, 38); doc.text("e", logoFooterX + 11.5, logoFooterY + 10.5);
+    doc.setTextColor(171, 71, 188); doc.text("r", logoFooterX + 15.5, logoFooterY + 10.5);
+
+    // Class green bubble
+    doc.setFillColor(75, 174, 79);
+    doc.rect(logoFooterX - 7, logoFooterY + 12, 14, 3, 'F');
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(5);
+    doc.setTextColor(255, 255, 255);
+    doc.text("Class", logoFooterX, logoFooterY + 14.3, { align: 'center' });
+
+    // Motto underneath
     doc.setFont("Helvetica", "italic");
-    doc.setFontSize(8);
-    doc.text("Sistem Kuitansi Finansial Otomatis Math Fingers. Pembayaran yang sah memerlukan validasi sistem.", 15, y + 5);
+    doc.setFontSize(6);
+    doc.setTextColor(100, 116, 139);
+    doc.text('"Berhitung Cepat, Tanpa Alat & Akurat"', logoFooterX, logoFooterY + 18.5, { align: 'center' });
+
+    // 7. FOOTER RIGHT: SIGNATURE BLOCK
+    const signX = 175;
+    const signY = rpBoxY + 1;
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(9.5);
+    doc.setTextColor(51, 65, 85);
+    doc.text("Hormat kami,", signX, signY, { align: 'center' });
+    
+    // Underline for signature
+    doc.setDrawColor(148, 163, 184); // Slate-400
+    doc.setLineWidth(0.3);
+    doc.line(signX - 22, signY + 16, signX + 22, signY + 16);
     
     doc.setFont("Helvetica", "bold");
-    doc.text(`${settings.defaultTeacherName},`, 150, y + 10);
-    doc.text("Sistem Finansial", 150, y + 25);
-    
+    doc.setFontSize(9.5);
+    doc.setTextColor(30, 41, 59);
+    doc.text(settings.defaultTeacherName, signX, signY + 20, { align: 'center' });
+
     doc.save(`Receipt_SPP_${invoice.invoiceNo.replace(/\//g, '_')}.pdf`);
   };
 

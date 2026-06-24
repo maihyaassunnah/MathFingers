@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Student, Attendance, Invoice, Grade, AppSettings, DashboardTask } from '../types';
 import { formatRupiah, getWhatsAppLink } from '../utils';
+import { MathFingerLogo } from './MathFingerLogo';
 import { 
   Users, 
   CheckSquare, 
@@ -146,9 +147,9 @@ export function DashboardOverview({
             <Sparkles size={12} className="animate-pulse" />
             <span>Sistem Manajemen Les Privat Terpadu</span>
           </span>
-          <h1 className={`text-3xl sm:text-4xl font-extrabold font-sans tracking-tight ${isLight ? 'text-slate-800' : 'text-white'}`}>
-            Math Fingers
-          </h1>
+          <div className="py-2">
+            <MathFingerLogo size={80} textSize="xl" theme={theme === 'dark' ? 'dark' : 'light'} />
+          </div>
           <p className={`${isLight ? 'text-slate-500' : 'text-slate-300'} text-sm sm:text-base font-medium italic`}>
             "Berhitung cepat tanpa alat hanya sekejap"
           </p>

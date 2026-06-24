@@ -1,81 +1,68 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <defs>
-    <!-- Background Gradient -->
-    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#020617" />
-      <stop offset="50%" stop-color="#0f172a" />
-      <stop offset="100%" stop-color="#1e293b" />
-    </linearGradient>
-    
-    <!-- Accent Emerald Gradient -->
-    <linearGradient id="emerald-grad" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#059669" />
-      <stop offset="50%" stop-color="#10b981" />
-      <stop offset="100%" stop-color="#34d399" />
-    </linearGradient>
-
-    <!-- Accent Glow Filter -->
-    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="8" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
-    </filter>
-  </defs>
-
-  <!-- Background -->
-  <rect width="512" height="512" rx="128" fill="url(#bg-grad)" />
-  <rect width="496" height="496" x="8" y="8" rx="120" fill="none" stroke="#1e293b" stroke-width="6" />
-
-  <!-- Hand & Fingers (Representing Jaritmatika / Math Finggers) -->
-  <g transform="translate(136, 110)">
-    <!-- Palm base -->
-    <path d="M40 180 C40 150, 70 140, 110 140 C150 140, 190 150, 190 190 C190 230, 170 260, 130 270 C90 280, 40 250, 40 180 Z" fill="url(#emerald-grad)" opacity="0.9" />
-    
-    <!-- Thumb (Jempol) - bent/active -->
-    <path d="M45 155 Q10 140 20 110 Q30 80 55 110 C70 125, 60 145, 45 155 Z" fill="url(#emerald-grad)" filter="url(#glow)" />
-    
-    <!-- Index Finger (Telunjuk) - showing 1 -->
-    <rect x="75" y="10" width="22" height="135" rx="11" fill="url(#emerald-grad)" filter="url(#glow)" />
-    
-    <!-- Middle Finger (Tengah) - showing 2 -->
-    <rect x="107" y="0" width="22" height="145" rx="11" fill="url(#emerald-grad)" filter="url(#glow)" />
-    
-    <!-- Ring Finger (Manis) - folded -->
-    <path d="M139 140 C139 120, 155 120, 155 140 L155 175 C155 185, 139 185, 139 175 Z" fill="#047857" />
-    
-    <!-- Pinky Finger (Kelingking) - folded -->
-    <path d="M169 155 C169 140, 183 140, 183 155 L183 180 C183 190, 169 190, 169 180 Z" fill="#047857" />
-
-    <!-- Wrist connection -->
-    <path d="M70 245 L85 295 L155 295 L165 245 Z" fill="url(#emerald-grad)" opacity="0.75" />
-  </g>
-
-  <!-- Math Symbols surrounding the hand -->
-  <!-- Plus symbol -->
-  <g transform="translate(90, 120)" stroke="#10b981" stroke-width="8" stroke-linecap="round">
-    <line x1="0" y1="-15" x2="0" y2="15" />
-    <line x1="-15" y1="0" x2="15" y2="0" />
-  </g>
-
-  <!-- Minus symbol -->
-  <g transform="translate(410, 180)" stroke="#34d399" stroke-width="8" stroke-linecap="round">
-    <line x1="-15" y1="0" x2="15" y2="0" />
-  </g>
-
-  <!-- Multiply symbol -->
-  <g transform="translate(100, 320)" stroke="#34d399" stroke-width="6" stroke-linecap="round">
-    <line x1="-10" y1="-10" x2="10" y2="10" />
-    <line x1="10" y1="-10" x2="-10" y2="10" />
-  </g>
-
-  <!-- Equals symbol -->
-  <g transform="translate(390, 300)" stroke="#10b981" stroke-width="8" stroke-linecap="round">
-    <line x1="-15" y1="-6" x2="15" y2="-6" />
-    <line x1="-15" y1="6" x2="15" y2="6" />
-  </g>
-
-  <!-- Number 5 glow representing the thumb value -->
-  <text x="390" y="110" font-family="system-ui, sans-serif" font-weight="900" font-size="44" fill="#10b981" text-anchor="middle" filter="url(#glow)">5</text>
+  <!-- Warm Cream Background with Rounded Corner -->
+  <rect width="512" height="512" rx="112" fill="#faf7e9" />
   
-  <!-- Number 1 representing the fingers value -->
-  <text x="130" y="80" font-family="system-ui, sans-serif" font-weight="900" font-size="32" fill="#34d399" text-anchor="middle" opacity="0.8">1</text>
+  <!-- Outer Playful Green Border -->
+  <rect width="480" height="480" x="16" y="16" rx="96" fill="none" stroke="#4bae4f" stroke-width="8" stroke-dasharray="16 12" />
+
+  <!-- Stars & Plus Decorations (Kid style) -->
+  <!-- Top Left Star -->
+  <path d="M70 90 L75 105 L90 105 L78 115 L82 130 L70 120 L58 130 L62 115 L50 105 L65 105 Z" fill="#ffca28" />
+  <!-- Bottom Right Star -->
+  <path d="M430 410 L434 422 L446 422 L436 430 L440 442 L430 434 L420 442 L424 430 L414 422 L426 422 Z" fill="#ff7043" />
+  <!-- Top Right Hearts / Sparks -->
+  <path d="M410 100 C410 90, 425 90, 425 100 C425 110, 410 120, 410 120 C410 120, 395 110, 395 100 C395 90, 410 90, 410 100 Z" fill="#ec4899" />
+  
+  <!-- Plus signs -->
+  <g stroke="#29b6f6" stroke-width="6" stroke-linecap="round">
+    <line x1="120" y1="410" x2="120" y2="430" />
+    <line x1="110" y1="420" x2="130" y2="420" />
+  </g>
+  <g stroke="#ab47bc" stroke-width="6" stroke-linecap="round">
+    <line x1="430" y1="210" x2="430" y2="230" />
+    <line x1="420" y1="220" x2="440" y2="220" />
+  </g>
+
+  <!-- Circular Ring Around the Hand -->
+  <circle cx="256" cy="275" r="160" fill="none" stroke="#81c784" stroke-width="4" stroke-dasharray="8 8" />
+
+  <!-- Main Smiling Hand Graphics -->
+  <g id="smiling-hand" transform="translate(110, 110)">
+    <!-- Wrist -->
+    <path d="M125 240 L165 240 L170 290 L120 290 Z" fill="#81c784" stroke="#2e7d32" stroke-width="6" stroke-linejoin="round" />
+    
+    <!-- Palm base -->
+    <path d="M70 170 C50 140, 70 110, 110 110 C140 110, 190 120, 215 160 C235 190, 225 240, 185 255 C145 270, 90 255, 70 170 Z" fill="#81c784" stroke="#2e7d32" stroke-width="6" stroke-linejoin="round" />
+    
+    <!-- Thumb (Finger 1) - Yellow -->
+    <path d="M74 165 C54 165, 30 145, 20 120 C10 95, 30 85, 45 100 L76 135 Z" fill="#ffca28" stroke="#2e7d32" stroke-width="6" stroke-linejoin="round" />
+    <!-- Index Finger (Finger 2) - Blue -->
+    <path d="M96 114 L96 40 C96 25, 118 25, 118 40 L118 114 Z" fill="#29b6f6" stroke="#2e7d32" stroke-width="6" stroke-linejoin="round" />
+    <!-- Middle Finger (Finger 3) - Red -->
+    <path d="M132 110 L132 20 C132 5, 154 5, 154 20 L154 110 Z" fill="#ef5350" stroke="#2e7d32" stroke-width="6" stroke-linejoin="round" />
+    <!-- Ring Finger (Finger 4) - Purple -->
+    <path d="M168 114 L168 35 C168 20, 190 20, 190 35 L190 114 Z" fill="#ab47bc" stroke="#2e7d32" stroke-width="6" stroke-linejoin="round" />
+    <!-- Pinky Finger (Finger 5) - Orange -->
+    <path d="M202 135 L222 65 C226 50, 246 58, 242 73 L216 150 Z" fill="#ffa726" stroke="#2e7d32" stroke-width="6" stroke-linejoin="round" />
+
+    <!-- Labels 1, 2, 3, 4, 5 on Fingers -->
+    <text x="35" y="112" font-family="system-ui, sans-serif" font-weight="900" font-size="16" fill="#5d4037" text-anchor="middle">1</text>
+    <text x="107" y="52" font-family="system-ui, sans-serif" font-weight="900" font-size="16" fill="#ffffff" text-anchor="middle">2</text>
+    <text x="143" y="32" font-family="system-ui, sans-serif" font-weight="900" font-size="16" fill="#ffffff" text-anchor="middle">3</text>
+    <text x="179" y="47" font-family="system-ui, sans-serif" font-weight="900" font-size="16" fill="#ffffff" text-anchor="middle">4</text>
+    <text x="228" y="84" font-family="system-ui, sans-serif" font-weight="900" font-size="16" fill="#ffffff" text-anchor="middle">5</text>
+
+    <!-- Smiley Face on Palm -->
+    <!-- Eyes -->
+    <path d="M110 165 Q120 155 130 165" fill="none" stroke="#2e7d32" stroke-width="4" stroke-linecap="round" />
+    <path d="M155 165 Q165 155 175 165" fill="none" stroke="#2e7d32" stroke-width="4" stroke-linecap="round" />
+    <!-- Blushing Cheeks -->
+    <circle cx="102" cy="178" r="7" fill="#ff8a80" opacity="0.8" />
+    <circle cx="182" cy="178" r="7" fill="#ff8a80" opacity="0.8" />
+    <!-- Happy Smile Mouth -->
+    <path d="M123 182 Q143 205 163 182" fill="none" stroke="#2e7d32" stroke-width="5" stroke-linecap="round" />
+  </g>
+
+  <!-- Playful Title Below -->
+  <text x="256" y="465" font-family="system-ui, 'Quicksand', 'Fredoka', sans-serif" font-weight="900" font-size="34" fill="#2e7d32" text-anchor="middle" letter-spacing="1">MATH FINGER</text>
 </svg>

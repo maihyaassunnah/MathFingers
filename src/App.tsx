@@ -9,6 +9,7 @@ import { GradeManager } from './components/GradeManager';
 import { MaterialList } from './components/MaterialList';
 import { StudentProgressReport } from './components/StudentProgressReport';
 import { SettingsManager } from './components/SettingsManager';
+import { MathFingerLogo } from './components/MathFingerLogo';
 
 import { 
   Home, 
@@ -88,14 +89,23 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className={`flex flex-col items-center justify-center min-h-screen ${theme === 'dark' ? 'bg-[#0f172a] text-slate-300' : 'bg-slate-50 text-slate-700'}`}>
-        <div className="relative">
-          <div className="w-16 h-16 border-4 border-slate-300 border-t-emerald-500 rounded-full animate-spin"></div>
-          <Sparkles className="absolute top-5 left-5 text-emerald-500 animate-pulse" size={24} />
+      <div className={`flex flex-col items-center justify-center min-h-screen ${theme === 'dark' ? 'bg-[#0f172a] text-slate-300' : 'bg-[#fdfbf7] text-slate-700'}`}>
+        <div className="animate-bounce">
+          <MathFingerLogo size={100} showText={false} theme={theme} />
         </div>
-        <h2 className={`text-xl font-bold font-sans ${theme === 'dark' ? 'text-white' : 'text-slate-800'} mt-6 tracking-wide`}>Math Fingers</h2>
-        <p className={`${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} text-sm mt-1.5 font-medium italic`}>"Berhitung cepat tanpa alat hanya sekejap"</p>
-        <p className="text-xs text-slate-500 mt-10">Sinkronisasi Database Supabase...</p>
+        <h2 className={`text-2xl font-black mt-6 tracking-wider`}>
+          <span className="text-rose-500">M</span>
+          <span className="text-amber-500">a</span>
+          <span className="text-sky-400">t</span>
+          <span className="text-emerald-500">h</span>
+          <span className="text-slate-400 ml-2">F</span>
+          <span className="text-indigo-400">i</span>
+          <span className="text-teal-400">n</span>
+          <span className="text-purple-500">g</span>
+          <span className="text-orange-500">e</span>
+          <span className="text-pink-500">r</span>
+        </h2>
+        <p className="text-xs text-slate-500 mt-4 animate-pulse">Menghubungkan ke Database Supabase...</p>
       </div>
     );
   }
@@ -229,21 +239,13 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen flex flex-col md:flex-row transition-colors duration-150 ${theme === 'dark' ? 'bg-[#0f172a] text-slate-300' : 'bg-slate-50 text-slate-700'}`}>
+    <div className={`min-h-screen flex flex-col md:flex-row transition-colors duration-150 ${theme === 'dark' ? 'bg-[#0f172a] text-slate-300' : 'bg-[#fdfcf2] text-slate-700'}`}>
       
       {/* 1. TOP NAVBAR (MOBILE ONLY) */}
-      <header className={`md:hidden px-4 py-3.5 flex items-center justify-between sticky top-0 z-40 shadow-sm border-b transition-colors duration-150 ${
+      <header className={`md:hidden px-4 py-3 flex items-center justify-between sticky top-0 z-40 shadow-sm border-b transition-colors duration-150 ${
         theme === 'dark' ? 'bg-[#020617] border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-800'
       }`}>
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-gradient-to-tr from-emerald-600 to-teal-500 rounded-xl text-white">
-            <Sparkles size={18} />
-          </div>
-          <div>
-            <span className={`font-extrabold text-base tracking-tight block ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Math Fingers</span>
-            <span className="text-[9px] text-slate-500 font-medium block">Berhitung cepat tanpa alat hanya sekejap</span>
-          </div>
-        </div>
+        <MathFingerLogo size={36} textSize="sm" theme={theme} />
 
         <div className="flex items-center gap-2">
           {/* Light/Dark Toggle (Mobile) */}
@@ -280,21 +282,13 @@ export default function App() {
         theme === 'dark' ? 'bg-[#020617] border-slate-800' : 'bg-white border-slate-200'
       }`}>
         {/* Brand Identity */}
-        <div className={`p-6 border-b flex flex-col items-center text-center space-y-2 ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'}`}>
-          <div className="p-3 bg-gradient-to-tr from-emerald-600 to-teal-500 text-white rounded-2xl shadow-sm">
-            <Sparkles size={28} />
-          </div>
-          <div>
-            <h1 className={`text-xl font-black tracking-tight font-sans ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Math Fingers</h1>
-            <p className="text-[10px] text-slate-500 font-medium leading-relaxed mt-0.5 px-2">
-              Berhitung cepat tanpa alat hanya sekejap
-            </p>
-          </div>
+        <div className={`p-5 border-b flex flex-col items-center text-center space-y-3 ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'}`}>
+          <MathFingerLogo size={64} textSize="md" theme={theme} />
           
           {/* Light/Dark Toggle (Desktop) */}
           <button
             onClick={toggleTheme}
-            className={`mt-2 flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
+            className={`mt-1.5 flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
               theme === 'dark' 
                 ? 'bg-slate-900 border-slate-800 text-amber-400 hover:text-white hover:bg-slate-800' 
                 : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'

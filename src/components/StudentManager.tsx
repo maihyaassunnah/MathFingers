@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Student } from '../types';
+import { Student, LearningMaterial } from '../types';
 import { formatWhatsAppPhone, getWhatsAppLink } from '../utils';
 import { Search, Plus, UserPlus, Phone, Calendar, BookOpen, Trash2, Edit2, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
 interface StudentManagerProps {
   students: Student[];
+  materials: LearningMaterial[];
   onAddStudent: (data: Omit<Student, 'id' | 'createdAt'>) => Promise<void>;
   onUpdateStudent: (id: string, data: Partial<Student>) => Promise<void>;
   onDeleteStudent: (id: string) => Promise<void>;
@@ -13,6 +14,7 @@ interface StudentManagerProps {
 
 export function StudentManager({ 
   students, 
+  materials = [],
   onAddStudent, 
   onUpdateStudent, 
   onDeleteStudent,
@@ -29,16 +31,19 @@ export function StudentManager({
   const [parentName, setParentName] = useState('');
   const [parentPhone, setParentPhone] = useState('');
   const [joinDate, setJoinDate] = useState(new Date().toISOString().slice(0, 10));
-  const [level, setLevel] = useState('Level 1: Dasar Satuan (0 - 9)');
+  const [level, setLevel] = useState('');
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
+  const [keterangan, setKeterangan] = useState('');
 
-  const levels = [
-    'Level 1: Dasar Satuan (0 - 9)',
-    'Level 2: Teman Kecil (+/-)',
-    'Level 3: Dasar Puluhan (10 - 90)',
-    'Level 4: Teman Besar (+/-)',
-    'Level 5: Kombinasi & Perkalian'
-  ];
+  const levels = materials && materials.length > 0 
+    ? materials.map(m => m.level)
+    : [
+        'Level 1: Dasar Satuan (0 - 9)',
+        'Level 2: Teman Kecil (+/-)',
+        'Level 3: Dasar Puluhan (10 - 90)',
+        'Level 4: Teman Besar (+/-)',
+        'Level 5: Kombinasi & Perkalian'
+      ];
 
   const handleOpenAdd = () => {
     setEditingStudent(null);
@@ -46,8 +51,9 @@ export function StudentManager({
     setParentName('');
     setParentPhone('');
     setJoinDate(new Date().toISOString().slice(0, 10));
-    setLevel('Level 1: Dasar Satuan (0 - 9)');
+    setLevel(levels[0] || 'Level 1: Dasar Satuan (0 - 9)');
     setStatus('active');
+    setKeterangan('');
     setIsFormOpen(true);
   };
 
@@ -57,8 +63,9 @@ export function StudentManager({
     setParentName(student.parentName);
     setParentPhone(student.parentPhone);
     setJoinDate(student.joinDate);
-    setLevel(student.level);
+    setLevel(student.level || levels[0] || 'Level 1: Dasar Satuan (0 - 9)');
     setStatus(student.status);
+    setKeterangan(student.keterangan || '');
     setIsFormOpen(true);
   };
 
@@ -74,8 +81,9 @@ export function StudentManager({
       parentName,
       parentPhone,
       joinDate,
-      level,
-      status
+      level: level || levels[0] || 'Level 1: Dasar Satuan (0 - 9)',
+      status,
+      keterangan
     };
 
     if (editingStudent) {
@@ -285,6 +293,19 @@ export function StudentManager({
                 </select>
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Keterangan Tambahan (Opsional)</label>
+                <textarea
+                  placeholder="Masukkan keterangan pendaftaran siswa (misalnya preferensi jadwal les, kebutuhan khusus, dsb.)"
+                  value={keterangan}
+                  onChange={(e) => setKeterangan(e.target.value)}
+                  rows={2}
+                  className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm placeholder:text-slate-500 ${
+                    isLight ? 'bg-slate-100 border-slate-200 text-slate-850' : 'bg-slate-900 border-slate-800 text-slate-200'
+                  }`}
+                />
+              </div>
+
               <div className={`pt-4 border-t flex gap-3 justify-end ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
                 <button
                   type="button"
@@ -340,6 +361,15 @@ export function StudentManager({
                       <td className="p-4">
                         <div className={`font-semibold text-sm sm:text-base ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</div>
                         <div className="text-slate-400 text-xs font-mono">ID: {student.id.slice(0, 8)}</div>
+                        {student.keterangan && (
+                          <div className={`text-xs mt-1 px-2 py-0.5 rounded-md border inline-block max-w-[220px] truncate ${
+                            isLight 
+                              ? 'bg-amber-500/5 border-amber-500/20 text-amber-700' 
+                              : 'bg-amber-500/10 border-amber-500/10 text-amber-300'
+                          }`} title={student.keterangan}>
+                            Ket: {student.keterangan}
+                          </div>
+                        )}
                       </td>
                       <td className="p-4 space-y-1">
                         <div className={`text-sm font-medium ${isLight ? 'text-slate-700' : 'text-slate-305'}`}>{student.parentName}</div>

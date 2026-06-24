@@ -82,7 +82,7 @@ export default function App() {
     { id: 'notes', name: 'Jurnal Guru', icon: FileText },
     { id: 'spp', name: 'SPP & Invoice', icon: Receipt },
     { id: 'grades', name: 'Input Nilai', icon: Award },
-    { id: 'simulator', name: 'Daftar Materi & Kurikulum', icon: BookOpen },
+    { id: 'simulator', name: 'Daftar Materi', icon: BookOpen },
     { id: 'report', name: 'Rapor Perkembangan', icon: TrendingUp },
     { id: 'settings', name: 'Pengaturan', icon: Settings },
   ];
@@ -144,6 +144,7 @@ export default function App() {
         return (
           <StudentManager 
             students={students} 
+            materials={materials}
             onAddStudent={addStudent} 
             onUpdateStudent={updateStudent} 
             onDeleteStudent={deleteStudent} 
@@ -343,7 +344,7 @@ export default function App() {
                 }`}
               >
                 <IconComponent size={18} className={isActive ? 'text-white dark:text-slate-950' : theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} />
-                <span>{item.name}</span>
+                <span className="whitespace-nowrap truncate">{item.name}</span>
                 {isActive && (
                   <span className="absolute right-3 top-4.5 w-1.5 h-1.5 bg-white dark:bg-slate-950 rounded-full" />
                 )}

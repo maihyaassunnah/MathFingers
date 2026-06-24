@@ -3,7 +3,7 @@
   "short_name": "MathFingers",
   "description": "Aplikasi manajemen Les Privat Math Fingers dengan motto 'Berhitung cepat tanpa alat hanya sekejap'.",
   "start_url": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "background_color": "#020617",
   "theme_color": "#10b981",
   "orientation": "portrait-primary",

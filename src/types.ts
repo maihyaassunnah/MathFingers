@@ -6,6 +6,7 @@ export interface Student {
   joinDate: string; // YYYY-MM-DD
   level: string; // e.g. "Level 1: Basic"
   status: 'active' | 'inactive';
+  keterangan?: string; // notes / description when registering
   createdAt: number;
 }
 

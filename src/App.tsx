@@ -122,6 +122,18 @@ export default function App() {
     }
   };
 
+  const getAccentTextClass = () => {
+    switch (settings.accentColor) {
+      case 'indigo': return 'text-indigo-600 dark:text-indigo-400';
+      case 'violet': return 'text-violet-600 dark:text-violet-400';
+      case 'amber': return 'text-amber-600 dark:text-amber-400';
+      case 'rose': return 'text-rose-600 dark:text-rose-400';
+      case 'sky': return 'text-sky-600 dark:text-sky-400';
+      case 'emerald':
+      default: return 'text-emerald-600 dark:text-emerald-400';
+    }
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'overview':
@@ -268,13 +280,6 @@ export default function App() {
               <Wifi size={14} />
             </span>
           )}
-
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className={`p-2 rounded-xl hover:bg-slate-800/50 ${theme === 'dark' ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'}`}
-          >
-            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
         </div>
       </header>
 
@@ -420,9 +425,81 @@ export default function App() {
       )}
 
       {/* 4. MAIN WORKSPACE CONTENT WINDOW */}
-      <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto max-w-7xl mx-auto w-full">
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-24 md:pb-8 overflow-y-auto max-w-7xl mx-auto w-full">
         {renderContent()}
       </main>
+
+      {/* 5. MOBILE BOTTOM NAVIGATION */}
+      <div className={`md:hidden fixed bottom-0 left-0 right-0 z-40 border-t backdrop-blur-lg transition-colors duration-150 ${
+        theme === 'dark' ? 'bg-[#020617]/90 border-slate-850 text-white' : 'bg-white/95 border-slate-200 text-slate-800'
+      } pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.08)]`}>
+        <div className="flex items-center justify-around py-2.5 px-1">
+          {/* Dashboard Shortcut */}
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
+              activeTab === 'overview' 
+                ? getAccentTextClass() 
+                : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
+            }`}
+          >
+            <Home size={20} className={activeTab === 'overview' ? 'scale-110 transition-transform' : 'transition-transform'} />
+            <span className="text-[10px] font-bold tracking-tight">Dashboard</span>
+          </button>
+
+          {/* Siswa Shortcut */}
+          <button
+            onClick={() => setActiveTab('students')}
+            className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
+              activeTab === 'students' 
+                ? getAccentTextClass() 
+                : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
+            }`}
+          >
+            <Users size={20} className={activeTab === 'students' ? 'scale-110 transition-transform' : 'transition-transform'} />
+            <span className="text-[10px] font-bold tracking-tight">Siswa</span>
+          </button>
+
+          {/* Absensi Shortcut */}
+          <button
+            onClick={() => setActiveTab('attendance')}
+            className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
+              activeTab === 'attendance' 
+                ? getAccentTextClass() 
+                : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
+            }`}
+          >
+            <CheckSquare size={20} className={activeTab === 'attendance' ? 'scale-110 transition-transform' : 'transition-transform'} />
+            <span className="text-[10px] font-bold tracking-tight">Absensi</span>
+          </button>
+
+          {/* Input Nilai Shortcut */}
+          <button
+            onClick={() => setActiveTab('grades')}
+            className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
+              activeTab === 'grades' 
+                ? getAccentTextClass() 
+                : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
+            }`}
+          >
+            <Award size={20} className={activeTab === 'grades' ? 'scale-110 transition-transform' : 'transition-transform'} />
+            <span className="text-[10px] font-bold tracking-tight text-center">Input Nilai</span>
+          </button>
+
+          {/* Menu Lainnya Button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(true)}
+            className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
+              isMobileMenuOpen 
+                ? getAccentTextClass() 
+                : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
+            }`}
+          >
+            <Menu size={20} className="transition-transform" />
+            <span className="text-[10px] font-bold tracking-tight">Lainnya</span>
+          </button>
+        </div>
+      </div>
 
     </div>
   );

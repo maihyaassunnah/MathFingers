@@ -31,106 +31,133 @@ export function getWhatsAppLink(phone: string, text: string): string {
 export const SEED_MATERIALS: LearningMaterial[] = [
   {
     id: 'mat-1',
-    level: 'Level 1: Dasar Satuan (0 - 9)',
-    title: 'Pengenalan Jari Tangan Kanan',
-    description: 'Menggunakan jari tangan kanan untuk melambangkan nilai satuan 0 sampai 9. Kunci dasar berhitung cepat.',
+    level: 'Level Dasar: Pengenalan Simbol Jari',
+    title: 'Pengenalan Jari Tangan Kanan & Kiri',
+    description: 'Menggunakan jari tangan kanan untuk satuan (1-9) dan tangan kiri untuk puluhan (10-90) sebagai pondasi dasar berhitung cepat.',
     formulas: [
       'Jempol Kanan = 5',
-      'Telunjuk Kanan = 1',
-      'Jari Tengah Kanan = 1',
-      'Jari Manis Kanan = 1',
-      'Jari Kelingking Kanan = 1',
-      'Semua jari kanan ditutup = 0'
+      'Jempol Kiri = 50',
+      'Telunjuk Kanan = 1, Telunjuk Kiri = 10',
+      'Semua jari ditutup = 0'
     ],
     steps: [
-      'Posisikan tangan kanan mengepal di depan dada (nilai 0).',
-      'Buka jari telunjuk untuk melambangkan nilai 1.',
-      'Buka berturut-turut jari tengah (2), manis (3), kelingking (4).',
-      'Tutup empat jari dan buka jempol kanan untuk melambangkan nilai 5.',
-      'Buka kembali telunjuk bersama jempol untuk 6, tengah untuk 7, manis untuk 8, kelingking untuk 9.'
+      'Posisikan kedua tangan mengepal di depan dada (nilai 0).',
+      'Buka jari telunjuk kanan untuk melambangkan nilai 1.',
+      'Tutup empat jari kanan dan buka jempol kanan untuk melambangkan nilai 5.',
+      'Buka jari telunjuk kiri untuk melambangkan nilai 10.',
+      'Buka jempol kiri untuk melambangkan nilai 50.'
     ]
   },
   {
     id: 'mat-2',
-    level: 'Level 2: Teman Kecil (+/-)',
-    title: 'Metode Teman Kecil (Kombinasi Angka 5)',
-    description: 'Digunakan saat jari satu-satuan tidak cukup untuk ditambah atau dikurangi, menggunakan basis angka 5.',
+    level: 'Level 1 : Penjumlahan & Pengurangan Angka Satuan',
+    title: 'Operasi Jari Satuan Langsung (Direct Single-Digit)',
+    description: 'Melatih refleks penjumlahan dan pengurangan langsung di tangan kanan tanpa menggunakan rumus bantuan.',
     formulas: [
-      'Teman Kecil +4 = +5 - 1',
-      'Teman Kecil +3 = +5 - 2',
-      'Teman Kecil +2 = +5 - 3',
-      'Teman Kecil +1 = +5 - 4',
-      'Teman Kecil -4 = -5 + 1',
-      'Teman Kecil -3 = -5 + 2',
-      'Teman Kecil -2 = -5 + 3',
-      'Teman Kecil -1 = -5 + 4'
+      '+1 s.d +4 secara langsung pada tangan kanan',
+      '-1 s.d -4 secara langsung pada tangan kanan'
     ],
     steps: [
-      'Latih siswa mengenali pasangannya: 4 temannya 1, 3 temannya 2.',
-      'Contoh Kasus 1 + 4: Mulai dari 1 (telunjuk terbuka). Jari satuan sisa 3 (kurang untuk +4). Terapkan rumus +4 yaitu buka jempol (+5) dan tutup telunjuk (-1). Hasilnya 5 (jempol terbuka).',
-      'Berikan drill soal secara lisan dengan ritme cepat untuk melatih refleks gerakan jari.'
+      'Posisikan tangan kanan mengepal (0).',
+      'Latih soal penambahan langsung, contoh: 2 + 2 - 1 = buka 2 jari, buka 2 jari lagi, tutup 1 jari. Hasil akhir = 3.',
+      'Latih kombinasi jempol (5), contoh: 1 + 5 + 2 = buka telunjuk (1), buka jempol (5), buka 2 jari lagi (2). Hasil akhir = 8.'
     ]
   },
   {
     id: 'mat-3',
-    level: 'Level 3: Dasar Puluhan (10 - 90)',
-    title: 'Pengenalan Jari Tangan Kiri',
-    description: 'Menggunakan tangan kiri untuk melambangkan nilai puluhan (10 sampai 90), dikombinasikan dengan tangan kanan.',
+    level: 'Level 2 : Penjumlahan & Pengurangan Angka Puluhan',
+    title: 'Operasi Jari Puluhan Langsung (Direct Tens)',
+    description: 'Melatih koordinasi tangan kiri untuk nilai puluhan dan tangan kanan untuk nilai satuan dalam operasi langsung.',
     formulas: [
-      'Jempol Kiri = 50',
-      'Telunjuk Kiri = 10',
-      'Jari Tengah Kiri = 10',
-      'Jari Manis Kiri = 10',
-      'Jari Kelingking Kiri = 10',
-      'Kedua tangan digunakan bersama untuk angka 11 sampai 99'
+      '+10 s.d +40 secara langsung pada tangan kiri',
+      '-10 s.d -40 secara langsung pada tangan kiri'
     ],
     steps: [
-      'Latih tangan kiri terpisah terlebih dahulu untuk melambangkan puluhan: 10, 20, 30, 40, 50 (jempol kiri), 60, 70, 80, 90.',
-      'Gabungkan latihan: Tangan kiri menunjukkan puluhan, tangan kanan menunjukkan satuan (Contoh: 24 = 2 jari kiri terbuka, 4 jari kanan terbuka).',
-      'Lakukan penambahan langsung tanpa rumus (Contoh: 12 + 22 = buka 10 & 20 di kiri, buka 2 & 2 di kanan).'
+      'Gunakan tangan kiri untuk melambangkan nilai puluhan (10, 20, 30, dst).',
+      'Contoh soal: 20 + 20 - 10 = buka 2 jari kiri (20), buka 2 jari kiri lagi (20), tutup 1 jari kiri (10). Hasil akhir = 30.',
+      'Gabungkan latihan puluhan dan satuan, contoh: 12 + 22 = 34 (3 jari kiri, 4 jari kanan).'
     ]
   },
   {
     id: 'mat-4',
-    level: 'Level 4: Teman Besar (+/-)',
-    title: 'Metode Teman Besar (Kombinasi Angka 10)',
-    description: 'Menggunakan basis angka 10 (melibatkan gerakan jari tangan kiri puluhan) untuk penambahan/pengurangan melampaui batas tangan kanan.',
+    level: 'Level 3 : Penjumlahan & Pengurangan Angka Ratusan',
+    title: 'Operasi Jari Ratusan & Visualisasi Bayangan',
+    description: 'Mengembangkan visualisasi ingatan ratusan di otak sementara jari aktif melakukan perhitungan puluhan dan satuan.',
     formulas: [
-      'Teman Besar +9 = +10 - 1',
-      'Teman Besar +8 = +10 - 2',
-      'Teman Besar +7 = +10 - 3',
-      'Teman Besar +6 = +10 - 4',
-      'Teman Besar +5 = +10 - 5',
-      'Teman Besar -9 = -10 + 1',
-      'Teman Besar -8 = -10 + 2',
-      'Teman Besar -7 = -10 + 3',
-      'Teman Besar -6 = -10 + 4'
+      'Simpan ratusan di dalam memori/ingatan visual',
+      'Gunakan jari tangan kiri (puluhan) dan kanan (satuan) untuk sisa nilai'
     ],
     steps: [
-      'Minta siswa menghafal pasangannya: 9 kawannya 1, 8 kawannya 2, 7 kawannya 3, 6 kawannya 4, 5 kawannya 5.',
-      'Contoh 7 + 8: Tampilkan 7 di tangan kanan (jempol + 2 jari). Untuk +8, karena sisa jari kanan kurang, buka 10 di kiri (+10) dan tutup 2 jari di kanan (-2). Hasilnya 15 (1 di kiri, 5 di kanan).',
-      'Latih konsistensi koordinasi jempol kiri dan gerakan tangan kanan.'
+      'Latih siswa untuk menyimpan angka ratusan dalam bayangan visual pikiran.',
+      'Lakukan operasi hitung puluhan dan satuan secara aktif di jari kedua tangan.',
+      'Sebutkan hasil akhir dengan menggabungkan ratusan di memori dan puluhan/satuan di jari.'
     ]
   },
   {
     id: 'mat-5',
-    level: 'Level 5: Kombinasi & Perkalian',
-    title: 'Perkalian Cepat Satu Jari',
-    description: 'Berhitung perkalian 1-digit dengan 2-digit menggunakan simulasi jari berkecepatan tinggi.',
+    level: 'Level 4 : Perkalian Dasar 1-5',
+    title: 'Konsep Perkalian Jari & Penjumlahan Berulang',
+    description: 'Memahami konsep dasar perkalian di bawah 5 menggunakan simulasi gerakan jari penjumlahan berulang yang cepat.',
     formulas: [
-      'Perkalian 9: Menutup jari ke-N dari kiri ke kanan memberikan hasil (Contoh: Jari ke-3 ditutup = 2 di kiri, 7 di kanan = 27)',
-      'Perkalian 6-10: Mengatupkan jari-jari bernilai di atas 5 (Jari terbuka bernilai puluhan, jari tertutup dikalikan).'
+      'A x B = Penjumlahan berulang angka A sebanyak B kali'
     ],
     steps: [
-      'Ajarkan trik perkalian 9 terlebih dahulu untuk membangun kepercayaan diri siswa.',
-      'Untuk perkalian umum, latih siswa membayangkan penjumlahan berulang beruntun dengan metode Math Fingers tingkat tinggi.'
+      'Ajarkan bahwa perkalian adalah penambahan berulang secara sistematis.',
+      'Latih gerakan jari refleks untuk menambahkan angka berulang (Contoh: 3 x 4 = lakukan 3 + 3 + 3 + 3 di jari dengan lincah).',
+      'Siswa merekam tempo ketukan jari agar hasil hitung stabil dan tepat.'
+    ]
+  },
+  {
+    id: 'mat-6',
+    level: 'Level 5 : Perkalian Dasar 6-10',
+    title: 'Metode Lipat Jari Formasi Jaritmatika',
+    description: 'Menggunakan formasi melipat jari-jari di atas nilai 5 untuk menghitung perkalian 6 sampai 10 secara instan.',
+    formulas: [
+      'Jari ditekuk/dilipat = Bernilai puluhan (ditambahkan)',
+      'Jari berdiri/terbuka = Bernilai satuan (dikalikan)'
+    ],
+    steps: [
+      'Tentukan formasi lipat jari untuk angka di atas 5 (contoh: 7 melipat 2 jari, 8 melipat 3 jari).',
+      'Untuk 7 x 8, lipat 2 jari kiri dan 3 jari kanan. Jumlah jari dilipat: 2 + 3 = 5 (bernilai 50).',
+      'Kalikan sisa jari yang berdiri: 3 (kiri) x 2 (kanan) = 6.',
+      'Jumlahkan hasil puluhan dan satuan: 50 + 6 = 56.'
+    ]
+  },
+  {
+    id: 'mat-7',
+    level: 'Level 6 : Perkalian Angka Puluhan & Satuan',
+    title: 'Metode Pembagian Distributif Cepat',
+    description: 'Melakukan perkalian angka dua digit (belasan/puluhan) dengan angka satu digit menggunakan urutan distributif jari.',
+    formulas: [
+      '(A0 + B) x C = (A0 x C) + (B x C)'
+    ],
+    steps: [
+      'Kalikan angka puluhan dengan pengali terlebih dahulu, simpan hasilnya dalam memori.',
+      'Kalikan angka satuan dengan pengali tersebut di jari tangan.',
+      'Gabungkan hasil perkalian puluhan di memori dengan hasil satuan di jari.'
+    ]
+  },
+  {
+    id: 'mat-8',
+    level: 'Level 7 : Perkalian Angka Puluhan & Puluhan',
+    title: 'Perkalian Silang Kilat Jaritmatika',
+    description: 'Metode tingkat mahir untuk menghitung perkalian dua digit dengan dua digit menggunakan gerak refleks silang.',
+    formulas: [
+      'Langkah 1: Satuan x Satuan',
+      'Langkah 2: (Puluhan x Satuan) + (Satuan x Puluhan) [Kali Silang]',
+      'Langkah 3: Puluhan x Puluhan'
+    ],
+    steps: [
+      'Gunakan teknik simpan-tambah di jari untuk menampung angka sisa (carry over).',
+      'Latih siswa melakukan kalkulasi mental silang secara berurutan dengan panduan ketukan jari refleks.',
+      'Berikan drill harian untuk memperkuat memori jangka pendek anak.'
     ]
   }
 ];
 
 // Helper to generate a unique Invoice Number
-export function generateInvoiceNo(): string {
+export function generateInvoiceNo(prefix: string = 'INV/MF'): string {
   const dateStr = new Date().toISOString().slice(2, 7).replace('-', ''); // e.g., "2606"
   const rand = Math.floor(1000 + Math.random() * 9000); // 4 digit random
-  return `INV/MF/${dateStr}/${rand}`;
+  return `${prefix}/${dateStr}/${rand}`;
 }

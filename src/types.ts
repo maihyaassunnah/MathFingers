@@ -9,7 +9,7 @@ export interface Student {
   keterangan?: string; // notes / description when registering
   tempatLahir?: string;
   tanggalLahir?: string; // YYYY-MM-DD
-  jenisPaket?: string; // e.g. "Reguler", "Privat", "Kelompok"
+  jenisPaket?: string; // e.g. "4P", "8P"
   jenisKelamin?: 'Laki-laki' | 'Perempuan';
   alamat?: string;
   createdAt: number;
@@ -75,6 +75,9 @@ export interface AppSettings {
   defaultSppAmount: number;
   accentColor: 'emerald' | 'indigo' | 'violet' | 'amber' | 'rose' | 'sky';
   defaultTeacherName: string;
+  invoicePrefix?: string;
+  invoiceLogo?: string;
+  invoiceSignature?: string;
 }
 
 export interface DashboardTask {

@@ -157,6 +157,9 @@ export default function App() {
           <StudentManager 
             students={students} 
             materials={materials}
+            attendance={attendance}
+            notes={notes}
+            grades={grades}
             onAddStudent={addStudent} 
             onUpdateStudent={updateStudent} 
             onDeleteStudent={deleteStudent} 
@@ -426,7 +429,9 @@ export default function App() {
 
       {/* 4. MAIN WORKSPACE CONTENT WINDOW */}
       <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-24 md:pb-8 overflow-y-auto max-w-7xl mx-auto w-full">
-        {renderContent()}
+        <div key={activeTab} className="animate-page-fade-in">
+          {renderContent()}
+        </div>
       </main>
 
       {/* 5. MOBILE BOTTOM NAVIGATION */}

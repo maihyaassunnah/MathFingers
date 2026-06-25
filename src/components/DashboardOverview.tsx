@@ -186,43 +186,43 @@ export function DashboardOverview({
       </div>
  
       {/* Metrics bento-grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         
         {/* Metric 1 */}
         <div 
           onClick={() => onNavigate('students')} 
-          className={`p-4 sm:p-5 rounded-2xl border shadow-sm flex items-center gap-4 cursor-pointer hover:border-slate-400 transition group ${
+          className={`p-3 sm:p-5 rounded-2xl border shadow-sm flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:border-slate-400 transition group ${
             isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
           }`}
         >
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition border ${
+          <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition border ${
             isLight ? 'bg-slate-100 group-hover:bg-slate-200 text-emerald-600 border-slate-200' : 'bg-slate-800 group-hover:bg-slate-700 text-emerald-400 border-slate-700/50'
           }`}>
-            <Users size={20} />
+            <Users size={16} className="sm:w-5 sm:h-5" />
           </div>
           <div>
-            <span className="text-slate-500 text-xs font-semibold block">SISWA AKTIF</span>
-            <span className={`text-xl sm:text-2xl font-extrabold ${isLight ? 'text-slate-800' : 'text-white'}`}>{activeStudents.length}</span>
-            <span className="text-[10px] text-slate-500 block mt-0.5">Siswa terdaftar</span>
+            <span className="text-slate-500 text-[10px] sm:text-xs font-semibold block">SISWA AKTIF</span>
+            <span className={`text-lg sm:text-2xl font-extrabold ${isLight ? 'text-slate-800' : 'text-white'}`}>{activeStudents.length}</span>
+            <span className="text-[10px] text-slate-500 hidden sm:block mt-0.5">Siswa terdaftar</span>
           </div>
         </div>
 
         {/* Metric 2 */}
         <div 
           onClick={() => onNavigate('attendance')} 
-          className={`p-4 sm:p-5 rounded-2xl border shadow-sm flex items-center gap-4 cursor-pointer hover:border-slate-400 transition group ${
+          className={`p-3 sm:p-5 rounded-2xl border shadow-sm flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:border-slate-400 transition group ${
             isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
           }`}
         >
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition border ${
+          <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition border ${
             isLight ? 'bg-slate-100 group-hover:bg-slate-200 text-amber-600 border-slate-200' : 'bg-slate-800 group-hover:bg-slate-700 text-amber-400 border-slate-700/50'
           }`}>
-            <CheckSquare size={20} />
+            <CheckSquare size={16} className="sm:w-5 sm:h-5" />
           </div>
           <div>
-            <span className="text-slate-500 text-xs font-semibold block">PRESENSI HARI INI</span>
-            <span className={`text-xl sm:text-2xl font-extrabold ${isLight ? 'text-slate-800' : 'text-white'}`}>{todaysAttendance.length > 0 ? `${attendanceRate}%` : 'N/A'}</span>
-            <span className="text-[10px] text-slate-500 block mt-0.5">
+            <span className="text-slate-500 text-[10px] sm:text-xs font-semibold block">PRESENSI</span>
+            <span className={`text-lg sm:text-2xl font-extrabold ${isLight ? 'text-slate-800' : 'text-white'}`}>{todaysAttendance.length > 0 ? `${attendanceRate}%` : 'N/A'}</span>
+            <span className="text-[10px] text-slate-500 hidden sm:block mt-0.5">
               {todaysAttendance.length > 0 ? 'Sudah absen' : 'Belum diabsen hari ini'}
             </span>
           </div>
@@ -231,38 +231,40 @@ export function DashboardOverview({
         {/* Metric 3 */}
         <div 
           onClick={() => onNavigate('spp')} 
-          className={`p-4 sm:p-5 rounded-2xl border shadow-sm flex items-center gap-4 cursor-pointer hover:border-slate-400 transition group ${
+          className={`p-3 sm:p-5 rounded-2xl border shadow-sm flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:border-slate-400 transition group ${
             isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
           }`}
         >
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition border ${
+          <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition border ${
             isLight ? 'bg-slate-100 group-hover:bg-slate-200 text-rose-600 border-slate-200' : 'bg-slate-800 group-hover:bg-slate-700 text-rose-400 border-slate-700/50'
           }`}>
-            <Receipt size={20} />
+            <Receipt size={16} className="sm:w-5 sm:h-5" />
           </div>
           <div>
-            <span className="text-slate-500 text-xs font-semibold block">TAGIHAN SPP</span>
-            <span className={`text-xl sm:text-2xl font-extrabold ${isLight ? 'text-slate-800' : 'text-white'}`}>{unpaidInvoices.length} Tagihan</span>
-            <span className="text-[10px] text-rose-500 font-bold block mt-0.5">{formatRupiah(unpaidAmount)}</span>
+            <span className="text-slate-500 text-[10px] sm:text-xs font-semibold block">TAGIHAN SPP</span>
+            <span className={`text-lg sm:text-2xl font-extrabold ${isLight ? 'text-slate-800' : 'text-white'}`}>
+              {unpaidInvoices.length} <span className="hidden sm:inline">Tagihan</span>
+            </span>
+            <span className="text-[10px] text-rose-500 font-bold hidden sm:block mt-0.5">{formatRupiah(unpaidAmount)}</span>
           </div>
         </div>
 
         {/* Metric 4 */}
         <div 
           onClick={() => onNavigate('grades')} 
-          className={`p-4 sm:p-5 rounded-2xl border shadow-sm flex items-center gap-4 cursor-pointer hover:border-slate-400 transition group ${
+          className={`p-3 sm:p-5 rounded-2xl border shadow-sm flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:border-slate-400 transition group ${
             isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
           }`}
         >
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition border ${
+          <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition border ${
             isLight ? 'bg-slate-100 group-hover:bg-slate-200 text-blue-600 border-slate-200' : 'bg-slate-800 group-hover:bg-slate-700 text-blue-400 border-slate-700/50'
           }`}>
-            <Award size={20} />
+            <Award size={16} className="sm:w-5 sm:h-5" />
           </div>
           <div>
-            <span className="text-slate-500 text-xs font-semibold block">RATA-RATA KELAS</span>
-            <span className={`text-xl sm:text-2xl font-extrabold ${isLight ? 'text-slate-800' : 'text-white'}`}>{avgClassScore}/100</span>
-            <span className="text-[10px] text-slate-500 block mt-0.5">Akurasi kuis berhitung</span>
+            <span className="text-slate-500 text-[10px] sm:text-xs font-semibold block">RATA KELAS</span>
+            <span className={`text-lg sm:text-2xl font-extrabold ${isLight ? 'text-slate-800' : 'text-white'}`}>{avgClassScore}/100</span>
+            <span className="text-[10px] text-slate-500 hidden sm:block mt-0.5">Akurasi kuis berhitung</span>
           </div>
         </div>
 
@@ -459,7 +461,7 @@ export function DashboardOverview({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Left column: Action shortcuts */}
-        <div className={`p-5 rounded-2xl border shadow-sm space-y-4 lg:col-span-1 ${
+        <div className={`hidden md:block p-5 rounded-2xl border shadow-sm space-y-4 lg:col-span-1 ${
           isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
         }`}>
           <h3 className={`font-bold text-base ${isLight ? 'text-slate-850' : 'text-white'}`}>Menu Navigasi Pintar</h3>

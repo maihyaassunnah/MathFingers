@@ -139,7 +139,8 @@ export function MaterialList({
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Tingkatan Silabus</h3>
             <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
               {materials.map((mat) => {
-                const levelNum = mat.level.match(/\d+/)?.[0] || '1';
+                const isDasar = mat.level.toLowerCase().includes('dasar');
+                const levelNum = isDasar ? 'D' : (mat.level.match(/\d+/)?.[0] || '1');
                 const isActive = selectedMatId === mat.id || (!selectedMatId && activeMaterial?.id === mat.id);
 
                 return (
@@ -163,7 +164,9 @@ export function MaterialList({
                     </div>
                     
                     <div className="flex-1 min-w-0 font-sans">
-                      <div className="text-xs font-semibold text-slate-400 font-mono tracking-wider">LEVEL {levelNum}</div>
+                      <div className="text-xs font-semibold text-slate-400 font-mono tracking-wider">
+                        {isDasar ? 'LEVEL DASAR' : `LEVEL ${levelNum}`}
+                      </div>
                       <div className={`font-bold truncate text-sm mt-0.5 ${isLight ? 'text-slate-800' : 'text-white'}`}>{mat.title}</div>
                     </div>
                   </button>

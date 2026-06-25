@@ -186,7 +186,11 @@ export function AttendanceTracker({
                   isLight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/20'
                 }`}>
                   <div className="flex-1">
-                    <span className="text-xs font-semibold text-slate-400 font-mono tracking-wider">LEVEL {student.level.match(/\d/)?.[0] || '1'}</span>
+                    <span className="text-xs font-semibold text-slate-400 font-mono tracking-wider">
+                      {student.level.toLowerCase().includes('dasar') 
+                        ? 'LEVEL DASAR' 
+                        : `LEVEL ${student.level.match(/\d+/)?.[0] || '1'}`}
+                    </span>
                     <h3 className={`font-bold text-base ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</h3>
                     <p className="text-slate-400 text-xs mt-0.5">Wali: {student.parentName} ({student.parentPhone})</p>
                   </div>

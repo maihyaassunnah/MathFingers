@@ -156,63 +156,105 @@ function angkaKeTerbilang(nominal: number): string {
       format: 'a5'
     });
     
+    // Dynamic Accent Color Helper
+    const getAccentRGB = (): [number, number, number] => {
+      switch (settings.accentColor) {
+        case 'indigo': return [79, 70, 229];
+        case 'violet': return [124, 58, 237];
+        case 'amber': return [217, 119, 6];
+        case 'rose': return [225, 29, 72];
+        case 'sky': return [14, 165, 233];
+        case 'emerald':
+        default: return [5, 150, 105];
+      }
+    };
+    
+    const getAccentLightRGB = (): [number, number, number] => {
+      switch (settings.accentColor) {
+        case 'indigo': return [240, 242, 254];
+        case 'violet': return [245, 243, 255];
+        case 'amber': return [254, 243, 199];
+        case 'rose': return [255, 241, 242];
+        case 'sky': return [240, 249, 255];
+        case 'emerald':
+        default: return [240, 253, 250];
+      }
+    };
+
+    const [accentR, accentG, accentB] = getAccentRGB();
+    const [lightR, lightG, lightB] = getAccentLightRGB();
+
     // Background card border & padding lines
     doc.setDrawColor(226, 232, 240); // Slate-200
     doc.setLineWidth(1);
     doc.rect(8, 8, 194, 132); // Outer border frame
     
-    doc.setDrawColor(5, 150, 105); // Emerald-600 inner border frame
+    doc.setDrawColor(accentR, accentG, accentB); // Dynamic brand inner border frame
     doc.setLineWidth(0.3);
     doc.rect(9.5, 9.5, 191, 129);
 
-    // Decorative pastel dots/stars
-    doc.setFillColor(254, 252, 233); // Soft yellow
-    doc.circle(15, 15, 18, 'F');
-    doc.setFillColor(236, 253, 245); // Soft green
-    doc.circle(195, 15, 15, 'F');
-    doc.setFillColor(254, 243, 199); // Amber
-    doc.circle(20, 130, 12, 'F');
+    // Subtle modern pastel dot watermarks in 4 corners instead of giant overlapping circles
+    doc.setFillColor(lightR, lightG, lightB);
+    doc.circle(12, 12, 6, 'F');
+    doc.circle(198, 12, 6, 'F');
+    doc.circle(12, 136, 6, 'F');
+    doc.circle(198, 136, 6, 'F');
 
-    // 1. TOP LEFT: MATH FINGERS BRANDING
+    // 1. TOP LEFT: BRANDING & CUSTOM LOGO
     const brandX = 14;
     const brandY = 16;
     
-    // Tiny cute hand drawing
-    doc.setFillColor(5, 150, 105); // Emerald
-    doc.circle(brandX + 5, brandY + 6, 3.5, 'F'); // palm
-    doc.rect(brandX + 4.2, brandY + 8.5, 1.6, 2, 'F'); // wrist
-    // Fingers
-    doc.setFillColor(245, 158, 11); // Amber
-    doc.rect(brandX + 1, brandY + 4, 1.2, 3, 'F'); // thumb
-    doc.setFillColor(59, 130, 246); // Blue
-    doc.rect(brandX + 3, brandY + 1.5, 1.2, 4.5, 'F'); // index
-    doc.setFillColor(239, 68, 68); // Red
-    doc.rect(brandX + 5, brandY + 0.5, 1.2, 5.5, 'F'); // middle
-    doc.setFillColor(139, 92, 246); // Purple
-    doc.rect(brandX + 7, brandY + 1.5, 1.2, 4.5, 'F'); // ring
-    doc.setFillColor(249, 115, 22); // Orange
-    doc.rect(brandX + 9, brandY + 3, 1.2, 3, 'F'); // pinky
+    if (settings.invoiceLogo) {
+      try {
+        // Embed uploaded custom Logo
+        doc.addImage(settings.invoiceLogo, 'PNG', brandX, brandY - 5, 22, 15);
+      } catch (err) {
+        console.error("Failed to draw custom logo in PDF, drawing fallback", err);
+        drawFallbackLogo(brandX, brandY);
+      }
+    } else {
+      drawFallbackLogo(brandX, brandY);
+    }
 
     // Brand Titles
+    const textOffset = settings.invoiceLogo ? 25 : 13;
     doc.setFont("Helvetica", "bold");
-    doc.setFontSize(13);
-    doc.setTextColor(5, 150, 105); // Emerald-600
-    doc.text("MATH FINGERS", brandX + 13, brandY + 5);
+    doc.setFontSize(12.5);
+    doc.setTextColor(accentR, accentG, accentB);
+    doc.text("MATH FINGERS", brandX + textOffset, brandY + 4.5);
     
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(7.5);
     doc.setTextColor(100, 116, 139); // Slate-500
-    doc.text("Easy Learning House • Berhitung Cepat", brandX + 13, brandY + 9);
+    doc.text("Easy Learning House • Berhitung Cepat", brandX + textOffset, brandY + 8.5);
+
+    // Helper to draw default hand logo icon
+    function drawFallbackLogo(bx: number, by: number) {
+      doc.setFillColor(accentR, accentG, accentB); // Dynamic
+      doc.circle(bx + 5, by + 6, 3.5, 'F'); // palm
+      doc.rect(bx + 4.2, by + 8.5, 1.6, 2, 'F'); // wrist
+      // Fingers
+      doc.setFillColor(245, 158, 11); // Amber
+      doc.rect(bx + 1, by + 4, 1.2, 3, 'F'); // thumb
+      doc.setFillColor(59, 130, 246); // Blue
+      doc.rect(bx + 3, by + 1.5, 1.2, 4.5, 'F'); // index
+      doc.setFillColor(239, 68, 68); // Red
+      doc.rect(bx + 5, by + 0.5, 1.2, 5.5, 'F'); // middle
+      doc.setFillColor(139, 92, 246); // Purple
+      doc.rect(bx + 7, by + 1.5, 1.2, 4.5, 'F'); // ring
+      doc.setFillColor(249, 115, 22); // Orange
+      doc.rect(bx + 9, by + 3, 1.2, 3, 'F'); // pinky
+    }
 
     // 2. TOP MIDDLE: KUITANSI TITLE
     doc.setFont("Helvetica", "bold");
-    doc.setFontSize(18);
-    doc.setTextColor(5, 150, 105);
-    doc.text("KUITANSI", 105, 19, { align: 'center' });
+    doc.setFontSize(17);
+    doc.setTextColor(accentR, accentG, accentB);
+    doc.text("KUITANSI", 105, 18.5, { align: 'center' });
     doc.setFontSize(7.5);
     doc.setFont("Helvetica", "bold");
-    doc.setTextColor(245, 158, 11); // Amber-500
-    doc.text("TANDA TERIMA RESMI SPP", 105, 23.5, { align: 'center' });
+    doc.setTextColor(245, 158, 11); // Amber-500 title highlight
+    doc.text("TANDA TERIMA RESMI SPP", 105, 23, { align: 'center' });
 
     // 3. TOP RIGHT: INVOICE META BOX
     const metaX = 148;
@@ -223,7 +265,7 @@ function angkaKeTerbilang(nominal: number): string {
     doc.setFillColor(248, 250, 252); // Slate-50 light background
     doc.setDrawColor(226, 232, 240); // Slate-200 border
     doc.setLineWidth(0.4);
-    doc.rect(metaX, metaY, metaW, metaH, 'FD');
+    doc.roundedRect(metaX, metaY, metaW, metaH, 1.5, 1.5, 'FD');
     
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(7.5);
@@ -285,7 +327,7 @@ function angkaKeTerbilang(nominal: number): string {
     doc.setFont("Helvetica", "bold");
     doc.setTextColor(30, 41, 59);
     const genderSuffix = student?.jenisKelamin ? ` (${student.jenisKelamin === 'Laki-laki' ? 'L' : 'P'})` : '';
-    const packageText = student?.jenisPaket ? ` • Paket ${student.jenisPaket}` : ' • Paket Reguler';
+    const packageText = student?.jenisPaket ? ` • Paket ${student.jenisPaket}` : ' • Paket 4P';
     const levelText = student?.level ? ` • ${student.level}` : '';
     doc.text(`${invoice.studentName}${genderSuffix}${packageText}${levelText}`, valueX, r2);
     doc.line(valueX, r2 + 1.5, 196, r2 + 1.5);
@@ -297,56 +339,56 @@ function angkaKeTerbilang(nominal: number): string {
     doc.text(":", valueX - 4, r3);
     
     doc.setFont("Helvetica", "bold");
-    doc.setTextColor(5, 150, 105); // Accent color
+    doc.setTextColor(accentR, accentG, accentB); // Accent Color text
     doc.text(`Iuran Bulanan (SPP) Periode ${invoice.month}`, valueX, r3);
     doc.line(valueX, r3 + 1.5, 196, r3 + 1.5);
 
-    // Terbilang Uang Band
-    doc.setFillColor(240, 253, 250); // Emerald-50 light green band
-    doc.rect(labelX, r4, 182, 10, 'F');
+    // Terbilang Uang Band - Rounding rect for gorgeous card look
+    doc.setFillColor(lightR, lightG, lightB); // Accent Light banner
+    doc.roundedRect(labelX, r4, 182, 10, 2, 2, 'F');
     
     doc.setFont("Helvetica", "bold");
     doc.setFontSize(9);
-    doc.setTextColor(5, 150, 105);
+    doc.setTextColor(accentR, accentG, accentB);
     doc.text("Uang Sejumlah", labelX + 3, r4 + 6.5);
     doc.text(":", valueX - 4, r4 + 6.5);
     
     doc.setFont("Helvetica", "bolditalic");
     doc.setFontSize(9.5);
-    doc.setTextColor(15, 118, 110); // Teal-800
+    doc.setTextColor(Math.max(0, accentR - 35), Math.max(0, accentG - 35), Math.max(0, accentB - 35)); // High contrast dark version of accent
     const amountInWords = `### ${angkaKeTerbilang(invoice.amount)} Rupiah ###`;
     doc.text(amountInWords, valueX, r4 + 6.5);
 
     // 5. FOOTER SECTION
-    const footerY = 90;
+    const footerY = 92;
     
-    // Amount display box (Left bottom)
-    doc.setFillColor(5, 150, 105); // Deep emerald solid background
-    doc.rect(labelX, footerY, 68, 14, 'F');
+    // Amount display box (Left bottom) - Gorgeous rounded rectangle
+    doc.setFillColor(accentR, accentG, accentB); // Dynamic solid background
+    doc.roundedRect(labelX, footerY, 70, 14, 2, 2, 'F');
     
     doc.setFont("Helvetica", "bold");
-    doc.setFontSize(14);
+    doc.setFontSize(13.5);
     doc.setTextColor(255, 255, 255); // White font
     const formattedAmount = `Rp ${invoice.amount.toLocaleString('id-ID')},-`;
-    doc.text(formattedAmount, labelX + 34, footerY + 9.5, { align: 'center' });
+    doc.text(formattedAmount, labelX + 35, footerY + 9.2, { align: 'center' });
     
     // Info details below Amount Box
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(7.5);
     doc.setTextColor(148, 163, 184); // Slate-400
     const payMethodText = invoice.paymentMethod ? `Metode Pembayaran: ${invoice.paymentMethod}` : 'Metode Pembayaran: Lunas';
-    doc.text(payMethodText, labelX, footerY + 19);
+    doc.text(payMethodText, labelX + 2, footerY + 19);
 
     // Motto middle
-    const mottoX = 114;
+    const mottoX = 116;
     doc.setFont("Helvetica", "italic");
     doc.setFontSize(7.5);
     doc.setTextColor(148, 163, 184);
     doc.text('"Berhitung Cepat & Akurat Tanpa Alat"', mottoX, footerY + 6, { align: 'center' });
     
     // Little hand icon decoration in middle
-    doc.setFillColor(209, 250, 229); // Emerald-100
-    doc.circle(mottoX, footerY - 2, 2, 'F');
+    doc.setFillColor(lightR, lightG, lightB);
+    doc.circle(mottoX, footerY - 2, 2.5, 'F');
 
     // Right bottom: Signature
     const signX = 168;
@@ -355,15 +397,24 @@ function angkaKeTerbilang(nominal: number): string {
     doc.setTextColor(100, 116, 139);
     doc.text("Penerima,", signX, footerY, { align: 'center' });
     
+    // Draw electronic signature if uploaded by user
+    if (settings.invoiceSignature) {
+      try {
+        doc.addImage(settings.invoiceSignature, 'PNG', signX - 16, footerY + 1.5, 32, 12);
+      } catch (err) {
+        console.error("Failed to render custom electronic signature onto PDF", err);
+      }
+    }
+
     // Signature underline line
-    doc.setDrawColor(203, 213, 225);
+    doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(0.4);
-    doc.line(signX - 20, footerY + 15, signX + 20, footerY + 15);
+    doc.line(signX - 22, footerY + 14.5, signX + 22, footerY + 14.5);
     
     doc.setFont("Helvetica", "bold");
     doc.setFontSize(9);
     doc.setTextColor(30, 41, 59);
-    doc.text(settings.defaultTeacherName, signX, footerY + 19, { align: 'center' });
+    doc.text(settings.defaultTeacherName, signX, footerY + 18.5, { align: 'center' });
 
     doc.save(`Receipt_SPP_${invoice.invoiceNo.replace(/\//g, '_')}.pdf`);
   };

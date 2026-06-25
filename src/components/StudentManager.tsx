@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { Student, LearningMaterial } from '../types';
+import { Student, LearningMaterial, Attendance, TeacherNote, Grade } from '../types';
 import { formatWhatsAppPhone, getWhatsAppLink } from '../utils';
-import { Search, Plus, UserPlus, Phone, Calendar, BookOpen, Trash2, Edit2, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { generateStudentPDFReport } from '../utils/pdfGenerator';
+import { Search, Plus, UserPlus, Phone, Calendar, BookOpen, Trash2, Edit2, CheckCircle, XCircle, AlertCircle, Download } from 'lucide-react';
 
 interface StudentManagerProps {
   students: Student[];
   materials: LearningMaterial[];
+  attendance: Attendance[];
+  notes: TeacherNote[];
+  grades: Grade[];
   onAddStudent: (data: Omit<Student, 'id' | 'createdAt'>) => Promise<void>;
   onUpdateStudent: (id: string, data: Partial<Student>) => Promise<void>;
   onDeleteStudent: (id: string) => Promise<void>;
@@ -15,6 +19,9 @@ interface StudentManagerProps {
 export function StudentManager({ 
   students, 
   materials = [],
+  attendance = [],
+  notes = [],
+  grades = [],
   onAddStudent, 
   onUpdateStudent, 
   onDeleteStudent,
@@ -36,19 +43,20 @@ export function StudentManager({
   const [keterangan, setKeterangan] = useState('');
   const [tempatLahir, setTempatLahir] = useState('');
   const [tanggalLahir, setTanggalLahir] = useState('');
-  const [jenisPaket, setJenisPaket] = useState('Reguler');
+  const [jenisPaket, setJenisPaket] = useState('4P');
   const [jenisKelamin, setJenisKelamin] = useState<'Laki-laki' | 'Perempuan'>('Laki-laki');
   const [alamat, setAlamat] = useState('');
 
-  const levels = materials && materials.length > 0 
-    ? materials.map(m => m.level)
-    : [
-        'Level 1: Dasar Satuan (0 - 9)',
-        'Level 2: Teman Kecil (+/-)',
-        'Level 3: Dasar Puluhan (10 - 90)',
-        'Level 4: Teman Besar (+/-)',
-        'Level 5: Kombinasi & Perkalian'
-      ];
+  const levels = [
+    'Level Dasar: Pengenalan Simbol Jari',
+    'Level 1 : Penjumlahan & Pengurangan Angka Satuan',
+    'Level 2 : Penjumlahan & Pengurangan Angka Puluhan',
+    'Level 3 : Penjumlahan & Pengurangan Angka Ratusan',
+    'Level 4 : Perkalian Dasar 1-5',
+    'Level 5 : Perkalian Dasar 6-10',
+    'Level 6 : Perkalian Angka Puluhan & Satuan',
+    'Level 7 : Perkalian Angka Puluhan & Puluhan'
+  ];
 
   const handleOpenAdd = () => {
     setEditingStudent(null);
@@ -56,12 +64,12 @@ export function StudentManager({
     setParentName('');
     setParentPhone('');
     setJoinDate(new Date().toISOString().slice(0, 10));
-    setLevel(levels[0] || 'Level 1: Dasar Satuan (0 - 9)');
+    setLevel(levels[0] || 'Level Dasar: Pengenalan Simbol Jari');
     setStatus('active');
     setKeterangan('');
     setTempatLahir('');
     setTanggalLahir('');
-    setJenisPaket('Reguler');
+    setJenisPaket('4P');
     setJenisKelamin('Laki-laki');
     setAlamat('');
     setIsFormOpen(true);
@@ -73,12 +81,12 @@ export function StudentManager({
     setParentName(student.parentName);
     setParentPhone(student.parentPhone);
     setJoinDate(student.joinDate);
-    setLevel(student.level || levels[0] || 'Level 1: Dasar Satuan (0 - 9)');
+    setLevel(student.level || levels[0] || 'Level Dasar: Pengenalan Simbol Jari');
     setStatus(student.status);
     setKeterangan(student.keterangan || '');
     setTempatLahir(student.tempatLahir || '');
     setTanggalLahir(student.tanggalLahir || '');
-    setJenisPaket(student.jenisPaket || 'Reguler');
+    setJenisPaket(student.jenisPaket || '4P');
     setJenisKelamin(student.jenisKelamin || 'Laki-laki');
     setAlamat(student.alamat || '');
     setIsFormOpen(true);
@@ -96,7 +104,7 @@ export function StudentManager({
       parentName,
       parentPhone,
       joinDate,
-      level: level || levels[0] || 'Level 1: Dasar Satuan (0 - 9)',
+      level: level || levels[0] || 'Level Dasar: Pengenalan Simbol Jari',
       status,
       keterangan,
       tempatLahir,
@@ -150,18 +158,6 @@ export function StudentManager({
           <UserPlus size={18} />
           <span>Tambah Siswa Baru</span>
         </button>
-      </div>
-
-      {/* Informational database notice */}
-      <div className={`p-4 rounded-xl border flex items-start gap-3 text-xs leading-relaxed ${
-        isLight 
-          ? 'bg-emerald-500/5 border-emerald-500/15 text-emerald-800' 
-          : 'bg-emerald-500/10 border-emerald-500/10 text-emerald-300'
-      }`}>
-        <AlertCircle size={16} className="mt-0.5 shrink-0" />
-        <div>
-          <span className="font-semibold">Info Pembaruan Database:</span> Formulir pendaftaran kini mendukung data lengkap (Tempat & Tanggal Lahir, Jenis Paket, Jenis Kelamin, dan Alamat Rumah). Jika Anda menggunakan Supabase, pastikan untuk menyalin & menjalankan skrip pembaruan tabel dari menu <strong>Pengaturan</strong> agar data baru disinkronkan secara online. Sementara waktu, seluruh data pendaftaran baru tersimpan dengan aman secara lokal.
-        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -361,9 +357,8 @@ export function StudentManager({
                       isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
                     }`}
                   >
-                    <option value="Reguler" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Reguler</option>
-                    <option value="Privat" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Privat</option>
-                    <option value="Intensif" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Intensif</option>
+                    <option value="4P" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>4P</option>
+                    <option value="8P" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>8P</option>
                   </select>
                 </div>
                 <div>
@@ -477,19 +472,23 @@ export function StudentManager({
                             </span>
                           )}
                         </div>
-                        <div className="text-slate-400 text-xs font-mono">ID: {student.id.slice(0, 8)}</div>
-                        
-                        {/* TTL */}
-                        {(student.tempatLahir || student.tanggalLahir) && (
-                          <div className="text-slate-400 text-xs mt-1">
-                            <span className="opacity-70">Lahir:</span> {student.tempatLahir || '-'}{student.tanggalLahir ? `, ${student.tanggalLahir}` : ''}
-                          </div>
-                        )}
 
-                        {/* Alamat */}
-                        {student.alamat && (
-                          <div className="text-slate-400 text-xs mt-0.5 truncate max-w-[240px]" title={student.alamat}>
-                            <span className="opacity-70">Alamat:</span> {student.alamat}
+                        {/* Lahir & Alamat Sejajar */}
+                        {((student.tempatLahir || student.tanggalLahir) || student.alamat) && (
+                          <div className="text-slate-400 text-xs mt-1 flex flex-wrap gap-x-2 items-center leading-relaxed">
+                            {(student.tempatLahir || student.tanggalLahir) && (
+                              <span>
+                                <span className="opacity-70">Lahir:</span> {student.tempatLahir || '-'}{student.tanggalLahir ? `, ${student.tanggalLahir}` : ''}
+                              </span>
+                            )}
+                            {((student.tempatLahir || student.tanggalLahir) && student.alamat) && (
+                              <span className="text-slate-600 dark:text-slate-500 font-bold">•</span>
+                            )}
+                            {student.alamat && (
+                              <span className="truncate max-w-[280px]" title={student.alamat}>
+                                <span className="opacity-70">Alamat:</span> {student.alamat}
+                              </span>
+                            )}
                           </div>
                         )}
 
@@ -542,6 +541,13 @@ export function StudentManager({
                       </td>
                       <td className="p-4">
                         <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => generateStudentPDFReport(student, attendance, notes, grades)}
+                            className="p-1.5 text-slate-500 hover:text-blue-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                            title="Unduh Rapor PDF"
+                          >
+                            <Download size={16} />
+                          </button>
                           <button
                             onClick={() => handleOpenEdit(student)}
                             className="p-1.5 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"

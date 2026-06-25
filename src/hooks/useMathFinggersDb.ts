@@ -39,7 +39,8 @@ export function useMathFinggersDb() {
       bankAccountHolder: 'Admin Math Fingers',
       defaultSppAmount: 250000,
       accentColor: 'emerald',
-      defaultTeacherName: 'Admin Math Fingers'
+      defaultTeacherName: 'Admin Math Fingers',
+      invoicePrefix: 'INV/MF'
     });
   });
 
@@ -131,8 +132,16 @@ export function useMathFinggersDb() {
       setGrades(loadedGrades);
       saveLocalData('grades', loadedGrades);
 
-      if (!materialsData || materialsData.length === 0) {
-        // Seed default materials to Supabase
+      const hasOldMaterials = !materialsData || materialsData.length === 0 || materialsData.some(m => m.level.includes('Dasar Satuan'));
+      if (hasOldMaterials) {
+        if (supabase && materialsData && materialsData.length > 0) {
+          try {
+            const oldIds = ['mat-1', 'mat-2', 'mat-3', 'mat-4', 'mat-5'];
+            await supabase.from('materials').delete().in('id', oldIds);
+          } catch (e) {
+            console.warn('Could not delete old materials:', e);
+          }
+        }
         await seedDefaultMaterialsToSupabase();
       } else {
         setMaterials(materialsData);
@@ -157,7 +166,8 @@ export function useMathFinggersDb() {
     setGrades(getLocalData<Grade[]>('grades', []));
     
     const localMats = getLocalData<LearningMaterial[]>('materials', []);
-    if (localMats.length === 0) {
+    const hasOldLocal = localMats.length === 0 || localMats.some(m => m.level.includes('Dasar Satuan'));
+    if (hasOldLocal) {
       saveLocalData('materials', SEED_MATERIALS);
       setMaterials(SEED_MATERIALS);
     } else {
@@ -349,7 +359,7 @@ export function useMathFinggersDb() {
 
   // --- INVOICE WRITERS ---
   const createInvoice = async (invoiceData: Omit<Invoice, 'id' | 'invoiceNo' | 'createdAt'>) => {
-    const invoiceNo = generateInvoiceNo();
+    const invoiceNo = generateInvoiceNo(settings.invoicePrefix || 'INV/MF');
     const newInvoice: Invoice = {
       ...invoiceData,
       id: generateId(),

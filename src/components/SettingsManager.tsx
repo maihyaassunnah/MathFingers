@@ -11,7 +11,10 @@ import {
   Save, 
   RefreshCw,
   Smartphone,
-  Download
+  Download,
+  Upload,
+  Image,
+  Trash2
 } from 'lucide-react';
 
 interface SettingsManagerProps {
@@ -36,8 +39,28 @@ export function SettingsManager({ settings, onUpdateSettings, theme = 'dark' }: 
   const [defaultSppAmount, setDefaultSppAmount] = useState(settings.defaultSppAmount);
   const [accentColor, setAccentColor] = useState<AppSettings['accentColor']>(settings.accentColor);
   const [defaultTeacherName, setDefaultTeacherName] = useState(settings.defaultTeacherName);
+  const [invoicePrefix, setInvoicePrefix] = useState(settings.invoicePrefix || 'INV/MF');
+  const [invoiceLogo, setInvoiceLogo] = useState<string | undefined>(settings.invoiceLogo);
+  const [invoiceSignature, setInvoiceSignature] = useState<string | undefined>(settings.invoiceSignature);
   
   const [isSaved, setIsSaved] = useState(false);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'signature') => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          if (type === 'logo') {
+            setInvoiceLogo(reader.result);
+          } else {
+            setInvoiceSignature(reader.result);
+          }
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +70,10 @@ export function SettingsManager({ settings, onUpdateSettings, theme = 'dark' }: 
       bankAccountHolder,
       defaultSppAmount: Number(defaultSppAmount),
       accentColor,
-      defaultTeacherName
+      defaultTeacherName,
+      invoicePrefix,
+      invoiceLogo,
+      invoiceSignature
     });
 
     setIsSaved(true);
@@ -61,6 +87,9 @@ export function SettingsManager({ settings, onUpdateSettings, theme = 'dark' }: 
     setDefaultSppAmount(250000);
     setAccentColor('emerald');
     setDefaultTeacherName('Admin Math Fingers');
+    setInvoicePrefix('INV/MF');
+    setInvoiceLogo(undefined);
+    setInvoiceSignature(undefined);
   };
 
   const isLight = theme === 'light';
@@ -173,6 +202,27 @@ export function SettingsManager({ settings, onUpdateSettings, theme = 'dark' }: 
                 </div>
                 <p className="text-[10px] text-slate-500 mt-1">Dicantumkan pada kuitansi digital atau default pembuat Jurnal Catatan Guru.</p>
               </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Format / Awalan Nomor Invoice *
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: INV/MF atau KUITANSI"
+                    value={invoicePrefix}
+                    onChange={(e) => setInvoicePrefix(e.target.value)}
+                    className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-1 text-sm font-mono font-bold ${
+                      isLight 
+                        ? 'bg-slate-50 border-slate-200 text-slate-800' 
+                        : 'bg-slate-950/40 border-slate-800 text-white'
+                    } ${getAccentBorderClass()}`}
+                  />
+                </div>
+                <p className="text-[10px] text-slate-500 mt-1">Mengubah format penomoran invoice (contoh hasil: <code>{invoicePrefix}/2606/4231</code>).</p>
+              </div>
             </div>
           </div>
 
@@ -242,6 +292,112 @@ export function SettingsManager({ settings, onUpdateSettings, theme = 'dark' }: 
               </div>
               <p className="text-[10px] text-slate-500 mt-1">Rincian bank ini akan dimasukkan secara otomatis dalam template pesan tagihan WhatsApp dan kuitansi PDF SPP.</p>
             </div>
+          </div>
+        </div>
+
+        {/* Row 1.5: Logo & Signature Settings */}
+        <div className={`p-6 rounded-2xl border shadow-sm space-y-5 ${
+          isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+        }`}>
+          <h3 className={`text-sm font-bold uppercase tracking-wider ${isLight ? 'text-slate-500' : 'text-slate-400'} flex items-center gap-2 border-b pb-3 ${isLight ? 'border-slate-100' : 'border-slate-800/80'}`}>
+            <Image size={16} className={getAccentTextClass()} />
+            <span>Kustomisasi Dokumen Kuitansi (Logo & Tanda Tangan)</span>
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Logo Upload Card */}
+            <div className={`p-4 rounded-xl border flex flex-col justify-between ${
+              isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/30 border-slate-800'
+            }`}>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  Logo Instansi / Les (Menggantikan Default)
+                </label>
+                <p className="text-[10px] text-slate-500 mb-3">
+                  Upload logo format PNG/JPG dengan rasio persegi/lanskap. Logo akan dicetak pada header kiri atas kuitansi.
+                </p>
+                
+                {invoiceLogo ? (
+                  <div className="relative border border-slate-200 dark:border-slate-800 rounded-xl p-3 bg-slate-100 dark:bg-slate-950/40 flex items-center justify-center h-28 group">
+                    <img 
+                      src={invoiceLogo} 
+                      alt="Invoice Logo Preview" 
+                      className="max-h-full max-w-full object-contain"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setInvoiceLogo(undefined)}
+                      className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-600 text-white hover:bg-red-500 transition shadow-sm"
+                      title="Hapus Logo"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className={`border-2 border-dashed rounded-xl p-5 flex flex-col items-center justify-center h-28 hover:border-slate-400 transition cursor-pointer relative group ${
+                    isLight ? 'border-slate-300' : 'border-slate-800'
+                  }`}>
+                    <Upload size={22} className="text-slate-500 group-hover:text-slate-400 transition mb-1.5" />
+                    <span className="text-xs font-semibold text-slate-400 group-hover:text-slate-300">Pilih berkas Logo</span>
+                    <span className="text-[9px] text-slate-500 mt-0.5">Maks. 1MB (PNG/JPG)</span>
+                    <input
+                      type="file"
+                      accept="image/png, image/jpeg"
+                      onChange={(e) => handleImageUpload(e, 'logo')}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Signature Upload Card */}
+            <div className={`p-4 rounded-xl border flex flex-col justify-between ${
+              isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/30 border-slate-800'
+            }`}>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  Tanda Tangan Elektronik Penerima (Format PNG)
+                </label>
+                <p className="text-[10px] text-slate-500 mb-3">
+                  Upload tanda tangan dengan background transparan (PNG) untuk ditempelkan secara otomatis di atas nama pengajar.
+                </p>
+                
+                {invoiceSignature ? (
+                  <div className="relative border border-slate-200 dark:border-slate-800 rounded-xl p-3 bg-slate-100 dark:bg-slate-950/40 flex items-center justify-center h-28 group">
+                    <img 
+                      src={invoiceSignature} 
+                      alt="Invoice Signature Preview" 
+                      className="max-h-full max-w-full object-contain animate-fade-in"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setInvoiceSignature(undefined)}
+                      className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-600 text-white hover:bg-red-500 transition shadow-sm"
+                      title="Hapus Tanda Tangan"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className={`border-2 border-dashed rounded-xl p-5 flex flex-col items-center justify-center h-28 hover:border-slate-400 transition cursor-pointer relative group ${
+                    isLight ? 'border-slate-300' : 'border-slate-800'
+                  }`}>
+                    <Upload size={22} className="text-slate-500 group-hover:text-slate-400 transition mb-1.5" />
+                    <span className="text-xs font-semibold text-slate-400 group-hover:text-slate-300">Pilih berkas TTD</span>
+                    <span className="text-[9px] text-slate-500 mt-0.5">Disarankan PNG transparan</span>
+                    <input
+                      type="file"
+                      accept="image/png"
+                      onChange={(e) => handleImageUpload(e, 'signature')}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
         </div>
 

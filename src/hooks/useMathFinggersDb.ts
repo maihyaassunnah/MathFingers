@@ -527,6 +527,76 @@ export function useMathFinggersDb() {
     saveLocalData('dashboard_tasks', updated);
   };
 
+  // --- MANUAL BACKUP IMPORT WRITER ---
+  const importBackupData = async (backupPayload: any) => {
+    try {
+      const data = backupPayload?.data || backupPayload;
+      if (!data) throw new Error('Data cadangan tidak valid');
+
+      const importedStudents = Array.isArray(data.students) ? data.students : null;
+      const importedGrades = Array.isArray(data.grades) ? data.grades : null;
+      const importedAttendance = Array.isArray(data.attendance) ? data.attendance : null;
+      const importedNotes = Array.isArray(data.notes) ? data.notes : null;
+      const importedInvoices = Array.isArray(data.invoices) ? data.invoices : null;
+      const importedTasks = Array.isArray(data.dashboardTasks) ? data.dashboardTasks : null;
+
+      if (!importedStudents && !importedGrades) {
+        throw new Error('Data siswa atau nilai tidak ditemukan dalam cadangan');
+      }
+
+      // Update Local State & LocalStorage
+      if (importedStudents) {
+        setStudents(importedStudents);
+        saveLocalData('students', importedStudents);
+        if (supabase && !isOfflineFallback) {
+          await supabase.from('students').upsert(importedStudents);
+        }
+      }
+
+      if (importedGrades) {
+        setGrades(importedGrades);
+        saveLocalData('grades', importedGrades);
+        if (supabase && !isOfflineFallback) {
+          await supabase.from('grades').upsert(importedGrades);
+        }
+      }
+
+      if (importedAttendance) {
+        setAttendance(importedAttendance);
+        saveLocalData('attendance', importedAttendance);
+        if (supabase && !isOfflineFallback) {
+          await supabase.from('attendance').upsert(importedAttendance);
+        }
+      }
+
+      if (importedNotes) {
+        setNotes(importedNotes);
+        saveLocalData('notes', importedNotes);
+        if (supabase && !isOfflineFallback) {
+          await supabase.from('notes').upsert(importedNotes);
+        }
+      }
+
+      if (importedInvoices) {
+        setInvoices(importedInvoices);
+        saveLocalData('invoices', importedInvoices);
+        if (supabase && !isOfflineFallback) {
+          await supabase.from('invoices').upsert(importedInvoices);
+        }
+      }
+
+      if (importedTasks) {
+        setDashboardTasks(importedTasks);
+        saveLocalData('dashboard_tasks', importedTasks);
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      console.error('Failed to import backup:', err);
+      return { success: false, error: err.message || 'Gagal memproses file cadangan' };
+    }
+  };
+
   return {
     students,
     attendance,
@@ -555,6 +625,7 @@ export function useMathFinggersDb() {
     updateSettings,
     addDashboardTask,
     toggleDashboardTask,
-    deleteDashboardTask
+    deleteDashboardTask,
+    importBackupData
   };
 }

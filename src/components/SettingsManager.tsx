@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { AppSettings } from '../types';
 import { 
   Settings, 
@@ -14,13 +14,23 @@ import {
   Download,
   Upload,
   Image,
-  Trash2
+  Trash2,
+  Database,
+  FileJson,
+  AlertCircle
 } from 'lucide-react';
 
 interface SettingsManagerProps {
   settings: AppSettings;
   onUpdateSettings: (newSettings: AppSettings) => void;
   theme?: string;
+  students?: any[];
+  grades?: any[];
+  attendance?: any[];
+  notes?: any[];
+  invoices?: any[];
+  dashboardTasks?: any[];
+  onImportBackup?: (backupPayload: any) => Promise<{ success: boolean; error?: string }>;
 }
 
 const ACCENT_COLORS = [
@@ -32,7 +42,18 @@ const ACCENT_COLORS = [
   { id: 'sky', name: 'Sky Blue', colorClass: 'bg-sky-500', hoverClass: 'hover:bg-sky-600', ringClass: 'ring-sky-400' },
 ] as const;
 
-export function SettingsManager({ settings, onUpdateSettings, theme = 'dark' }: SettingsManagerProps) {
+export function SettingsManager({ 
+  settings, 
+  onUpdateSettings, 
+  theme = 'dark',
+  students = [],
+  grades = [],
+  attendance = [],
+  notes = [],
+  invoices = [],
+  dashboardTasks = [],
+  onImportBackup
+}: SettingsManagerProps) {
   const [bankName, setBankName] = useState(settings.bankName);
   const [bankAccountNo, setBankAccountNo] = useState(settings.bankAccountNo);
   const [bankAccountHolder, setBankAccountHolder] = useState(settings.bankAccountHolder);
@@ -44,6 +65,85 @@ export function SettingsManager({ settings, onUpdateSettings, theme = 'dark' }: 
   const [invoiceSignature, setInvoiceSignature] = useState<string | undefined>(settings.invoiceSignature);
   
   const [isSaved, setIsSaved] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importStatus, setImportStatus] = useState<null | { success: boolean; error?: string }>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExportBackup = () => {
+    try {
+      setIsExporting(true);
+      const backupData = {
+        appName: "Math Fingers System Backup",
+        backupDate: new Date().toISOString(),
+        data: {
+          students,
+          grades,
+          attendance,
+          notes,
+          invoices,
+          dashboardTasks,
+          settings
+        }
+      };
+
+      const jsonString = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `math_fingers_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error exporting backup:', err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onImportBackup) return;
+
+    try {
+      setIsImporting(true);
+      setImportStatus(null);
+      const reader = new FileReader();
+      
+      reader.onload = async (event) => {
+        try {
+          const content = event.target?.result;
+          if (typeof content !== 'string') {
+            throw new Error('Format file tidak didukung');
+          }
+
+          const parsed = JSON.parse(content);
+          const result = await onImportBackup(parsed);
+          
+          if (result.success) {
+            setImportStatus({ success: true });
+          } else {
+            setImportStatus({ success: false, error: result.error || 'Gagal memulihkan data cadangan' });
+          }
+        } catch (parseErr: any) {
+          setImportStatus({ success: false, error: 'File bukan format JSON yang valid: ' + parseErr.message });
+        } finally {
+          setIsImporting(false);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+      };
+
+      reader.readAsText(file);
+    } catch (err: any) {
+      setImportStatus({ success: false, error: 'Gagal membaca berkas: ' + err.message });
+      setIsImporting(false);
+    }
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'signature') => {
     const file = e.target.files?.[0];
@@ -437,6 +537,120 @@ export function SettingsManager({ settings, onUpdateSettings, theme = 'dark' }: 
                 );
               })}
             </div>
+          </div>
+        </div>
+
+        {/* Row 3: Manual Backup & Restore Settings */}
+        <div className={`p-6 rounded-2xl border shadow-sm space-y-5 ${
+          isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+        }`}>
+          <h3 className={`text-sm font-bold uppercase tracking-wider ${isLight ? 'text-slate-500' : 'text-slate-400'} flex items-center gap-2 border-b pb-3 ${isLight ? 'border-slate-100' : 'border-slate-800/80'}`}>
+            <Database size={16} className={getAccentTextClass()} />
+            <span>Penyimpanan & Cadangan Data (Manual Backup)</span>
+          </h3>
+
+          <div className="space-y-4">
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Ekspor seluruh data siswa, absensi, jurnal guru, tagihan, dan nilai ke format JSON untuk disimpan secara lokal di perangkat Anda sebagai cadangan data manual. Anda juga dapat mengimpor file tersebut untuk memulihkan seluruh data sistem ke kondisi semula.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Export Panel */}
+              <div className={`p-4 rounded-xl border flex flex-col justify-between ${
+                isLight ? 'bg-slate-50/50 border-slate-200' : 'bg-slate-950/20 border-slate-800'
+              }`}>
+                <div>
+                  <h4 className={`text-xs font-bold uppercase tracking-wider mb-1 ${isLight ? 'text-slate-700' : 'text-slate-300'} flex items-center gap-1.5`}>
+                    <FileJson size={14} className="text-emerald-500" />
+                    <span>Ekspor Data Utama</span>
+                  </h4>
+                  <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+                    Unduh salinan cadangan lengkap data siswa, nilai akademis, dan seluruh riwayat sistem dalam bentuk berkas JSON tunggal.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleExportBackup}
+                  disabled={isExporting}
+                  className={`w-full py-3 px-4 rounded-xl font-bold text-xs tracking-wide transition flex items-center justify-center gap-2 border ${
+                    isLight 
+                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-transparent' 
+                      : 'bg-emerald-950/30 hover:bg-emerald-900/40 text-emerald-400 border-emerald-500/20'
+                  }`}
+                >
+                  <Download size={14} className={isExporting ? 'animate-bounce' : ''} />
+                  <span>{isExporting ? 'Memproses Ekspor...' : 'Unduh File Cadangan (.JSON)'}</span>
+                </button>
+              </div>
+
+              {/* Import Panel */}
+              <div className={`p-4 rounded-xl border flex flex-col justify-between ${
+                isLight ? 'bg-slate-50/50 border-slate-200' : 'bg-slate-950/20 border-slate-800'
+              }`}>
+                <div>
+                  <h4 className={`text-xs font-bold uppercase tracking-wider mb-1 ${isLight ? 'text-slate-700' : 'text-slate-300'} flex items-center gap-1.5`}>
+                    <Upload size={14} className="text-amber-500" />
+                    <span>Impor / Pulihkan Data</span>
+                  </h4>
+                  <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+                    Unggah berkas JSON cadangan Anda yang sebelumnya telah diunduh untuk memulihkan seluruh data siswa dan riwayat nilai sistem.
+                  </p>
+                </div>
+                <div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept=".json"
+                    onChange={handleImportFileChange}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isImporting}
+                    className={`w-full py-3 px-4 rounded-xl font-bold text-xs tracking-wide transition flex items-center justify-center gap-2 border ${
+                      isLight 
+                        ? 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200' 
+                        : 'bg-slate-900 hover:bg-slate-850 text-slate-300 border-slate-800'
+                    }`}
+                  >
+                    <Upload size={14} className={isImporting ? 'animate-pulse' : ''} />
+                    <span>{isImporting ? 'Memproses Impor...' : 'Pilih & Impor Berkas JSON'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Import Status Alert */}
+            {importStatus && (
+              <div className={`p-4 rounded-xl border flex items-start gap-3 animate-fade-in ${
+                importStatus.success
+                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
+                  : 'bg-red-500/10 border-red-500/20 text-red-500'
+              }`}>
+                {importStatus.success ? (
+                  <>
+                    <Check size={16} className="mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h5 className="text-xs font-bold uppercase tracking-wider">Pemulihan Sukses</h5>
+                      <p className="text-xs opacity-90 mt-0.5">
+                        Berhasil memulihkan seluruh data siswa dan nilai dari berkas cadangan lokal! Antarmuka otomatis memuat data terbaru.
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h5 className="text-xs font-bold uppercase tracking-wider">Kesalahan Impor</h5>
+                      <p className="text-xs opacity-90 mt-0.5">
+                        {importStatus.error}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

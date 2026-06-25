@@ -7,9 +7,10 @@ import { TeacherNotes } from './components/TeacherNotes';
 import { SppInvoiceManager } from './components/SppInvoiceManager';
 import { GradeManager } from './components/GradeManager';
 import { MaterialList } from './components/MaterialList';
-import { StudentProgressReport } from './components/StudentProgressReport';
 import { SettingsManager } from './components/SettingsManager';
+import { StudentProgressReport } from './components/StudentProgressReport';
 import { MathFingerLogo } from './components/MathFingerLogo';
+import { LoginManager } from './components/LoginManager';
 
 import { 
   Home, 
@@ -28,10 +29,14 @@ import {
   Smartphone,
   Sun,
   Moon,
-  Settings
+  Settings,
+  LogOut
 } from 'lucide-react';
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState<string | null>(() => {
+    return localStorage.getItem('math_finggers_current_user');
+  });
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -72,7 +77,8 @@ export default function App() {
     updateSettings,
     addDashboardTask,
     toggleDashboardTask,
-    deleteDashboardTask
+    deleteDashboardTask,
+    importBackupData
   } = useMathFinggersDb();
 
   const navigationItems = [
@@ -233,6 +239,13 @@ export default function App() {
             settings={settings} 
             onUpdateSettings={updateSettings} 
             theme={theme}
+            students={students}
+            grades={grades}
+            attendance={attendance}
+            notes={notes}
+            invoices={invoices}
+            dashboardTasks={dashboardTasks}
+            onImportBackup={importBackupData}
           />
         );
       default:
@@ -253,6 +266,18 @@ export default function App() {
         );
     }
   };
+
+  if (!currentUser) {
+    return (
+      <LoginManager 
+        onLogin={(adminName) => {
+          setCurrentUser(adminName);
+          localStorage.setItem('math_finggers_current_user', adminName);
+        }} 
+        theme={theme} 
+      />
+    );
+  }
 
   return (
     <div className={`min-h-screen flex flex-col md:flex-row transition-colors duration-150 ${theme === 'dark' ? 'bg-[#0f172a] text-slate-300' : 'bg-[#fdfcf2] text-slate-700'}`}>
@@ -361,9 +386,38 @@ export default function App() {
           })}
         </nav>
 
-        {/* Footer info panel */}
-        <div className={`p-4 border-t text-[10px] text-slate-500 text-center ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'}`}>
-          &copy; {new Date().getFullYear()} Math Fingers System v1.1.0
+        {/* Admin Profile & Logout (Desktop) */}
+        <div className={`p-4 border-t flex flex-col gap-3.5 ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'}`}>
+          <div className="flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${
+              theme === 'dark' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+            }`}>
+              {currentUser?.split(' ').map(n => n[0]).join('')}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className={`text-xs font-bold truncate ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>{currentUser}</h4>
+              <span className="text-[10px] text-slate-500 font-medium block">Administrator</span>
+            </div>
+          </div>
+          
+          <button
+            onClick={() => {
+              setCurrentUser(null);
+              localStorage.removeItem('math_finggers_current_user');
+            }}
+            className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold border transition ${
+              theme === 'dark'
+                ? 'bg-red-500/5 hover:bg-red-500/10 border-red-500/10 text-red-400 hover:text-red-300'
+                : 'bg-red-50/50 hover:bg-red-100/50 border-red-200/50 text-red-600'
+            }`}
+          >
+            <LogOut size={13} />
+            <span>Keluar Sesi</span>
+          </button>
+
+          <div className="text-[9px] text-slate-500 text-center mt-1">
+            &copy; {new Date().getFullYear()} Math Fingers System v1.1.0
+          </div>
         </div>
       </aside>
 
@@ -420,8 +474,38 @@ export default function App() {
               })}
             </nav>
 
-            <div className={`p-4 border-t text-[10px] text-slate-500 text-center ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
-              Math Fingers Privat Tutor
+            {/* Admin Profile & Logout (Mobile Drawer) */}
+            <div className={`p-4 border-t flex flex-col gap-3 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black shrink-0 ${
+                  theme === 'dark' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-600'
+                }`}>
+                  {currentUser?.split(' ').map(n => n[0]).join('')}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className={`text-xs font-bold truncate ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>{currentUser}</h4>
+                  <span className="text-[9px] text-slate-500">Administrator</span>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => {
+                  setCurrentUser(null);
+                  localStorage.removeItem('math_finggers_current_user');
+                }}
+                className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold border transition ${
+                  theme === 'dark'
+                    ? 'bg-red-500/5 hover:bg-red-500/10 border-red-500/10 text-red-400'
+                    : 'bg-red-50/50 hover:bg-red-100/50 border-red-200/50 text-red-600'
+                }`}
+              >
+                <LogOut size={12} />
+                <span>Keluar Sesi</span>
+              </button>
+              
+              <div className="text-[8px] text-slate-500 text-center mt-1">
+                Math Fingers Privat Tutor
+              </div>
             </div>
           </div>
         </div>

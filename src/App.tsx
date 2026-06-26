@@ -98,7 +98,7 @@ export default function App() {
     { id: 'spp', name: 'SPP & Invoice', icon: Receipt },
     { id: 'spp_history', name: 'Riwayat SPP', icon: History },
     { id: 'grades', name: 'Input Nilai', icon: Award },
-    { id: 'simulator', name: 'Daftar Materi', icon: BookOpen },
+    { id: 'simulator', name: 'Kurikulum', icon: BookOpen },
     { id: 'report', name: 'Rapor Perkembangan', icon: TrendingUp },
     { id: 'supabase_sql', name: 'SQL Editor Supabase', icon: Database },
     { id: 'settings', name: 'Pengaturan', icon: Settings },

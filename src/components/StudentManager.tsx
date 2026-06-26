@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Student, LearningMaterial, Attendance, TeacherNote, Grade } from '../types';
 import { formatWhatsAppPhone, getWhatsAppLink } from '../utils';
 import { generateStudentPDFReport } from '../utils/pdfGenerator';
-import { Search, Plus, UserPlus, Phone, Calendar, BookOpen, Trash2, Edit2, CheckCircle, XCircle, AlertCircle, Download, Award } from 'lucide-react';
+import { Search, Plus, UserPlus, Phone, Calendar, BookOpen, Trash2, Edit2, CheckCircle, XCircle, AlertCircle, Download, Award, Video, ExternalLink, Eye, X, Image as ImageIcon } from 'lucide-react';
 
 interface StudentManagerProps {
   students: Student[];
@@ -48,6 +48,11 @@ export function StudentManager({
   const [jenisPaket, setJenisPaket] = useState('4P');
   const [jenisKelamin, setJenisKelamin] = useState<'Laki-laki' | 'Perempuan'>('Laki-laki');
   const [alamat, setAlamat] = useState('');
+  const [activeMaterialId, setActiveMaterialId] = useState('');
+
+  // Curriculum overlay modal states
+  const [selectedCurriculumMat, setSelectedCurriculumMat] = useState<LearningMaterial | null>(null);
+  const [selectedCurriculumFullImg, setSelectedCurriculumFullImg] = useState<string | null>(null);
 
   const levels = [
     'Level Dasar: Pengenalan Simbol Jari',
@@ -74,6 +79,7 @@ export function StudentManager({
     setJenisPaket('4P');
     setJenisKelamin('Laki-laki');
     setAlamat('');
+    setActiveMaterialId('');
     setIsFormOpen(true);
   };
 
@@ -91,6 +97,7 @@ export function StudentManager({
     setJenisPaket(student.jenisPaket || '4P');
     setJenisKelamin(student.jenisKelamin || 'Laki-laki');
     setAlamat(student.alamat || '');
+    setActiveMaterialId(student.activeMaterialId || '');
     setIsFormOpen(true);
   };
 
@@ -113,7 +120,8 @@ export function StudentManager({
       tanggalLahir,
       jenisPaket,
       jenisKelamin,
-      alamat
+      alamat,
+      activeMaterialId: activeMaterialId || ''
     };
 
     if (editingStudent) {
@@ -353,19 +361,39 @@ export function StudentManager({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Level Bimbingan</label>
-                <select
-                  value={level}
-                  onChange={(e) => setLevel(e.target.value)}
-                  className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                    isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
-                  }`}
-                >
-                  {levels.map(l => (
-                    <option key={l} value={l} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>{l}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Level Bimbingan (Administratif)</label>
+                  <select
+                    value={level}
+                    onChange={(e) => setLevel(e.target.value)}
+                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                      isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
+                    }`}
+                  >
+                    {levels.map(l => (
+                      <option key={l} value={l} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>{l}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Materi Jaritmatika Aktif</label>
+                  <select
+                    value={activeMaterialId}
+                    onChange={(e) => setActiveMaterialId(e.target.value)}
+                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                      isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
+                    }`}
+                  >
+                    <option value="" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>-- Pilih Materi Aktif (Opsional) --</option>
+                    {materials.map(m => (
+                      <option key={m.id} value={m.id} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>
+                        {m.title} ({m.level || 'Umum'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -488,7 +516,8 @@ export function StudentManager({
                 }`}>
                   <th className="p-4">Nama Siswa</th>
                   <th className="p-4">Orang Tua / HP</th>
-                  <th className="p-4">Level Math Fingers</th>
+                  <th className="p-4">Level</th>
+                  <th className="p-4">Materi Aktif</th>
                   <th className="p-4">Gabung Sejak</th>
                   <th className="p-4">Status</th>
                   <th className="p-4 text-center">Aksi</th>
@@ -562,10 +591,38 @@ export function StudentManager({
                         </a>
                       </td>
                       <td className="p-4">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-                          <BookOpen size={12} />
-                          {student.level}
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                          {student.level || 'Dasar'}
                         </span>
+                      </td>
+                      <td className="p-4">
+                        {(() => {
+                          const activeMat = materials.find(m => m.id === student.activeMaterialId);
+                          return (
+                            <button
+                              onClick={() => {
+                                if (activeMat) {
+                                  setSelectedCurriculumMat(activeMat);
+                                } else {
+                                  // Open first available material or show prompt
+                                  setSelectedCurriculumMat(materials[0] || null);
+                                }
+                              }}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition ${
+                                activeMat 
+                                  ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:scale-[1.02] active:scale-95 cursor-pointer hover:bg-emerald-500/25' 
+                                  : 'bg-slate-500/10 border-slate-500/20 text-slate-400 hover:bg-slate-500/20 hover:text-slate-300 cursor-pointer'
+                              }`}
+                              title={activeMat ? 'Klik untuk melihat Gambar & Panduan Tutorial' : 'Belum ada materi aktif. Klik untuk melihat silabus pertama.'}
+                            >
+                              <BookOpen size={12} />
+                              <span className="max-w-[150px] truncate">{activeMat ? activeMat.title : 'Pilih / Lihat Panduan'}</span>
+                              {activeMat && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              )}
+                            </button>
+                          );
+                        })()}
                       </td>
                       <td className="p-4 text-xs text-slate-400">
                         <div className="flex items-center gap-1">
@@ -637,6 +694,221 @@ export function StudentManager({
           </div>
         )}
       </div>
+
+      {/* Pop-up Modal Detail Kurikulum & Panduan Gambar */}
+      {selectedCurriculumMat && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`rounded-2xl w-full max-w-3xl shadow-2xl border flex flex-col max-h-[92vh] overflow-hidden ${
+            theme === 'light' ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-850 text-white'
+          }`}>
+            {/* Header Modal */}
+            <div className={`p-5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${theme === 'light' ? 'border-slate-200' : 'border-slate-800'}`}>
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center flex-shrink-0">
+                  <BookOpen size={18} />
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">PANDUAN MATERI</div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-sm text-slate-400">Pilih Silabus:</span>
+                    <select
+                      value={selectedCurriculumMat.id}
+                      onChange={(e) => {
+                        const matched = materials.find(m => m.id === e.target.value);
+                        if (matched) setSelectedCurriculumMat(matched);
+                      }}
+                      className={`px-2.5 py-1.5 border rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                        theme === 'light' ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950 border-slate-800 text-white'
+                      }`}
+                    >
+                      {materials.map(m => (
+                        <option key={m.id} value={m.id}>
+                          {m.title} ({m.level || 'Umum'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 self-end sm:self-auto">
+                <button 
+                  onClick={() => setSelectedCurriculumMat(null)}
+                  className="w-8 h-8 rounded-lg bg-slate-800/10 dark:bg-slate-800 hover:bg-red-500 hover:text-white transition flex items-center justify-center text-slate-400 font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Konten Modal */}
+            <div className="p-6 overflow-y-auto space-y-6">
+              {/* Judul & Deskripsi */}
+              <div>
+                <h3 className="text-lg font-bold text-emerald-500 mb-1">{selectedCurriculumMat.title}</h3>
+                <p className={`text-sm leading-relaxed ${theme === 'light' ? 'text-slate-600' : 'text-slate-400'}`}>
+                  {selectedCurriculumMat.description}
+                </p>
+              </div>
+
+              {/* Grid Formula & Langkah Latihan */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Formula */}
+                <div className={`p-4 rounded-xl border ${theme === 'light' ? 'bg-slate-50 border-slate-150' : 'bg-slate-950/40 border-slate-800'}`}>
+                  <h5 className="text-xs font-bold text-emerald-500 uppercase tracking-wider mb-2.5">Formula Jari</h5>
+                  {selectedCurriculumMat.formulas && selectedCurriculumMat.formulas.length > 0 ? (
+                    <ul className="space-y-1.5">
+                      {selectedCurriculumMat.formulas.map((formula, idx) => (
+                        <li key={idx} className="text-xs flex items-start gap-2">
+                          <span className="text-emerald-500 font-bold">•</span>
+                          <span className="font-mono">{formula}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-xs text-slate-500 italic">Tidak ada formula khusus untuk level ini.</p>
+                  )}
+                </div>
+
+                {/* Langkah Latihan */}
+                <div className={`p-4 rounded-xl border ${theme === 'light' ? 'bg-slate-50 border-slate-150' : 'bg-slate-950/40 border-slate-800'}`}>
+                  <h5 className="text-xs font-bold text-emerald-500 uppercase tracking-wider mb-2.5">Langkah Latihan</h5>
+                  {selectedCurriculumMat.steps && selectedCurriculumMat.steps.length > 0 ? (
+                    <ol className="space-y-2">
+                      {selectedCurriculumMat.steps.map((step, idx) => (
+                        <li key={idx} className="text-xs flex gap-2">
+                          <span className="w-5 h-5 rounded-full bg-emerald-500/10 text-emerald-500 flex-shrink-0 flex items-center justify-center font-bold font-mono">
+                            {idx + 1}
+                          </span>
+                          <span className="leading-relaxed">{step}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p className="text-xs text-slate-500 italic">Belum ada langkah latihan tertulis.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Video Tutorial */}
+              {selectedCurriculumMat.videoUrl && (
+                <div className="space-y-2">
+                  <h5 className="text-xs font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Video size={14} />
+                    <span>Video Panduan</span>
+                  </h5>
+                  {(() => {
+                    // Quick embed URL resolver
+                    const match = selectedCurriculumMat.videoUrl.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/);
+                    const embedUrl = match && match[2].length === 11 ? `https://www.youtube.com/embed/${match[2]}` : null;
+                    
+                    if (embedUrl) {
+                      return (
+                        <div className="aspect-video w-full rounded-xl overflow-hidden border border-slate-800 shadow-sm relative bg-black">
+                          <iframe
+                            className="w-full h-full"
+                            src={embedUrl}
+                            title={`Video Tutorial - ${selectedCurriculumMat.title}`}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          ></iframe>
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <a
+                          href={selectedCurriculumMat.videoUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`flex items-center justify-between p-3.5 rounded-xl border transition ${
+                            theme === 'light' 
+                              ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800' 
+                              : 'bg-slate-950/60 hover:bg-slate-950 border-slate-800 text-slate-200'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 flex-shrink-0">
+                              <Video size={18} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold truncate">Buka Video Panduan Eksternal</p>
+                              <p className="text-[10px] text-slate-500 truncate">{selectedCurriculumMat.videoUrl}</p>
+                            </div>
+                          </div>
+                          <ExternalLink size={14} className="text-slate-450 flex-shrink-0" />
+                        </a>
+                      );
+                    }
+                  })()}
+                </div>
+              )}
+
+              {/* Galeri Foto Tutorial */}
+              {selectedCurriculumMat.tutorialImages && selectedCurriculumMat.tutorialImages.length > 0 && (
+                <div className="space-y-2.5">
+                  <h5 className="text-xs font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <ImageIcon size={14} className="text-emerald-500" />
+                    <span>Gambar Panduan & Ilustrasi Jari (Klik untuk Perbesar)</span>
+                  </h5>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {selectedCurriculumMat.tutorialImages.map((imgUrl, idx) => (
+                      <div
+                        key={idx}
+                        onClick={() => setSelectedCurriculumFullImg(imgUrl)}
+                        className={`group relative aspect-square rounded-xl overflow-hidden border cursor-pointer transition-all duration-150 hover:scale-[1.02] hover:shadow-md ${
+                          theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/40 border-slate-800'
+                        }`}
+                      >
+                        <img
+                          src={imgUrl}
+                          alt={`Panduan Jari ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition duration-150 flex items-center justify-center">
+                          <span className="text-white text-xs font-bold flex items-center gap-1">
+                            <Eye size={14} /> Perbesar
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Modal */}
+            <div className={`p-4 bg-slate-50 dark:bg-slate-950/40 border-t flex justify-end ${theme === 'light' ? 'border-slate-200' : 'border-slate-850'}`}>
+              <button
+                onClick={() => setSelectedCurriculumMat(null)}
+                className="px-5 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl transition shadow-sm"
+              >
+                Tutup Panduan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen Image Lightbox */}
+      {selectedCurriculumFullImg && (
+        <div 
+          className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          onClick={() => setSelectedCurriculumFullImg(null)}
+        >
+          <button 
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition text-lg"
+            onClick={() => setSelectedCurriculumFullImg(null)}
+          >
+            ✕
+          </button>
+          <img 
+            src={selectedCurriculumFullImg} 
+            alt="Panduan Jari Perbesar" 
+            className="max-w-full max-h-[90vh] rounded-xl shadow-2xl object-contain"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+      )}
     </div>
   );
 }

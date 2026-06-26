@@ -46,6 +46,12 @@ export const SEED_MATERIALS: LearningMaterial[] = [
       'Tutup empat jari kanan dan buka jempol kanan untuk melambangkan nilai 5.',
       'Buka jari telunjuk kiri untuk melambangkan nilai 10.',
       'Buka jempol kiri untuk melambangkan nilai 50.'
+    ],
+    videoUrl: 'https://www.youtube.com/watch?v=kYJbybZInX8',
+    tutorialImages: [
+      'https://images.unsplash.com/photo-1543269865-cbf427effbad?q=80&w=600',
+      'https://images.unsplash.com/photo-1518152006812-edab29b069ac?q=80&w=600',
+      'https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=600'
     ]
   },
   {
@@ -61,6 +67,11 @@ export const SEED_MATERIALS: LearningMaterial[] = [
       'Posisikan tangan kanan mengepal (0).',
       'Latih soal penambahan langsung, contoh: 2 + 2 - 1 = buka 2 jari, buka 2 jari lagi, tutup 1 jari. Hasil akhir = 3.',
       'Latih kombinasi jempol (5), contoh: 1 + 5 + 2 = buka telunjuk (1), buka jempol (5), buka 2 jari lagi (2). Hasil akhir = 8.'
+    ],
+    videoUrl: 'https://www.youtube.com/watch?v=C1VvW6P1GIs',
+    tutorialImages: [
+      'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=600',
+      'https://images.unsplash.com/photo-1577896851231-70ef18881754?q=80&w=600'
     ]
   },
   {

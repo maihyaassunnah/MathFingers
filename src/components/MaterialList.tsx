@@ -1,6 +1,52 @@
 import React, { useState } from 'react';
 import { LearningMaterial } from '../types';
-import { BookOpen, Sparkles, HelpCircle, Plus, Edit, Trash2, Save, AlertTriangle } from 'lucide-react';
+import { BookOpen, Sparkles, HelpCircle, Plus, Edit, Trash2, Save, AlertTriangle, Video, Image as ImageIcon, ExternalLink, Eye, X, Film, Upload } from 'lucide-react';
+
+function getYoutubeEmbedUrl(url: string): string | null {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) 
+    ? `https://www.youtube.com/embed/${match[2]}`
+    : null;
+}
+
+function compressAndResizeImage(file: File, maxWidth: number = 800): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(e.target?.result as string);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // JPEG format with 0.7 quality gives high quality but tiny storage footprint
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+        resolve(compressedBase64);
+      };
+      img.onerror = () => reject(new Error('Invalid image file'));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
+  });
+}
 
 interface MaterialListProps {
   materials: LearningMaterial[];
@@ -30,6 +76,14 @@ export function MaterialList({
   const [description, setDescription] = useState('');
   const [formulasText, setFormulasText] = useState('');
   const [stepsText, setStepsText] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
+  const [tutorialImages, setTutorialImages] = useState<string[]>([]);
+  
+  // Drag & drop state
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Gallery Preview overlay state
+  const [selectedFullImage, setSelectedFullImage] = useState<string | null>(null);
 
   const activeMaterial = materials.find(m => m.id === selectedMatId) || materials[0];
 
@@ -41,6 +95,8 @@ export function MaterialList({
     setDescription('');
     setFormulasText('');
     setStepsText('');
+    setVideoUrl('');
+    setTutorialImages([]);
     setIsFormOpen(true);
   };
 
@@ -52,7 +108,56 @@ export function MaterialList({
     setDescription(mat.description);
     setFormulasText(mat.formulas.join('\n'));
     setStepsText(mat.steps.join('\n'));
+    setVideoUrl(mat.videoUrl || '');
+    setTutorialImages(mat.tutorialImages || []);
     setIsFormOpen(true);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      await processFiles(files);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      await processFiles(files);
+    }
+  };
+
+  const processFiles = async (files: FileList) => {
+    const newImages = [...tutorialImages];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!file.type.startsWith('image/')) {
+        alert('File harus berupa gambar (JPEG, PNG, GIF, dll.)');
+        continue;
+      }
+      try {
+        const compressed = await compressAndResizeImage(file);
+        newImages.push(compressed);
+      } catch (err) {
+        console.error('Error compressing image:', err);
+      }
+    }
+    setTutorialImages(newImages);
+  };
+
+  const removeUploadedImage = (indexToRemove: number) => {
+    setTutorialImages(prev => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,12 +182,13 @@ export function MaterialList({
       title,
       description,
       formulas,
-      steps
+      steps,
+      videoUrl: videoUrl.trim(),
+      tutorialImages
     };
 
     if (formMode === 'add') {
       await onAddMaterial(materialData);
-      // Auto-select newly created material if possible (or we wait for re-render)
     } else if (formMode === 'edit' && editMatId) {
       await onUpdateMaterial(editMatId, materialData);
     }
@@ -110,7 +216,7 @@ export function MaterialList({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className={`text-2xl font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Daftar Materi & Kurikulum</h2>
+          <h2 className={`text-2xl font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Kurikulum & Silabus</h2>
           <p className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-sm`}>Kelola silabus materi bimbingan Jaritmatika, simpan formula, dan panduan latihan siswa.</p>
         </div>
         
@@ -136,11 +242,9 @@ export function MaterialList({
           
           {/* Level List Navigation Sidebar */}
           <div className="space-y-2 lg:col-span-1">
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Tingkatan Silabus</h3>
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Daftar Modul Silabus</h3>
             <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
-              {materials.map((mat) => {
-                const isDasar = mat.level.toLowerCase().includes('dasar');
-                const levelNum = isDasar ? 'D' : (mat.level.match(/\d+/)?.[0] || '1');
+              {materials.map((mat, idx) => {
                 const isActive = selectedMatId === mat.id || (!selectedMatId && activeMaterial?.id === mat.id);
 
                 return (
@@ -160,12 +264,12 @@ export function MaterialList({
                         ? 'bg-emerald-500 text-white dark:text-slate-950' 
                         : 'bg-slate-200 dark:bg-slate-950/60 text-slate-500'
                     }`}>
-                      {levelNum}
+                      {idx + 1}
                     </div>
                     
                     <div className="flex-1 min-w-0 font-sans">
-                      <div className="text-xs font-semibold text-slate-400 font-mono tracking-wider">
-                        {isDasar ? 'LEVEL DASAR' : `LEVEL ${levelNum}`}
+                      <div className="text-xs font-semibold text-slate-400 font-mono tracking-wider truncate">
+                        Kategori: {mat.level || 'Umum'}
                       </div>
                       <div className={`font-bold truncate text-sm mt-0.5 ${isLight ? 'text-slate-800' : 'text-white'}`}>{mat.title}</div>
                     </div>
@@ -253,6 +357,86 @@ export function MaterialList({
                     <p className="text-xs text-slate-500 italic">Belum ada langkah latihan tertulis.</p>
                   )}
                 </div>
+
+                {/* Tutorial Video Section */}
+                {activeMaterial.videoUrl && (
+                  <div className="space-y-3 pt-2">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Video size={14} className="text-emerald-500" />
+                      <span>Video Tutorial Bimbingan</span>
+                    </h4>
+                    {getYoutubeEmbedUrl(activeMaterial.videoUrl) ? (
+                      <div className="aspect-video w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm relative bg-black">
+                        <iframe
+                          className="w-full h-full"
+                          src={getYoutubeEmbedUrl(activeMaterial.videoUrl)!}
+                          title={`Video Tutorial - ${activeMaterial.title}`}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        ></iframe>
+                      </div>
+                    ) : (
+                      <a
+                        href={activeMaterial.videoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={`flex items-center justify-between p-4 rounded-xl border transition ${
+                          isLight 
+                            ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800' 
+                            : 'bg-slate-950/60 hover:bg-slate-950 border-slate-800 text-slate-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 flex-shrink-0">
+                            <Video size={20} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold truncate">Buka Video Tutorial Eksternal</p>
+                            <p className="text-xs text-slate-500 truncate">{activeMaterial.videoUrl}</p>
+                          </div>
+                        </div>
+                        <ExternalLink size={16} className="text-slate-400 flex-shrink-0" />
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {/* Tutorial Photo Gallery */}
+                {activeMaterial.tutorialImages && activeMaterial.tutorialImages.length > 0 && (
+                  <div className="space-y-3 pt-2">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <ImageIcon size={14} className="text-emerald-500" />
+                      <span>Foto-Foto Tutorial & Ilustrasi Jari</span>
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {activeMaterial.tutorialImages.map((imgUrl, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => setSelectedFullImage(imgUrl)}
+                          className={`group relative aspect-square rounded-xl overflow-hidden border cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-md ${
+                            isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/40 border-slate-800'
+                          }`}
+                        >
+                          <img
+                            src={imgUrl}
+                            alt={`Langkah ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              e.currentTarget.src = "https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=400";
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition duration-200">
+                            <span className="text-white text-xs font-semibold bg-black/60 px-2.5 py-1.5 rounded-lg flex items-center gap-1">
+                              <Eye size={12} />
+                              <span>Perbesar</span>
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Quick info tip footer */}
@@ -361,6 +545,94 @@ export function MaterialList({
                 </div>
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Link Video Tutorial (YouTube, Drive, dll)</label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                    <Video size={15} />
+                  </span>
+                  <input
+                    type="url"
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    value={videoUrl}
+                    onChange={(e) => setVideoUrl(e.target.value)}
+                    className={`w-full pl-10 pr-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs font-semibold ${
+                      isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+                    }`}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Foto-Foto Tutorial & Ilustrasi Jari (Upload File)
+                </label>
+                
+                {/* Drag and Drop Zone */}
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all duration-150 relative ${
+                    isDragging 
+                      ? 'border-emerald-500 bg-emerald-500/10' 
+                      : isLight
+                        ? 'border-slate-300 hover:border-slate-400 bg-slate-50 hover:bg-slate-100/60'
+                        : 'border-slate-800 hover:border-slate-700 bg-slate-950/40 hover:bg-slate-950/80'
+                  }`}
+                  onClick={() => document.getElementById('file-upload-input')?.click()}
+                >
+                  <input
+                    id="file-upload-input"
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <div className="w-9 h-9 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                      <Upload size={18} />
+                    </div>
+                    <p className="text-xs font-bold text-slate-300">
+                      Tarik & lepas file gambar di sini, atau <span className="text-emerald-450 hover:underline">pilih file dari komputer</span>
+                    </p>
+                    <p className="text-[10px] text-slate-500">
+                      Format PNG, JPG, JPEG, atau GIF. Kompresi otomatis aktif untuk menghemat ruang.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Thumbnails of currently selected files */}
+                {tutorialImages.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 mt-3">
+                    {tutorialImages.map((imgUrl, idx) => (
+                      <div key={idx} className="relative aspect-square rounded-lg overflow-hidden group border border-slate-200 dark:border-slate-800 bg-black/20">
+                        <img
+                          src={imgUrl}
+                          alt={`Langkah ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeUploadedImage(idx);
+                          }}
+                          className="absolute top-1 right-1 p-1 rounded-full bg-red-600 text-white opacity-0 group-hover:opacity-100 transition shadow-md hover:bg-red-500"
+                          title="Hapus gambar"
+                        >
+                          <X size={10} />
+                        </button>
+                        <div className="absolute bottom-0 inset-x-0 bg-black/60 text-[8px] text-white py-0.5 text-center truncate px-1">
+                          Gambar {idx + 1}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className={`pt-4 border-t flex gap-3 justify-end ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
                 <button
                   type="button"
@@ -378,6 +650,38 @@ export function MaterialList({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen Image Overlay modal */}
+      {selectedFullImage && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          onClick={() => setSelectedFullImage(null)}
+        >
+          <div 
+            className="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl bg-slate-950 flex flex-col items-center justify-center shadow-2xl border border-slate-800"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setSelectedFullImage(null)}
+              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition shadow-md"
+            >
+              <X size={18} />
+            </button>
+            <img 
+              src={selectedFullImage} 
+              alt="Tutorial Full Screen" 
+              className="max-w-full max-h-[80vh] object-contain"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                e.currentTarget.src = "https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=800";
+              }}
+            />
+            <div className="p-3 text-center text-slate-300 text-xs font-mono select-all break-all w-full bg-slate-900 border-t border-slate-800">
+              {selectedFullImage}
+            </div>
           </div>
         </div>
       )}

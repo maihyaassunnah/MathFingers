@@ -13,6 +13,7 @@ export interface Student {
   jenisKelamin?: 'Laki-laki' | 'Perempuan';
   alamat?: string;
   createdAt: number;
+  activeMaterialId?: string;
 }
 
 export interface Attendance {
@@ -76,6 +77,8 @@ export interface LearningMaterial {
   description: string;
   formulas: string[]; // finger combinations, e.g., "Teman Kecil +4 = +5 -1"
   steps: string[]; // how to practice
+  videoUrl?: string;
+  tutorialImages?: string[];
 }
 
 export interface AppSettings {

@@ -111,7 +111,8 @@ CREATE TABLE IF NOT EXISTS students (
   "jenisPaket" TEXT DEFAULT '4P',
   "jenisKelamin" TEXT DEFAULT 'Laki-laki',
   alamat TEXT,
-  "createdAt" BIGINT NOT NULL
+  "createdAt" BIGINT NOT NULL,
+  "activeMaterialId" TEXT
 );
 
 -- 2. TABEL ATTENDANCE (Presensi Kehadiran)
@@ -164,14 +165,16 @@ CREATE TABLE IF NOT EXISTS grades (
   notes TEXT
 );
 
--- 6. TABEL MATERIALS (Daftar Materi Modul)
+-- 6. TABEL MATERIALS (Kurikulum & Daftar Materi)
 CREATE TABLE IF NOT EXISTS materials (
   id TEXT PRIMARY KEY,
   level TEXT NOT NULL,
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   formulas TEXT[],
-  steps TEXT[]
+  steps TEXT[],
+  "videoUrl" TEXT,
+  "tutorialImages" TEXT[]
 );
 
 -- AKTIFKAN ROW LEVEL SECURITY (RLS) - Opsional, atau ijinkan akses penuh anon untuk kemudahan bimbingan les
@@ -248,7 +251,9 @@ CREATE TABLE IF NOT EXISTS materials (
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   formulas TEXT[],
-  steps TEXT[]
+  steps TEXT[],
+  "videoUrl" TEXT,
+  "tutorialImages" TEXT[]
 );`
   };
 
@@ -266,12 +271,17 @@ ALTER TABLE students ADD COLUMN IF NOT EXISTS "tanggalLahir" TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "jenisPaket" TEXT DEFAULT '4P';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "jenisKelamin" TEXT DEFAULT 'Laki-laki';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS alamat TEXT;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS "activeMaterialId" TEXT;
 
 -- 2. Kolom tambahan untuk tabel 'invoices' (Untuk sistem Cicilan SPP)
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "amountPaid" NUMERIC DEFAULT 0;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS installments JSONB DEFAULT '[]'::jsonb;
 
--- 3. Memperbaiki relasi Foreign Key Cascade Delete agar menu hapus bekerja mulus
+-- 3. Kolom tambahan untuk tabel 'materials' (Untuk Link Video & Foto Kurikulum)
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS "videoUrl" TEXT;
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS "tutorialImages" TEXT[];
+
+-- 4. Memperbaiki relasi Foreign Key Cascade Delete agar menu hapus bekerja mulus
 -- Menghapus constraint lama jika ada dan memperbarui menjadi ON DELETE CASCADE
 -- (Sehingga saat menghapus siswa, seluruh data absensi, nilai & invoice siswa tersebut ikut terhapus otomatis)
 
@@ -302,6 +312,10 @@ ALTER TABLE students ADD COLUMN IF NOT EXISTS alamat TEXT;`,
     invoices: `-- Melengkapi kolom invoice untuk Cicilan & Riwayat Pembayaran
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "amountPaid" NUMERIC DEFAULT 0;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS installments JSONB DEFAULT '[]'::jsonb;`,
+
+    materials: `-- Melengkapi kolom materials untuk Video & Foto Kurikulum (Kurikulum)
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS "videoUrl" TEXT;
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS "tutorialImages" TEXT[];`,
 
     constraints: `-- Mengatur Cascade Delete Supabase agar Menu Hapus bekerja dengan mulus
 ALTER TABLE IF EXISTS attendance DROP CONSTRAINT IF EXISTS attendance_studentId_fkey;
@@ -521,6 +535,16 @@ ALTER TABLE grades ADD CONSTRAINT grades_studentId_fkey FOREIGN KEY ("studentId"
                   }`}
                 >
                   Kolom Cicilan SPP
+                </button>
+                <button
+                  onClick={() => setSelectedTable('materials')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                    selectedTable === 'materials'
+                      ? 'bg-slate-800 text-emerald-400 border border-emerald-500/20'
+                      : 'bg-slate-950/40 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Kolom Kurikulum & Video
                 </button>
                 <button
                   onClick={() => setSelectedTable('constraints')}

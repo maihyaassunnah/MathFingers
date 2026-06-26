@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Student, LearningMaterial, Attendance, TeacherNote, Grade } from '../types';
 import { formatWhatsAppPhone, getWhatsAppLink } from '../utils';
 import { generateStudentPDFReport } from '../utils/pdfGenerator';
-import { Search, Plus, UserPlus, Phone, Calendar, BookOpen, Trash2, Edit2, CheckCircle, XCircle, AlertCircle, Download } from 'lucide-react';
+import { Search, Plus, UserPlus, Phone, Calendar, BookOpen, Trash2, Edit2, CheckCircle, XCircle, AlertCircle, Download, Award } from 'lucide-react';
 
 interface StudentManagerProps {
   students: Student[];
@@ -30,6 +30,8 @@ export function StudentManager({
   const [searchQuery, setSearchQuery] = useState('');
   const [levelFilter, setLevelFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('active');
+  const [sortAlphabetical, setSortAlphabetical] = useState<'asc' | 'desc'>('asc');
+  const [genderFilter, setGenderFilter] = useState<string>('All');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
 
@@ -39,7 +41,7 @@ export function StudentManager({
   const [parentPhone, setParentPhone] = useState('');
   const [joinDate, setJoinDate] = useState(new Date().toISOString().slice(0, 10));
   const [level, setLevel] = useState('');
-  const [status, setStatus] = useState<'active' | 'inactive'>('active');
+  const [status, setStatus] = useState<'active' | 'inactive' | 'alumni'>('active');
   const [keterangan, setKeterangan] = useState('');
   const [tempatLahir, setTempatLahir] = useState('');
   const [tanggalLahir, setTanggalLahir] = useState('');
@@ -132,12 +134,25 @@ export function StudentManager({
 
   // Filter Logic
   const filteredStudents = students.filter(student => {
+    // Exclude alumni from the current students directory
+    if (student.status === 'alumni') return false;
+
     const matchesSearch = student.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           student.parentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           student.parentPhone.includes(searchQuery);
     const matchesLevel = levelFilter === 'All' || student.level === levelFilter;
     const matchesStatus = statusFilter === 'All' || student.status === statusFilter;
-    return matchesSearch && matchesLevel && matchesStatus;
+    const matchesGender = genderFilter === 'All' || student.jenisKelamin === genderFilter;
+    return matchesSearch && matchesLevel && matchesStatus && matchesGender;
+  });
+
+  // Sort Logic (Alphabetical)
+  const sortedStudents = [...filteredStudents].sort((a, b) => {
+    if (sortAlphabetical === 'asc') {
+      return a.name.localeCompare(b.name);
+    } else {
+      return b.name.localeCompare(a.name);
+    }
   });
 
   const isLight = theme === 'light';
@@ -181,6 +196,21 @@ export function StudentManager({
         </div>
         
         <div className="flex flex-wrap gap-2 w-full md:w-auto">
+          {/* Urutan Abjad */}
+          <select
+            id="sort-student-alphabetical"
+            value={sortAlphabetical}
+            onChange={(e) => setSortAlphabetical(e.target.value as 'asc' | 'desc')}
+            className={`border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+              isLight 
+                ? 'bg-white border-slate-200 text-slate-700' 
+                : 'bg-slate-950/40 border-slate-800 text-slate-300'
+            }`}
+          >
+            <option value="asc" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Nama: A - Z</option>
+            <option value="desc" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Nama: Z - A</option>
+          </select>
+
           {/* Level Filter */}
           <select
             id="filter-student-level"
@@ -196,6 +226,22 @@ export function StudentManager({
             {levels.map(l => (
               <option key={l} value={l} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>{l}</option>
             ))}
+          </select>
+
+          {/* Gender Filter */}
+          <select
+            id="filter-student-gender"
+            value={genderFilter}
+            onChange={(e) => setGenderFilter(e.target.value)}
+            className={`border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+              isLight 
+                ? 'bg-white border-slate-200 text-slate-700' 
+                : 'bg-slate-950/40 border-slate-800 text-slate-300'
+            }`}
+          >
+            <option value="All" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Semua Gender</option>
+            <option value="Laki-laki" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Laki-laki</option>
+            <option value="Perempuan" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Perempuan</option>
           </select>
 
           {/* Status Filter */}
@@ -295,13 +341,14 @@ export function StudentManager({
                   <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Status Keaktifan</label>
                   <select
                     value={status}
-                    onChange={(e) => setStatus(e.target.value as 'active' | 'inactive')}
+                    onChange={(e) => setStatus(e.target.value as 'active' | 'inactive' | 'alumni')}
                     className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
                       isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
                     }`}
                   >
                     <option value="active" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Aktif</option>
                     <option value="inactive" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Nonaktif</option>
+                    <option value="alumni" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Alumni (Lulus)</option>
                   </select>
                 </div>
               </div>
@@ -426,7 +473,7 @@ export function StudentManager({
       <div className={`rounded-2xl border shadow-sm overflow-hidden ${
         isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
       }`}>
-        {filteredStudents.length === 0 ? (
+        {sortedStudents.length === 0 ? (
           <div className="p-12 text-center text-slate-500">
             <UserPlus size={44} className="mx-auto text-slate-600 mb-3" />
             <p className="font-medium text-slate-400">Tidak ada data siswa ditemukan</p>
@@ -448,7 +495,7 @@ export function StudentManager({
                 </tr>
               </thead>
               <tbody className={`divide-y text-sm ${isLight ? 'divide-slate-200 text-slate-700' : 'divide-slate-800/80 text-slate-300'}`}>
-                {filteredStudents.map((student) => {
+                {sortedStudents.map((student) => {
                   const waText = `Halo Ibu/Bapak ${student.parentName}, salam kenal dari Math Fingers. Ada perkembangan les yang ingin kami infokan terkait ananda ${student.name}.`;
                   const waLink = getWhatsAppLink(student.parentPhone, waText);
 
@@ -554,6 +601,17 @@ export function StudentManager({
                             title="Edit Profil"
                           >
                             <Edit2 size={16} />
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (confirm(`Apakah Anda yakin ingin meluluskan ${student.name} sebagai Alumni?`)) {
+                                await onUpdateStudent(student.id, { status: 'alumni' });
+                              }
+                            }}
+                            className="p-1.5 text-slate-500 hover:text-amber-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                            title="Luluskan Siswa (Jadi Alumni)"
+                          >
+                            <Award size={16} />
                           </button>
                           <button
                             onClick={() => handleDelete(student.id, student.name)}

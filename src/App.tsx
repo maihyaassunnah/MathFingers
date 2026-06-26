@@ -11,6 +11,10 @@ import { SettingsManager } from './components/SettingsManager';
 import { StudentProgressReport } from './components/StudentProgressReport';
 import { MathFingerLogo } from './components/MathFingerLogo';
 import { LoginManager } from './components/LoginManager';
+import { JournalHistory } from './components/JournalHistory';
+import { SppHistory } from './components/SppHistory';
+import { SupabaseSqlEditor } from './components/SupabaseSqlEditor';
+import { AlumniManager } from './components/AlumniManager';
 
 import { 
   Home, 
@@ -30,7 +34,10 @@ import {
   Sun,
   Moon,
   Settings,
-  LogOut
+  LogOut,
+  History,
+  Database,
+  GraduationCap
 } from 'lucide-react';
 
 export default function App() {
@@ -84,12 +91,16 @@ export default function App() {
   const navigationItems = [
     { id: 'overview', name: 'Dashboard', icon: Home },
     { id: 'students', name: 'Siswa', icon: Users },
+    { id: 'alumni', name: 'Alumni / Lulus', icon: GraduationCap },
     { id: 'attendance', name: 'Absensi', icon: CheckSquare },
     { id: 'notes', name: 'Jurnal Guru', icon: FileText },
+    { id: 'journal_history', name: 'Riwayat Jurnal', icon: History },
     { id: 'spp', name: 'SPP & Invoice', icon: Receipt },
+    { id: 'spp_history', name: 'Riwayat SPP', icon: History },
     { id: 'grades', name: 'Input Nilai', icon: Award },
     { id: 'simulator', name: 'Daftar Materi', icon: BookOpen },
     { id: 'report', name: 'Rapor Perkembangan', icon: TrendingUp },
+    { id: 'supabase_sql', name: 'SQL Editor Supabase', icon: Database },
     { id: 'settings', name: 'Pengaturan', icon: Settings },
   ];
 
@@ -172,6 +183,15 @@ export default function App() {
             theme={theme}
           />
         );
+      case 'alumni':
+        return (
+          <AlumniManager
+            students={students}
+            onUpdateStudent={updateStudent}
+            onDeleteStudent={deleteStudent}
+            theme={theme}
+          />
+        );
       case 'attendance':
         return (
           <AttendanceTracker 
@@ -191,6 +211,14 @@ export default function App() {
             theme={theme}
           />
         );
+      case 'journal_history':
+        return (
+          <JournalHistory 
+            students={students} 
+            notes={notes} 
+            theme={theme}
+          />
+        );
       case 'spp':
         return (
           <SppInvoiceManager 
@@ -200,6 +228,14 @@ export default function App() {
             onCreateInvoice={createInvoice} 
             onUpdateInvoiceStatus={updateInvoiceStatus} 
             onDeleteInvoice={deleteInvoice} 
+            theme={theme}
+          />
+        );
+      case 'spp_history':
+        return (
+          <SppHistory 
+            students={students} 
+            invoices={invoices} 
             theme={theme}
           />
         );
@@ -246,6 +282,12 @@ export default function App() {
             invoices={invoices}
             dashboardTasks={dashboardTasks}
             onImportBackup={importBackupData}
+          />
+        );
+      case 'supabase_sql':
+        return (
+          <SupabaseSqlEditor 
+            theme={theme}
           />
         );
       default:

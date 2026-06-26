@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Student, Invoice, AppSettings } from '../types';
+import { Student, Invoice, AppSettings, Installment } from '../types';
 import { formatRupiah, getWhatsAppLink } from '../utils';
 import { 
   Receipt, 
@@ -13,7 +13,10 @@ import {
   Send, 
   CreditCard,
   Download,
-  AlertCircle
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  History
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
@@ -22,7 +25,16 @@ interface SppInvoiceManagerProps {
   invoices: Invoice[];
   settings: AppSettings;
   onCreateInvoice: (data: Omit<Invoice, 'id' | 'invoiceNo' | 'createdAt'>) => Promise<void>;
-  onUpdateInvoiceStatus: (id: string, status: 'paid' | 'unpaid', details?: { paidAt: string; paymentMethod: 'Transfer' | 'Tunai' }) => Promise<void>;
+  onUpdateInvoiceStatus: (
+    id: string, 
+    status: 'paid' | 'unpaid' | 'partially_paid', 
+    details?: { 
+      paidAt?: string; 
+      paymentMethod?: 'Transfer' | 'Tunai';
+      amountPaid?: number;
+      installments?: Installment[];
+    }
+  ) => Promise<void>;
   onDeleteInvoice: (id: string) => Promise<void>;
   theme?: string;
 }
@@ -44,6 +56,14 @@ export function SppInvoiceManager({
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'Transfer' | 'Tunai'>('Transfer');
   const [paidAt, setPaidAt] = useState(new Date().toISOString().slice(0, 10));
+
+  // Expanded rows for installment lists
+  const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
+
+  // Installment payment options inside payment modal
+  const [paymentType, setPaymentType] = useState<'full' | 'installment'>('full');
+  const [installmentAmount, setInstallmentAmount] = useState<number>(0);
+  const [installmentNote, setInstallmentNote] = useState<string>('');
 
   // Invoice creator form states
   const [selectedStudentId, setSelectedStudentId] = useState('');
@@ -98,14 +118,66 @@ export function SppInvoiceManager({
     setIsFormOpen(false);
   };
 
+  const handleOpenPaymentModal = (invoice: Invoice) => {
+    setPayingInvoiceId(invoice.id);
+    setPaidAt(new Date().toISOString().slice(0, 10));
+    const currentPaid = invoice.amountPaid || 0;
+    const remaining = invoice.amount - currentPaid;
+    setInstallmentAmount(remaining);
+    setPaymentType('full');
+    setInstallmentNote('');
+  };
+
   const handleConfirmPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!payingInvoiceId) return;
 
-    await onUpdateInvoiceStatus(payingInvoiceId, 'paid', {
-      paidAt,
-      paymentMethod
-    });
+    const invoiceObj = invoices.find(inv => inv.id === payingInvoiceId);
+    if (!invoiceObj) return;
+
+    const currentPaid = invoiceObj.amountPaid || 0;
+    const totalAmount = invoiceObj.amount;
+    const remaining = totalAmount - currentPaid;
+
+    if (paymentType === 'full') {
+      const newInstallment: Installment = {
+        id: Math.random().toString(36).substring(2, 9),
+        amount: remaining,
+        paidAt,
+        paymentMethod,
+        note: 'Pelunasan Penuh'
+      };
+      const newInstallments = [...(invoiceObj.installments || []), newInstallment];
+      await onUpdateInvoiceStatus(payingInvoiceId, 'paid', {
+        paidAt,
+        paymentMethod,
+        amountPaid: totalAmount,
+        installments: newInstallments
+      });
+    } else {
+      if (installmentAmount <= 0 || installmentAmount > remaining) {
+        alert(`Jumlah pembayaran harus antara Rp 1 dan ${formatRupiah(remaining)}!`);
+        return;
+      }
+      const newInstallment: Installment = {
+        id: Math.random().toString(36).substring(2, 9),
+        amount: installmentAmount,
+        paidAt,
+        paymentMethod,
+        note: installmentNote.trim() || `Cicilan ke-${(invoiceObj.installments || []).length + 1}`
+      };
+      const newInstallments = [...(invoiceObj.installments || []), newInstallment];
+      const newAmountPaid = currentPaid + installmentAmount;
+      const isNowFullyPaid = newAmountPaid >= totalAmount;
+      const nextStatus = isNowFullyPaid ? 'paid' : 'partially_paid';
+
+      await onUpdateInvoiceStatus(payingInvoiceId, nextStatus, {
+        paidAt: isNowFullyPaid ? paidAt : undefined,
+        paymentMethod: isNowFullyPaid ? paymentMethod : undefined,
+        amountPaid: newAmountPaid,
+        installments: newInstallments
+      });
+    }
 
     setPayingInvoiceId(null);
   };
@@ -356,7 +428,8 @@ function angkaKeTerbilang(nominal: number): string {
     doc.setFont("Helvetica", "bolditalic");
     doc.setFontSize(9.5);
     doc.setTextColor(Math.max(0, accentR - 35), Math.max(0, accentG - 35), Math.max(0, accentB - 35)); // High contrast dark version of accent
-    const amountInWords = `### ${angkaKeTerbilang(invoice.amount)} Rupiah ###`;
+    const printAmount = invoice.status === 'partially_paid' ? (invoice.amountPaid || 0) : invoice.amount;
+    const amountInWords = `### ${angkaKeTerbilang(printAmount)} Rupiah ###`;
     doc.text(amountInWords, valueX, r4 + 6.5);
 
     // 5. FOOTER SECTION
@@ -369,15 +442,26 @@ function angkaKeTerbilang(nominal: number): string {
     doc.setFont("Helvetica", "bold");
     doc.setFontSize(13.5);
     doc.setTextColor(255, 255, 255); // White font
-    const formattedAmount = `Rp ${invoice.amount.toLocaleString('id-ID')},-`;
+    const formattedAmount = `Rp ${printAmount.toLocaleString('id-ID')},-`;
     doc.text(formattedAmount, labelX + 35, footerY + 9.2, { align: 'center' });
     
     // Info details below Amount Box
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(7.5);
     doc.setTextColor(148, 163, 184); // Slate-400
-    const payMethodText = invoice.paymentMethod ? `Metode Pembayaran: ${invoice.paymentMethod}` : 'Metode Pembayaran: Lunas';
-    doc.text(payMethodText, labelX + 2, footerY + 19);
+    const payMethodText = invoice.paymentMethod 
+      ? `Metode Pembayaran: ${invoice.paymentMethod}` 
+      : invoice.status === 'partially_paid' 
+        ? 'Status: Dicicil (Pembayaran Parsial)' 
+        : 'Metode Pembayaran: Lunas';
+    doc.text(payMethodText, labelX + 2, footerY + 18);
+
+    if (invoice.status === 'partially_paid') {
+      doc.setFont("Helvetica", "bold");
+      doc.setTextColor(217, 119, 6); // Amber
+      const remainingAmount = invoice.amount - printAmount;
+      doc.text(`Sisa Tagihan: Rp ${remainingAmount.toLocaleString('id-ID')},-`, labelX + 2, footerY + 22);
+    }
 
     // Motto middle
     const mottoX = 116;
@@ -619,77 +703,163 @@ function angkaKeTerbilang(nominal: number): string {
       )}
 
       {/* Payment Update Overlay Dialog */}
-      {payingInvoiceId && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className={`rounded-2xl w-full max-w-md shadow-2xl border p-6 space-y-4 ${
-            isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#020617] border-slate-800'
-          }`}>
-            <h3 className={`text-lg font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Konfirmasi Pelunasan SPP</h3>
-            <p className="text-slate-500 text-sm">Catat detail transaksi pelunasan invoice ini.</p>
-            
-            <form onSubmit={handleConfirmPayment} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Metode Bayar</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('Transfer')}
-                    className={`p-3 rounded-xl border text-sm font-medium transition flex items-center justify-center gap-2 ${
-                      paymentMethod === 'Transfer'
-                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                        : isLight ? 'border-slate-200 text-slate-600 hover:bg-slate-50' : 'border-slate-800 text-slate-400 hover:bg-slate-900'
-                    }`}
-                  >
-                    <Landmark size={16} />
-                    <span>Transfer Bank</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('Tunai')}
-                    className={`p-3 rounded-xl border text-sm font-medium transition flex items-center justify-center gap-2 ${
-                      paymentMethod === 'Tunai'
-                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                        : isLight ? 'border-slate-200 text-slate-600 hover:bg-slate-50' : 'border-slate-800 text-slate-400 hover:bg-slate-900'
-                    }`}
-                  >
-                    <CreditCard size={16} />
-                    <span>Uang Tunai</span>
-                  </button>
+      {payingInvoiceId && (() => {
+        const selectedInvoiceObj = invoices.find(inv => inv.id === payingInvoiceId);
+        if (!selectedInvoiceObj) return null;
+
+        const currentPaid = selectedInvoiceObj.amountPaid || 0;
+        const remaining = selectedInvoiceObj.amount - currentPaid;
+
+        return (
+          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className={`rounded-2xl w-full max-w-md shadow-2xl border p-6 space-y-4 ${
+              isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#020617] border-slate-800 text-white'
+            }`}>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className={`text-lg font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Catat Pembayaran SPP</h3>
+                  <p className="text-slate-500 text-xs mt-0.5">Siswa: <span className="font-semibold">{selectedInvoiceObj.studentName}</span> • Periode: <span className="font-semibold">{selectedInvoiceObj.month}</span></p>
+                </div>
+                <button onClick={() => setPayingInvoiceId(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white font-medium text-lg">✕</button>
+              </div>
+
+              {/* Outstanding balance breakdown info card */}
+              <div className={`p-4 rounded-xl space-y-1.5 border text-xs ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/40 border-slate-850'}`}>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Total Tagihan SPP:</span>
+                  <span className="font-bold">{formatRupiah(selectedInvoiceObj.amount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Sudah Dibayar (Cicilan):</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatRupiah(currentPaid)}</span>
+                </div>
+                <div className="flex justify-between border-t pt-1.5 mt-1">
+                  <span className="font-semibold text-slate-600 dark:text-slate-400">Sisa Outstanding:</span>
+                  <span className="font-black text-rose-500">{formatRupiah(remaining)}</span>
                 </div>
               </div>
+              
+              <form onSubmit={handleConfirmPayment} className="space-y-4">
+                {/* Payment Type Selection */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Tipe Pembayaran</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaymentType('full');
+                        setInstallmentAmount(remaining);
+                      }}
+                      className={`p-2.5 rounded-xl border text-xs font-bold transition flex flex-col items-center justify-center gap-1 ${
+                        paymentType === 'full'
+                          ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                          : isLight ? 'border-slate-200 text-slate-650 hover:bg-slate-50' : 'border-slate-800 text-slate-400 hover:bg-slate-900'
+                      }`}
+                    >
+                      <span>Pelunasan Penuh</span>
+                      <span className="text-[10px] font-normal font-mono">({formatRupiah(remaining)})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaymentType('installment');
+                        setInstallmentAmount(Math.min(remaining, 100000));
+                      }}
+                      className={`p-2.5 rounded-xl border text-xs font-bold transition flex flex-col items-center justify-center gap-1 ${
+                        paymentType === 'installment'
+                          ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                          : isLight ? 'border-slate-200 text-slate-655 hover:bg-slate-50' : 'border-slate-800 text-slate-400 hover:bg-slate-900'
+                      }`}
+                    >
+                      <span>Cicil / Parsial</span>
+                      <span className="text-[10px] font-normal">Tentukan nominal</span>
+                    </button>
+                  </div>
+                </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Tanggal Pembayaran</label>
-                <input
-                  type="date"
-                  required
-                  value={paidAt}
-                  onChange={(e) => setPaidAt(e.target.value)}
-                  className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 ${getAccentBorderClass()} ${
-                    isLight ? 'bg-slate-100 border-slate-200 text-slate-800 font-medium' : 'bg-slate-900 border-slate-800 text-white'
-                  }`}
-                />
-              </div>
+                {/* Amount to Pay (only for installment type) */}
+                {paymentType === 'installment' && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Nominal Bayar (IDR) *</label>
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      max={remaining}
+                      value={installmentAmount}
+                      onChange={(e) => setInstallmentAmount(Number(e.target.value))}
+                      className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 font-mono font-bold ${getAccentBorderClass()} ${
+                        isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+                      }`}
+                    />
+                    <p className="text-[10px] text-slate-500 mt-1">Masukkan jumlah cicilan saat ini. Maksimal {formatRupiah(remaining)}.</p>
+                  </div>
+                )}
 
-              <div className={`pt-4 border-t flex gap-3 justify-end ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-                <button
-                  type="button"
-                  onClick={() => setPayingInvoiceId(null)}
-                  className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className={`${getAccentBgClass()} text-white font-medium px-5 py-2.5 rounded-xl transition shadow-sm`}
-                >
-                  Konfirmasi Lunas
-                </button>
-              </div>
-            </form>
+                {/* Note / Keterangan */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Keterangan / Catatan</label>
+                  <input
+                    type="text"
+                    placeholder={paymentType === 'full' ? 'Contoh: Lunas Penuh' : 'Contoh: Cicilan ke-1'}
+                    value={installmentNote}
+                    onChange={(e) => setInstallmentNote(e.target.value)}
+                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 text-xs ${getAccentBorderClass()} ${
+                      isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+                    }`}
+                  />
+                </div>
+
+                {/* Payment Method & Date in Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Metode Bayar</label>
+                    <select
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value as 'Transfer' | 'Tunai')}
+                      className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 text-xs font-medium ${getAccentBorderClass()} ${
+                        isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+                      }`}
+                    >
+                      <option value="Transfer">Transfer Bank</option>
+                      <option value="Tunai">Tunai / Cash</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Tanggal Bayar</label>
+                    <input
+                      type="date"
+                      required
+                      value={paidAt}
+                      onChange={(e) => setPaidAt(e.target.value)}
+                      className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 text-xs font-medium ${getAccentBorderClass()} ${
+                        isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div className={`pt-4 border-t flex gap-3 justify-end ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
+                  <button
+                    type="button"
+                    onClick={() => setPayingInvoiceId(null)}
+                    className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className={`${getAccentBgClass()} text-white font-medium px-5 py-2.5 rounded-xl transition shadow-sm text-xs font-bold`}
+                  >
+                    {paymentType === 'full' ? 'Konfirmasi Lunas' : 'Simpan Cicilan'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Invoice list output */}
       <div className={`rounded-2xl border shadow-sm overflow-hidden ${
@@ -717,92 +887,185 @@ function angkaKeTerbilang(nominal: number): string {
                 </tr>
               </thead>
               <tbody className={`divide-y text-sm ${isLight ? 'divide-slate-200 text-slate-700' : 'divide-slate-800/80 text-slate-300'}`}>
-                {filteredInvoices.map((invoice) => (
-                  <tr key={invoice.id} className={`transition ${isLight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/20'}`}>
-                    <td className="p-4 font-mono text-xs font-semibold text-slate-500">
-                      {invoice.invoiceNo}
-                    </td>
-                    <td className={`p-4 font-semibold ${isLight ? 'text-slate-800' : 'text-white'}`}>
-                      {invoice.studentName}
-                    </td>
-                    <td className="p-4">
-                      <div className={`font-medium ${isLight ? 'text-slate-800' : 'text-slate-300'}`}>{invoice.month}</div>
-                      <div className="text-xs flex items-center gap-1 mt-0.5">
-                        <Calendar size={12} className="text-slate-400" />
-                        <span className="text-slate-400">Tempo: {invoice.dueDate}</span>
-                      </div>
-                    </td>
-                    <td className={`p-4 font-mono font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>
-                      {formatRupiah(invoice.amount)}
-                    </td>
-                    <td className="p-4">
-                      {invoice.status === 'paid' ? (
-                        <div className="space-y-0.5">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-md">
-                            <CheckCircle size={10} />
-                            <span>LUNAS</span>
-                          </span>
-                          <div className="text-[10px] font-mono text-slate-500">
-                            {invoice.paidAt} ({invoice.paymentMethod})
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-md">
-                          <Clock size={10} />
-                          <span>BELUM BAYAR</span>
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center justify-center gap-1.5">
-                        {invoice.status === 'unpaid' && (
-                          <button
-                            onClick={() => {
-                              setPayingInvoiceId(invoice.id);
-                              setPaidAt(new Date().toISOString().slice(0, 10));
-                            }}
-                            className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold px-2.5 py-1.5 rounded-lg transition"
-                          >
-                            Tandai Lunas
-                          </button>
-                        )}
-                        {invoice.status === 'paid' && (
-                          <button
-                            onClick={() => onUpdateInvoiceStatus(invoice.id, 'unpaid')}
-                            className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-bold px-2.5 py-1.5 rounded-lg transition"
-                          >
-                            Batalkan Lunas
-                          </button>
-                        )}
-                        
-                        {/* PDF Download receipt button */}
-                        <button
-                          onClick={() => downloadInvoicePDF(invoice)}
-                          className="p-1.5 text-slate-500 hover:text-blue-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                          title="Unduh Kuitansi PDF"
-                        >
-                          <Download size={16} />
-                        </button>
+                {filteredInvoices.map((invoice) => {
+                  const hasInstallments = invoice.installments && invoice.installments.length > 0;
+                  const isExpanded = expandedInvoiceId === invoice.id;
+                  const currentPaid = invoice.amountPaid || 0;
+                  const remaining = invoice.amount - currentPaid;
 
-                        <button
-                          onClick={() => sendInvoiceWhatsApp(invoice)}
-                          className="p-1.5 text-slate-500 hover:text-emerald-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                          title="Kirim WA"
-                        >
-                          <Send size={16} />
-                        </button>
-                        
-                        <button
-                          onClick={() => handleDelete(invoice.id, invoice.invoiceNo)}
-                          className="p-1.5 text-slate-500 hover:text-rose-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                          title="Hapus Invoice"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                  return (
+                    <React.Fragment key={invoice.id}>
+                      <tr className={`transition ${isLight ? 'hover:bg-slate-50' : 'hover:bg-slate-850/20'} ${isExpanded ? (isLight ? 'bg-slate-50/70' : 'bg-slate-900/40') : ''}`}>
+                        <td className="p-4 font-mono text-xs font-semibold text-slate-500">
+                          <div className="flex items-center gap-1.5">
+                            {hasInstallments ? (
+                              <button
+                                onClick={() => setExpandedInvoiceId(isExpanded ? null : invoice.id)}
+                                className={`p-1 rounded-md transition ${isLight ? 'hover:bg-slate-200 text-slate-600' : 'hover:bg-slate-800 text-slate-400'}`}
+                                title={isExpanded ? "Sembunyikan Riwayat Cicilan" : "Tampilkan Riwayat Cicilan"}
+                              >
+                                {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                              </button>
+                            ) : (
+                              <span className="w-6" /> // spacer
+                            )}
+                            <span>{invoice.invoiceNo}</span>
+                          </div>
+                        </td>
+                        <td className={`p-4 font-semibold ${isLight ? 'text-slate-800' : 'text-white'}`}>
+                          {invoice.studentName}
+                        </td>
+                        <td className="p-4">
+                          <div className={`font-medium ${isLight ? 'text-slate-800' : 'text-slate-300'}`}>{invoice.month}</div>
+                          <div className="text-xs flex items-center gap-1 mt-0.5">
+                            <Calendar size={12} className="text-slate-400" />
+                            <span className="text-slate-400">Tempo: {invoice.dueDate}</span>
+                          </div>
+                        </td>
+                        <td className={`p-4 font-mono font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>
+                          {formatRupiah(invoice.amount)}
+                        </td>
+                        <td className="p-4">
+                          {invoice.status === 'paid' ? (
+                            <div className="space-y-0.5">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-md">
+                                <CheckCircle size={10} />
+                                <span>LUNAS</span>
+                              </span>
+                              <div className="text-[10px] font-mono text-slate-500">
+                                {invoice.paidAt} ({invoice.paymentMethod})
+                              </div>
+                            </div>
+                          ) : invoice.status === 'partially_paid' ? (
+                            <div className="space-y-0.5">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded-md">
+                                <History size={10} />
+                                <span>DICICIL ({invoice.installments?.length || 0}x)</span>
+                              </span>
+                              <div className="text-[10px] text-slate-500">
+                                Dibayar: <span className="font-semibold">{formatRupiah(currentPaid)}</span>
+                              </div>
+                              <div className="text-[10px] text-rose-500 font-bold">
+                                Sisa: {formatRupiah(remaining)}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-md">
+                              <Clock size={10} />
+                              <span>BELUM BAYAR</span>
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {invoice.status !== 'paid' ? (
+                              <button
+                                onClick={() => handleOpenPaymentModal(invoice)}
+                                className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold px-2.5 py-1.5 rounded-lg transition"
+                              >
+                                Bayar / Cicil
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  if (confirm('Apakah Anda yakin ingin membatalkan semua pembayaran untuk invoice ini dan mereset status menjadi BELUM BAYAR?')) {
+                                    onUpdateInvoiceStatus(invoice.id, 'unpaid', {
+                                      paidAt: undefined,
+                                      paymentMethod: undefined,
+                                      amountPaid: 0,
+                                      installments: []
+                                    });
+                                  }
+                                }}
+                                className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-bold px-2.5 py-1.5 rounded-lg transition"
+                              >
+                                Batal Lunas
+                              </button>
+                            )}
+                            
+                            {/* PDF Download receipt button */}
+                            <button
+                              onClick={() => downloadInvoicePDF(invoice)}
+                              className="p-1.5 text-slate-500 hover:text-blue-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                              title="Unduh Kuitansi PDF"
+                            >
+                              <Download size={16} />
+                            </button>
+
+                            <button
+                              onClick={() => sendInvoiceWhatsApp(invoice)}
+                              className="p-1.5 text-slate-500 hover:text-emerald-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                              title="Kirim WA"
+                            >
+                              <Send size={16} />
+                            </button>
+                            
+                            <button
+                              onClick={() => handleDelete(invoice.id, invoice.invoiceNo)}
+                              className="p-1.5 text-slate-500 hover:text-rose-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                              title="Hapus Invoice"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Expandable Installment Row */}
+                      {isExpanded && invoice.installments && invoice.installments.length > 0 && (
+                        <tr>
+                          <td colSpan={6} className={`p-4 ${isLight ? 'bg-slate-50/50' : 'bg-slate-950/30'}`}>
+                            <div className="max-w-3xl pl-8 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <History size={14} className="text-slate-400" />
+                                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Rincian Pembayaran Cicilan ({invoice.installments.length}x):</span>
+                              </div>
+                              <div className={`border rounded-xl divide-y overflow-hidden text-xs ${isLight ? 'bg-white border-slate-200 divide-slate-200' : 'bg-[#020617] border-slate-850 divide-slate-850'}`}>
+                                {invoice.installments.map((inst, idx) => (
+                                  <div key={inst.id} className="p-3 flex flex-wrap items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2.5">
+                                      <span className="w-5 h-5 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-extrabold text-[10px]">
+                                        {idx + 1}
+                                      </span>
+                                      <div>
+                                        <div className="font-bold text-slate-700 dark:text-white">{formatRupiah(inst.amount)}</div>
+                                        <div className="text-[10px] text-slate-500">{inst.paidAt} • {inst.paymentMethod}</div>
+                                      </div>
+                                    </div>
+                                    <div className="text-xs text-slate-500 italic max-w-md">
+                                      {inst.note || 'Tanpa catatan'}
+                                    </div>
+                                    <div className="text-right">
+                                      {/* Allows deleting an individual installment payment */}
+                                      <button
+                                        onClick={() => {
+                                          if (confirm(`Hapus cicilan ke-${idx + 1} sejumlah ${formatRupiah(inst.amount)}?`)) {
+                                            const updatedInst = invoice.installments?.filter(i => i.id !== inst.id) || [];
+                                            const newAmountPaid = updatedInst.reduce((sum, item) => sum + item.amount, 0);
+                                            const newStatus = newAmountPaid === 0 ? 'unpaid' : 'partially_paid';
+                                            onUpdateInvoiceStatus(invoice.id, newStatus, {
+                                              paidAt: undefined,
+                                              paymentMethod: undefined,
+                                              amountPaid: newAmountPaid,
+                                              installments: updatedInst
+                                            });
+                                          }
+                                        }}
+                                        className="text-rose-500 hover:text-rose-700 font-semibold text-[10.5px]"
+                                      >
+                                        Hapus Pembayaran
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>

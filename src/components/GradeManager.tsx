@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Student, Grade } from '../types';
 import { getWhatsAppLink } from '../utils';
-import { Award, Plus, Search, Calendar, Zap, Timer, Trash2, Send, AlertCircle } from 'lucide-react';
+import { Award, Search, Calendar, Zap, Timer, Trash2, Send, AlertCircle } from 'lucide-react';
 
 interface GradeManagerProps {
   students: Student[];
@@ -20,39 +20,29 @@ export function GradeManager({
 }: GradeManagerProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [studentFilter, setStudentFilter] = useState('All');
-  const [isFormOpen, setIsFormOpen] = useState(false);
 
-  // Form states
-  const [selectedStudentId, setSelectedStudentId] = useState('');
-  const [topic, setTopic] = useState('');
-  const [score, setScore] = useState(90);
-  const [speedSeconds, setSpeedSeconds] = useState(15);
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [notes, setNotes] = useState('');
-
-  // Bulk / Class Form states
-  const [isBulkFormOpen, setIsBulkFormOpen] = useState(false);
+  // Direct Inline Class Form states
   const [bulkTopic, setBulkTopic] = useState('');
   const [bulkDate, setBulkDate] = useState(new Date().toISOString().slice(0, 10));
   const [studentGradesData, setStudentGradesData] = useState<Record<string, { included: boolean; score: number; speedSeconds: number; notes: string }>>({});
 
   const activeStudents = students.filter(s => s.status === 'active');
 
-  const handleOpenBulkForm = () => {
-    const initialData: Record<string, { included: boolean; score: number; speedSeconds: number; notes: string }> = {};
-    activeStudents.forEach(s => {
-      initialData[s.id] = {
-        included: true,
-        score: 90,
-        speedSeconds: 15,
-        notes: ''
-      };
+  // Initialize/sync studentGradesData whenever activeStudents changes, with default score & speedSeconds of 0
+  React.useEffect(() => {
+    setStudentGradesData(prev => {
+      const newData: Record<string, { included: boolean; score: number; speedSeconds: number; notes: string }> = {};
+      activeStudents.forEach(s => {
+        newData[s.id] = prev[s.id] || {
+          included: true,
+          score: 0,
+          speedSeconds: 0,
+          notes: ''
+        };
+      });
+      return newData;
     });
-    setStudentGradesData(initialData);
-    setBulkTopic('');
-    setBulkDate(new Date().toISOString().slice(0, 10));
-    setIsBulkFormOpen(true);
-  };
+  }, [students]);
 
   const handleUpdateStudentBulk = (studentId: string, field: 'included' | 'score' | 'speedSeconds' | 'notes', value: any) => {
     setStudentGradesData(prev => ({
@@ -77,70 +67,55 @@ export function GradeManager({
       return;
     }
 
-    // Loop and add grade for each student
-    for (const student of studentsToSave) {
-      const data = studentGradesData[student.id];
-      if (!data) continue;
-      await onAddGrade({
-        studentId: student.id,
-        studentName: student.name,
-        date: bulkDate,
-        topic: bulkTopic,
-        score: Number(data.score),
-        speedSeconds: Number(data.speedSeconds),
-        notes: data.notes
-      });
-    }
+    try {
+      // Loop and add grade for each student
+      for (const student of studentsToSave) {
+        const data = studentGradesData[student.id];
+        if (!data) continue;
+        await onAddGrade({
+          studentId: student.id,
+          studentName: student.name,
+          date: bulkDate,
+          topic: bulkTopic,
+          score: Number(data.score),
+          speedSeconds: Number(data.speedSeconds),
+          notes: data.notes
+        });
+      }
 
-    setIsBulkFormOpen(false);
-    alert(`Berhasil menyimpan nilai untuk ${studentsToSave.length} siswa!`);
+      // Reset topic and data to 0
+      setBulkTopic('');
+      setStudentGradesData(prev => {
+        const newData: Record<string, { included: boolean; score: number; speedSeconds: number; notes: string }> = {};
+        activeStudents.forEach(s => {
+          newData[s.id] = {
+            included: true,
+            score: 0,
+            speedSeconds: 0,
+            notes: ''
+          };
+        });
+        return newData;
+      });
+      alert(`Berhasil menyimpan nilai untuk ${studentsToSave.length} siswa!`);
+    } catch (err) {
+      console.error('Gagal menyimpan nilai:', err);
+      alert('Terjadi kesalahan saat menyimpan nilai.');
+    }
   };
 
   // Badge calculator based on accuracy and speed
   const getAgilityBadge = (sc: number, sp: number) => {
-    if (sc >= 90 && sp <= 12) {
+    if (sc >= 90 && sp <= 12 && sp > 0) {
       return { text: 'Kilat Akurat ⚡🏆', style: 'bg-amber-500/10 text-amber-500 dark:text-amber-400 border-amber-550/20' };
     }
-    if (sc >= 90 && sp <= 20) {
+    if (sc >= 90 && (sp <= 20 || sp === 0)) {
       return { text: 'Master Akurasi 🎯', style: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' };
     }
-    if (sc < 90 && sp <= 12) {
+    if (sc < 90 && sp <= 12 && sp > 0) {
       return { text: 'Kecepatan Tinggi 🏎️', style: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' };
     }
     return { text: 'Praktisi Jari 👍', style: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700' };
-  };
-
-  const handleOpenForm = () => {
-    setSelectedStudentId(activeStudents[0]?.id || '');
-    setTopic('');
-    setScore(90);
-    setSpeedSeconds(15);
-    setDate(new Date().toISOString().slice(0, 10));
-    setNotes('');
-    setIsFormOpen(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedStudentId || !topic.trim() || score < 0 || speedSeconds <= 0) {
-      alert('Mohon isi data nilai dengan benar!');
-      return;
-    }
-
-    const studentObj = students.find(s => s.id === selectedStudentId);
-    if (!studentObj) return;
-
-    await onAddGrade({
-      studentId: selectedStudentId,
-      studentName: studentObj.name,
-      date,
-      topic,
-      score,
-      speedSeconds,
-      notes
-    });
-
-    setIsFormOpen(false);
   };
 
   const handleDelete = async (id: string, topicName: string) => {
@@ -175,31 +150,155 @@ export function GradeManager({
   return (
     <div id="grade-manager-section" className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4 border-slate-200 dark:border-slate-800">
         <div>
           <h2 className={`text-2xl font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Input Nilai & Uji Kecepatan</h2>
-          <p className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-sm`}>Rekam akurasi jawaban dan kecepatan berhitung (detik) siswa untuk mengukur kelincahan otak.</p>
+          <p className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-sm`}>Rekam akurasi jawaban dan kecepatan berhitung (detik) siswa secara langsung di bawah ini.</p>
         </div>
-        
-        <div className="flex flex-wrap gap-2.5">
-          <button
-            id="btn-add-grade-class"
-            onClick={handleOpenBulkForm}
-            className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-2.5 rounded-xl transition duration-150 shadow-sm"
-          >
-            <Award size={18} />
-            <span>Input Nilai 1 Kelas</span>
-          </button>
-          
-          <button
-            id="btn-add-grade"
-            onClick={handleOpenForm}
-            className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2.5 rounded-xl transition duration-150 shadow-sm"
-          >
-            <Plus size={18} />
-            <span>Input Nilai Individu</span>
-          </button>
+      </div>
+
+      {/* Direct Inline Grade Input Form */}
+      <div className={`rounded-2xl border shadow-sm overflow-hidden ${
+        isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+      }`}>
+        <div className={`p-5 border-b ${isLight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-slate-950/20'}`}>
+          <h3 className={`text-base font-bold ${isLight ? 'text-slate-800' : 'text-white'} flex items-center gap-2`}>
+            <Award size={20} className="text-emerald-500" />
+            <span>Panel Input Nilai Kelas (Langsung)</span>
+          </h3>
+          <p className="text-xs text-slate-400 mt-0.5">Isi materi/bab, tanggal, dan nilai siswa aktif di bawah, lalu klik Simpan Nilai.</p>
         </div>
+
+        <form onSubmit={handleBulkSubmit} className="space-y-4">
+          {/* Topic and Date Row */}
+          <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-slate-200 dark:border-slate-800/60">
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Materi / Bab Uji Kompetensi *</label>
+              <input
+                type="text"
+                required
+                placeholder="Misal: Penjumlahan Kombinasi 5 (+4, +3)"
+                value={bulkTopic}
+                onChange={(e) => setBulkTopic(e.target.value)}
+                className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm ${
+                  isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
+                }`}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Tanggal Ujian *</label>
+              <input
+                type="date"
+                required
+                value={bulkDate}
+                onChange={(e) => setBulkDate(e.target.value)}
+                className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm ${
+                  isLight ? 'bg-white border-slate-200 text-slate-800 font-medium' : 'bg-slate-950/40 border-slate-800 text-white'
+                }`}
+              />
+            </div>
+          </div>
+
+          {/* Student Inputs Table */}
+          <div className="p-5 overflow-x-auto">
+            {activeStudents.length === 0 ? (
+              <div className="text-center py-8 text-slate-500">
+                <AlertCircle size={36} className="mx-auto text-slate-500 mb-2" />
+                <p className="text-sm font-medium">Tidak ada siswa aktif kelas ini.</p>
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 dark:border-slate-800/60 text-xs font-semibold uppercase tracking-wider text-slate-450 pb-2">
+                    <th className="py-2 w-16 text-center">Ikut</th>
+                    <th className="py-2">Nama Siswa</th>
+                    <th className="py-2 w-32 text-center">Skor (0-100)</th>
+                    <th className="py-2 w-32 text-center">Durasi (Detik)</th>
+                    <th className="py-2">Catatan Tambahan</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/40">
+                  {activeStudents.map((student) => {
+                    const data = studentGradesData[student.id] || { included: true, score: 0, speedSeconds: 0, notes: '' };
+                    return (
+                      <tr key={student.id} className={`transition ${data.included ? '' : 'opacity-40'}`}>
+                        <td className="py-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={data.included}
+                            onChange={(e) => handleUpdateStudentBulk(student.id, 'included', e.target.checked)}
+                            className="w-4.5 h-4.5 rounded text-emerald-600 focus:ring-emerald-500 bg-slate-950/40 border-slate-800 cursor-pointer"
+                          />
+                        </td>
+                        <td className="py-3 font-semibold text-sm">
+                          <div className={isLight ? 'text-slate-800' : 'text-slate-200'}>{student.name}</div>
+                          <div className="text-xs text-slate-400 font-mono">Level: {student.level}</div>
+                        </td>
+                        <td className="py-3 text-center px-2">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            required={data.included}
+                            disabled={!data.included}
+                            value={data.score}
+                            onChange={(e) => handleUpdateStudentBulk(student.id, 'score', Number(e.target.value))}
+                            className={`w-24 px-2 py-1.5 border rounded-lg text-center font-bold text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                              isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
+                            }`}
+                          />
+                        </td>
+                        <td className="py-3 text-center px-2">
+                          <input
+                            type="number"
+                            min="0"
+                            required={data.included}
+                            disabled={!data.included}
+                            value={data.speedSeconds}
+                            onChange={(e) => handleUpdateStudentBulk(student.id, 'speedSeconds', Number(e.target.value))}
+                            className={`w-24 px-2 py-1.5 border rounded-lg text-center font-mono font-bold text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                              isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
+                            }`}
+                          />
+                        </td>
+                        <td className="py-3">
+                          <input
+                            type="text"
+                            disabled={!data.included}
+                            placeholder="Sangat cepat / fokus tinggi"
+                            value={data.notes}
+                            onChange={(e) => handleUpdateStudentBulk(student.id, 'notes', e.target.value)}
+                            className={`w-full px-3 py-1.5 border rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                              isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
+                            }`}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Actions button bar */}
+          {activeStudents.length > 0 && (
+            <div className={`p-4 border-t flex justify-end shrink-0 ${isLight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-slate-950/20'}`}>
+              <button
+                type="submit"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm px-6 py-2.5 rounded-xl transition shadow-sm"
+              >
+                Simpan Nilai Semua Siswa
+              </button>
+            </div>
+          )}
+        </form>
+      </div>
+
+      {/* History Section Header */}
+      <div className="pt-6 border-t border-slate-200 dark:border-slate-800/60">
+        <h3 className={`text-lg font-bold mb-2 ${isLight ? 'text-slate-800' : 'text-white'}`}>Riwayat Nilai & Uji Kecepatan</h3>
+        <p className="text-xs text-slate-400">Gunakan pencarian dan filter di bawah untuk meninjau pencapaian belajar siswa.</p>
       </div>
 
       {/* Filter bar */}
@@ -241,302 +340,28 @@ export function GradeManager({
         </div>
       </div>
 
-      {/* Grade Form dialog */}
-      {isFormOpen && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className={`rounded-2xl w-full max-w-lg shadow-2xl border ${
-            isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#020617] border-slate-800 text-white'
-          }`}>
-            <div className={`p-6 border-b flex items-center justify-between ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-              <h3 className={`text-lg font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Input Nilai & Kecepatan Uji</h3>
-              <button onClick={() => setIsFormOpen(false)} className="text-slate-400 hover:text-white font-medium text-lg">✕</button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Siswa *</label>
-                {activeStudents.length === 0 ? (
-                  <p className="text-sm text-amber-500 flex items-center gap-1"><AlertCircle size={15} /> Tidak ada siswa aktif.</p>
-                ) : (
-                  <select
-                    required
-                    value={selectedStudentId}
-                    onChange={(e) => setSelectedStudentId(e.target.value)}
-                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                      isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
-                    }`}
-                  >
-                    {activeStudents.map(s => (
-                      <option key={s.id} value={s.id} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>{s.name} ({s.level})</option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Materi / Bab Uji Kompetensi *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Misal: Penjumlahan Kombinasi 5 (+4, +3)"
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                    isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
-                  }`}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Skor Akurasi (0 - 100) *</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    required
-                    value={score}
-                    onChange={(e) => setScore(Number(e.target.value))}
-                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 font-bold ${
-                      isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Durasi Selesai (Detik) *</label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={speedSeconds}
-                    onChange={(e) => setSpeedSeconds(Number(e.target.value))}
-                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 font-bold ${
-                      isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Tanggal Ujian *</label>
-                  <input
-                    type="date"
-                    required
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                      isLight ? 'bg-slate-100 border-slate-200 text-slate-800 font-medium' : 'bg-slate-900 border-slate-800 text-white'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Catatan Tambahan</label>
-                  <input
-                    type="text"
-                    placeholder="Sangat cepat, fokus tinggi"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                      isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div className={`pt-4 border-t flex gap-3 justify-end ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-                <button
-                  type="button"
-                  onClick={() => setIsFormOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-850 rounded-xl transition"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={activeStudents.length === 0}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-5 py-2 rounded-xl transition shadow-sm disabled:bg-slate-350 disabled:text-slate-500 dark:disabled:bg-slate-800 dark:disabled:text-slate-600"
-                >
-                  Simpan Nilai
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Bulk Class Grade Form dialog */}
-      {isBulkFormOpen && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className={`rounded-2xl w-full max-w-4xl shadow-2xl border flex flex-col max-h-[90vh] ${
-            isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#020617] border-slate-800 text-white'
-          }`}>
-            <div className={`p-6 border-b flex items-center justify-between shrink-0 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-              <div>
-                <h3 className={`text-lg font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Input Nilai Langsung 1 Kelas</h3>
-                <p className="text-slate-400 text-xs mt-0.5">Input skor akurasi dan kecepatan untuk seluruh siswa aktif sekaligus.</p>
-              </div>
-              <button onClick={() => setIsBulkFormOpen(false)} className="text-slate-400 hover:text-white font-medium text-lg">✕</button>
-            </div>
-
-            <form onSubmit={handleBulkSubmit} className="flex-1 flex flex-col overflow-hidden">
-              {/* Common Inputs */}
-              <div className={`p-6 border-b grid grid-cols-1 md:grid-cols-2 gap-4 shrink-0 ${isLight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-slate-950/40'}`}>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Materi / Bab Uji Kompetensi *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Misal: Penjumlahan Kombinasi 5 (+4, +3)"
-                    value={bulkTopic}
-                    onChange={(e) => setBulkTopic(e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm ${
-                      isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Tanggal Ujian *</label>
-                  <input
-                    type="date"
-                    required
-                    value={bulkDate}
-                    onChange={(e) => setBulkDate(e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm ${
-                      isLight ? 'bg-white border-slate-200 text-slate-800 font-medium' : 'bg-slate-900 border-slate-800 text-white'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              {/* Student Bulk Table */}
-              <div className="flex-1 overflow-y-auto p-6 min-h-[250px]">
-                {activeStudents.length === 0 ? (
-                  <div className="text-center py-12 text-slate-500">
-                    <AlertCircle size={36} className="mx-auto text-slate-500 mb-2" />
-                    <p className="text-sm font-medium">Tidak ada siswa aktif kelas ini.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-slate-800/60 text-xs font-semibold uppercase tracking-wider text-slate-400 pb-2">
-                          <th className="py-2 w-12 text-center">Pilih</th>
-                          <th className="py-2">Nama Siswa</th>
-                          <th className="py-2 w-28">Skor (0-100)</th>
-                          <th className="py-2 w-28">Durasi (Detik)</th>
-                          <th className="py-2">Catatan Tambahan</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/40">
-                        {activeStudents.map((student) => {
-                          const data = studentGradesData[student.id] || { included: true, score: 90, speedSeconds: 15, notes: '' };
-                          return (
-                            <tr key={student.id} className={`transition ${data.included ? '' : 'opacity-40'}`}>
-                              <td className="py-3 text-center">
-                                <input
-                                  type="checkbox"
-                                  checked={data.included}
-                                  onChange={(e) => handleUpdateStudentBulk(student.id, 'included', e.target.checked)}
-                                  className="w-4.5 h-4.5 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-900 border-slate-800 cursor-pointer"
-                                />
-                              </td>
-                              <td className="py-3 font-semibold text-sm">
-                                <div>{student.name}</div>
-                                <div className="text-xs text-slate-400 font-mono">Level: {student.level}</div>
-                              </td>
-                              <td className="py-3 pr-2">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="100"
-                                  required={data.included}
-                                  disabled={!data.included}
-                                  value={data.score}
-                                  onChange={(e) => handleUpdateStudentBulk(student.id, 'score', Number(e.target.value))}
-                                  className={`w-24 px-2 py-1.5 border rounded-lg text-center font-bold text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
-                                    isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950 border-slate-800 text-white'
-                                  }`}
-                                />
-                              </td>
-                              <td className="py-3 pr-2">
-                                <input
-                                  type="number"
-                                  min="1"
-                                  required={data.included}
-                                  disabled={!data.included}
-                                  value={data.speedSeconds}
-                                  onChange={(e) => handleUpdateStudentBulk(student.id, 'speedSeconds', Number(e.target.value))}
-                                  className={`w-24 px-2 py-1.5 border rounded-lg text-center font-mono font-bold text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
-                                    isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950 border-slate-800 text-white'
-                                  }`}
-                                />
-                              </td>
-                              <td className="py-3">
-                                <input
-                                  type="text"
-                                  disabled={!data.included}
-                                  placeholder="Sangat cepat / butuh bimbingan"
-                                  value={data.notes}
-                                  onChange={(e) => handleUpdateStudentBulk(student.id, 'notes', e.target.value)}
-                                  className={`w-full px-3 py-1.5 border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
-                                    isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950 border-slate-800 text-white'
-                                  }`}
-                                />
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              {/* Actions */}
-              <div className={`p-6 border-t flex gap-3 justify-end shrink-0 ${isLight ? 'border-slate-200 bg-slate-50' : 'border-slate-800'}`}>
-                <button
-                  type="button"
-                  onClick={() => setIsBulkFormOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-850 rounded-xl transition"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={activeStudents.length === 0}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-2.5 rounded-xl transition shadow-sm disabled:bg-slate-300 disabled:text-slate-500 dark:disabled:bg-slate-800 dark:disabled:text-slate-600"
-                >
-                  Simpan Nilai Semua Siswa
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* Grades list table */}
       <div className={`rounded-2xl border shadow-sm overflow-hidden ${
         isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
       }`}>
         {filteredGrades.length === 0 ? (
           <div className="p-12 text-center text-slate-500">
-            <Award size={44} className="mx-auto text-slate-600 mb-3" />
-            <p className="font-medium text-slate-400">Belum ada rekaman nilai latihan</p>
-            <p className="text-xs text-slate-500 mt-1">Gunakan tombol diatas untuk mulai merekam skor ujian siswa.</p>
+            <Award size={44} className="mx-auto text-slate-650 mb-3" />
+            <p className="font-medium text-slate-400">Belum ada rekaman nilai bimbingan</p>
+            <p className="text-xs text-slate-500 mt-1">Masukkan materi dan skor uji kompetensi pada formulir di atas untuk merekam data nilai.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className={`border-b text-xs font-semibold uppercase tracking-wider text-slate-500 ${
+                <tr className={`border-b text-xs font-semibold uppercase tracking-wider text-slate-550 ${
                   isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/40 border-slate-800'
                 }`}>
                   <th className="p-4">Siswa</th>
                   <th className="p-4">Materi Uji</th>
                   <th className="p-4">Skor Akurasi</th>
                   <th className="p-4">Kecepatan</th>
-                  <th className="p-4">Lencana Refleks</th>
+                  <th className="p-4">Lencana Kelincahan</th>
                   <th className="p-4">Tanggal</th>
                   <th className="p-4 text-center">Aksi</th>
                 </tr>

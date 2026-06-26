@@ -5,7 +5,7 @@ export interface Student {
   parentPhone: string; // WhatsApp number
   joinDate: string; // YYYY-MM-DD
   level: string; // e.g. "Level 1: Basic"
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'alumni';
   keterangan?: string; // notes / description when registering
   tempatLahir?: string;
   tanggalLahir?: string; // YYYY-MM-DD
@@ -34,6 +34,14 @@ export interface TeacherNote {
   teacherName: string;
 }
 
+export interface Installment {
+  id: string;
+  amount: number;
+  paidAt: string;
+  paymentMethod: 'Transfer' | 'Tunai';
+  note?: string;
+}
+
 export interface Invoice {
   id: string;
   invoiceNo: string;
@@ -42,10 +50,12 @@ export interface Invoice {
   amount: number;
   month: string; // e.g. "Juni 2026"
   dueDate: string; // YYYY-MM-DD
-  status: 'paid' | 'unpaid';
+  status: 'paid' | 'unpaid' | 'partially_paid';
   paidAt?: string; // YYYY-MM-DD
   paymentMethod?: 'Transfer' | 'Tunai';
   createdAt: number;
+  amountPaid?: number; // Cumulative payment amount
+  installments?: Installment[]; // List of installment records
 }
 
 export interface Grade {

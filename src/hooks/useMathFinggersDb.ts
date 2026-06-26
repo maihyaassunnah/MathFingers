@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
-import { Student, Attendance, TeacherNote, Invoice, Grade, LearningMaterial, AppSettings, DashboardTask } from '../types';
+import { Student, Attendance, TeacherNote, Invoice, Installment, Grade, LearningMaterial, AppSettings, DashboardTask } from '../types';
 import { SEED_MATERIALS, generateInvoiceNo } from '../utils';
 
 // Helper to load localStorage fallbacks
@@ -275,12 +275,36 @@ export function useMathFinggersDb() {
   };
 
   const deleteStudent = async (id: string) => {
-    const updated = students.filter(s => s.id !== id);
-    setStudents(updated);
-    saveLocalData('students', updated);
+    // Cascade delete associated records in local state & localStorage to prevent orphaned data
+    const updatedStudents = students.filter(s => s.id !== id);
+    setStudents(updatedStudents);
+    saveLocalData('students', updatedStudents);
+
+    const updatedAttendance = attendance.filter(a => a.studentId !== id);
+    setAttendance(updatedAttendance);
+    saveLocalData('attendance', updatedAttendance);
+
+    const updatedNotes = notes.filter(n => n.studentId !== id);
+    setNotes(updatedNotes);
+    saveLocalData('notes', updatedNotes);
+
+    const updatedInvoices = invoices.filter(i => i.studentId !== id);
+    setInvoices(updatedInvoices);
+    saveLocalData('invoices', updatedInvoices);
+
+    const updatedGrades = grades.filter(g => g.studentId !== id);
+    setGrades(updatedGrades);
+    saveLocalData('grades', updatedGrades);
 
     if (supabase && !isOfflineFallback) {
       try {
+        // Cascade delete child rows in Supabase first to prevent foreign key errors (ON DELETE CASCADE fallback)
+        await supabase.from('attendance').delete().eq('studentId', id);
+        await supabase.from('notes').delete().eq('studentId', id);
+        await supabase.from('invoices').delete().eq('studentId', id);
+        await supabase.from('grades').delete().eq('studentId', id);
+
+        // Finally delete the parent student record
         const { error } = await supabase.from('students').delete().eq('id', id);
         if (error) throw error;
       } catch (err) {
@@ -381,14 +405,19 @@ export function useMathFinggersDb() {
     }
   };
 
-  const updateInvoiceStatus = async (id: string, status: 'paid' | 'unpaid', details?: { paidAt: string; paymentMethod: 'Transfer' | 'Tunai' }) => {
+  const updateInvoiceStatus = async (id: string, status: 'paid' | 'unpaid' | 'partially_paid', details?: { paidAt?: string; paymentMethod?: 'Transfer' | 'Tunai'; amountPaid?: number; installments?: Installment[] }) => {
     const updated = invoices.map(inv => inv.id === id ? { ...inv, status, ...details } : inv);
     setInvoices(updated);
     saveLocalData('invoices', updated);
 
     if (supabase && !isOfflineFallback) {
       try {
-        const { error } = await supabase.from('invoices').update({ status, ...(details || {}) }).eq('id', id);
+        const payload: any = { status };
+        if (details?.paidAt !== undefined) payload.paidAt = details.paidAt;
+        if (details?.paymentMethod !== undefined) payload.paymentMethod = details.paymentMethod;
+        if (details?.amountPaid !== undefined) payload.amountPaid = details.amountPaid;
+        if (details?.installments !== undefined) payload.installments = details.installments;
+        const { error } = await supabase.from('invoices').update(payload).eq('id', id);
         if (error) throw error;
       } catch (err) {
         console.error('Failed to update invoice status in Supabase:', err);

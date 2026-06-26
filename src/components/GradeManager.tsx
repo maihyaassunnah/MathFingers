@@ -213,7 +213,6 @@ export function GradeManager({
                     <th className="py-2 w-16 text-center">Ikut</th>
                     <th className="py-2">Nama Siswa</th>
                     <th className="py-2 w-32 text-center">Skor (0-100)</th>
-                    <th className="py-2 w-32 text-center">Durasi (Detik)</th>
                     <th className="py-2">Catatan Tambahan</th>
                   </tr>
                 </thead>
@@ -232,7 +231,6 @@ export function GradeManager({
                         </td>
                         <td className="py-3 font-semibold text-sm">
                           <div className={isLight ? 'text-slate-800' : 'text-slate-200'}>{student.name}</div>
-                          <div className="text-xs text-slate-400 font-mono">Level: {student.level}</div>
                         </td>
                         <td className="py-3 text-center px-2">
                           <input
@@ -244,19 +242,6 @@ export function GradeManager({
                             value={data.score}
                             onChange={(e) => handleUpdateStudentBulk(student.id, 'score', Number(e.target.value))}
                             className={`w-24 px-2 py-1.5 border rounded-lg text-center font-bold text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                              isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
-                            }`}
-                          />
-                        </td>
-                        <td className="py-3 text-center px-2">
-                          <input
-                            type="number"
-                            min="0"
-                            required={data.included}
-                            disabled={!data.included}
-                            value={data.speedSeconds}
-                            onChange={(e) => handleUpdateStudentBulk(student.id, 'speedSeconds', Number(e.target.value))}
-                            className={`w-24 px-2 py-1.5 border rounded-lg text-center font-mono font-bold text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
                               isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
                             }`}
                           />

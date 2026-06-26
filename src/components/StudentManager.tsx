@@ -603,9 +603,16 @@ export function StudentManager({
                             <Edit2 size={16} />
                           </button>
                           <button
+                            type="button"
                             onClick={async () => {
                               if (confirm(`Apakah Anda yakin ingin meluluskan ${student.name} sebagai Alumni?`)) {
-                                await onUpdateStudent(student.id, { status: 'alumni' });
+                                try {
+                                  await onUpdateStudent(student.id, { status: 'alumni' });
+                                  alert(`Selamat! ${student.name} berhasil diluluskan dan statusnya diubah menjadi Alumni. Data telah dipindahkan ke menu 'Alumni / Lulus'.`);
+                                } catch (error) {
+                                  console.error(error);
+                                  alert(`Gagal meluluskan siswa: ${error instanceof Error ? error.message : 'Kesalahan tidak dikenal'}`);
+                                }
                               }
                             }}
                             className="p-1.5 text-slate-500 hover:text-amber-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"

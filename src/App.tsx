@@ -288,6 +288,10 @@ export default function App() {
         return (
           <SupabaseSqlEditor 
             theme={theme}
+            students={students}
+            onUpdateStudent={updateStudent}
+            onAddStudent={addStudent}
+            onDeleteStudent={deleteStudent}
           />
         );
       default:

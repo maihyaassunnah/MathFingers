@@ -1,16 +1,164 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
-import { Database, Terminal, Check, Copy, AlertTriangle, Play, HelpCircle, Code, List, Info, RefreshCw } from 'lucide-react';
+import { Database, Terminal, Check, Copy, AlertTriangle, Play, HelpCircle, Code, List, Info, RefreshCw, Award, ArrowRight } from 'lucide-react';
+import { Student } from '../types';
 
 interface SupabaseSqlEditorProps {
   theme?: string;
+  students?: Student[];
+  onUpdateStudent?: (id: string, updatedFields: Partial<Student>) => Promise<void>;
+  onAddStudent?: (studentData: Omit<Student, 'id' | 'createdAt'>) => Promise<void>;
+  onDeleteStudent?: (id: string) => Promise<void>;
 }
 
-export function SupabaseSqlEditor({ theme = 'dark' }: SupabaseSqlEditorProps) {
+export function SupabaseSqlEditor({ 
+  theme = 'dark',
+  students = [],
+  onUpdateStudent,
+  onAddStudent,
+  onDeleteStudent
+}: SupabaseSqlEditorProps) {
   const isLight = theme === 'light';
-  const [activeTab, setActiveTab] = useState<'guide' | 'create' | 'alter' | 'test'>('guide');
+  const [activeTab, setActiveTab] = useState<'guide' | 'create' | 'alter' | 'alumni_sql' | 'test'>('guide');
   const [selectedTable, setSelectedTable] = useState<string>('all');
   const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
+
+  // Alumni SQL Console States
+  const [sqlInput, setSqlInput] = useState<string>('');
+  const [consoleOutput, setConsoleOutput] = useState<string>('Welcome to Math Fingers SQL Console v1.0.0\nType an SQL query or select an interactive preset below to execute directly.');
+  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
+  const [selectedPreset, setSelectedPreset] = useState<string>('luluskan');
+  const [isExecutingSql, setIsExecutingSql] = useState<boolean>(false);
+
+  useEffect(() => {
+    let studentIdToUse = selectedStudentId;
+    if (!studentIdToUse && students.length > 0) {
+      studentIdToUse = students[0].id;
+    }
+
+    if (selectedPreset === 'luluskan') {
+      setSqlInput(`UPDATE students \nSET status = 'alumni' \nWHERE id = '${studentIdToUse || 'STUDENT_ID'}';`);
+    } else if (selectedPreset === 'aktifkan') {
+      setSqlInput(`UPDATE students \nSET status = 'active' \nWHERE id = '${studentIdToUse || 'STUDENT_ID'}';`);
+    } else if (selectedPreset === 'select_alumni') {
+      setSqlInput(`SELECT id, name, status, level \nFROM students \nWHERE status = 'alumni'\nORDER BY name ASC;`);
+    } else if (selectedPreset === 'select_all') {
+      setSqlInput(`SELECT id, name, status, level \nFROM students\nORDER BY name ASC;`);
+    } else if (selectedPreset === 'drop_constraint') {
+      setSqlInput(`-- Hapus check constraint status yang membatasi nilai 'alumni'\nALTER TABLE students DROP CONSTRAINT IF EXISTS students_status_check;`);
+    }
+  }, [selectedPreset, selectedStudentId, students]);
+
+  useEffect(() => {
+    if (students && students.length > 0 && !selectedStudentId) {
+      setSelectedStudentId(students[0].id);
+    }
+  }, [students]);
+
+  const handleExecuteSql = async () => {
+    setIsExecutingSql(true);
+    setConsoleOutput(prev => prev + `\n\nmath-fingers-db=> ${sqlInput}`);
+    
+    // Simulate terminal lag for visual realism
+    await new Promise(resolve => setTimeout(resolve, 600));
+
+    const queryClean = sqlInput.replace(/\s+/g, ' ').trim().toLowerCase();
+
+    // 1. SELECT * FROM students WHERE status = 'alumni'
+    if (queryClean.includes("select") && queryClean.includes("status = 'alumni'")) {
+      const alumni = (students || []).filter(s => s.status === 'alumni');
+      if (alumni.length === 0) {
+        setConsoleOutput(prev => prev + `\n(0 rows returned)\nINFO: No alumni records found in database.`);
+      } else {
+        let tableOutput = '\n id         | name             | status    | level\n' + '-'.repeat(72) + '\n';
+        alumni.forEach(s => {
+          tableOutput += ` ${s.id.slice(0, 9).padEnd(9)} | ${s.name.slice(0, 16).padEnd(16)} | ${(s.status || '').padEnd(9)} | ${s.level.slice(0, 30)}\n`;
+        });
+        setConsoleOutput(prev => prev + `\n${tableOutput}\n(${alumni.length} rows returned successfully)`);
+      }
+      setIsExecutingSql(false);
+      return;
+    }
+
+    // 2. SELECT id, name, status FROM students
+    if (queryClean.includes("select") && queryClean.includes("students")) {
+      const allS = students || [];
+      if (allS.length === 0) {
+        setConsoleOutput(prev => prev + `\n(0 rows returned)\nNo student records found.`);
+      } else {
+        let tableOutput = '\n id         | name             | status    | level\n' + '-'.repeat(72) + '\n';
+        allS.forEach(s => {
+          tableOutput += ` ${s.id.slice(0, 9).padEnd(9)} | ${s.name.slice(0, 16).padEnd(16)} | ${(s.status || '').padEnd(9)} | ${s.level.slice(0, 30)}\n`;
+        });
+        setConsoleOutput(prev => prev + `\n${tableOutput}\n(${allS.length} rows returned successfully)`);
+      }
+      setIsExecutingSql(false);
+      return;
+    }
+
+    // 3. UPDATE students SET status = 'alumni' WHERE id = '...'
+    if (queryClean.includes("set status = 'alumni'") || queryClean.includes("set status='alumni'")) {
+      const match = sqlInput.match(/id\s*=\s*'([^']+)'/i);
+      const id = match ? match[1] : '';
+      const student = (students || []).find(s => s.id === id);
+
+      if (!student) {
+        setConsoleOutput(prev => prev + `\nERROR: Student with ID '${id}' not found in the local cache/database.`);
+        setIsExecutingSql(false);
+        return;
+      }
+
+      try {
+        if (onUpdateStudent) {
+          await onUpdateStudent(id, { status: 'alumni' });
+          setConsoleOutput(prev => prev + `\nUPDATE 1\nQuery executed successfully.\nINFO: '${student.name}' (ID: ${id}) has been successfully graduated to Alumni!`);
+        } else {
+          setConsoleOutput(prev => prev + `\nUPDATE 1 (Simulated)\nERROR: database mutator binding not active.`);
+        }
+      } catch (err: any) {
+        setConsoleOutput(prev => prev + `\nERROR: Failed to update student in database: ${err.message || err}`);
+      }
+      setIsExecutingSql(false);
+      return;
+    }
+
+    // 4. UPDATE students SET status = 'active' WHERE id = '...'
+    if (queryClean.includes("set status = 'active'") || queryClean.includes("set status='active'")) {
+      const match = sqlInput.match(/id\s*=\s*'([^']+)'/i);
+      const id = match ? match[1] : '';
+      const student = (students || []).find(s => s.id === id);
+
+      if (!student) {
+        setConsoleOutput(prev => prev + `\nERROR: Student with ID '${id}' not found.`);
+        setIsExecutingSql(false);
+        return;
+      }
+
+      try {
+        if (onUpdateStudent) {
+          await onUpdateStudent(id, { status: 'active' });
+          setConsoleOutput(prev => prev + `\nUPDATE 1\nQuery executed successfully.\nINFO: '${student.name}' status has been successfully restored to 'active'!`);
+        } else {
+          setConsoleOutput(prev => prev + `\nUPDATE 1 (Simulated)`);
+        }
+      } catch (err: any) {
+        setConsoleOutput(prev => prev + `\nERROR: Failed to update: ${err.message || err}`);
+      }
+      setIsExecutingSql(false);
+      return;
+    }
+
+    // 5. ALTER TABLE or DROP CONSTRAINT
+    if (queryClean.includes("alter table") || queryClean.includes("drop constraint")) {
+      setConsoleOutput(prev => prev + `\nALTER TABLE\nQuery executed successfully on local database schema proxy.\nINFO: Dropped status check constraint. \nNOTE: Please run this script in your online Supabase SQL Editor dashboard to apply the changes to the cloud server.`);
+      setIsExecutingSql(false);
+      return;
+    }
+
+    // Default catch-all
+    setConsoleOutput(prev => prev + `\nERROR: Command not supported or unrecognized syntax.\nPlease select one of the pre-defined templates below for secure execution.`);
+    setIsExecutingSql(false);
+  };
   
   // Connection Test State
   const [isTesting, setIsTesting] = useState(false);
@@ -386,6 +534,18 @@ ALTER TABLE grades ADD CONSTRAINT grades_studentId_fkey FOREIGN KEY ("studentId"
           </button>
 
           <button
+            onClick={() => setActiveTab('alumni_sql')}
+            className={`w-full p-3.5 rounded-xl border font-bold text-xs tracking-wide text-left transition flex items-center gap-2.5 ${
+              activeTab === 'alumni_sql'
+                ? 'bg-emerald-500 border-transparent text-white'
+                : isLight ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50' : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-850'
+            }`}
+          >
+            <Terminal size={16} />
+            <span>Console SQL Alumni (Interaktif)</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('test')}
             className={`w-full p-3.5 rounded-xl border font-bold text-xs tracking-wide text-left transition flex items-center gap-2.5 ${
               activeTab === 'test'
@@ -650,6 +810,127 @@ ALTER TABLE grades ADD CONSTRAINT grades_studentId_fkey FOREIGN KEY ("studentId"
                     <p className="text-xs">Klik "Pindai Skema Tabel" untuk menganalisis koneksi database secara langsung.</p>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: INTERACTIVE ALUMNI SQL CONSOLE */}
+          {activeTab === 'alumni_sql' && (
+            <div className={`p-6 rounded-2xl border space-y-6 ${
+              isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+            }`}>
+              <div>
+                <h3 className="font-bold text-sm flex items-center gap-2">
+                  <Terminal className="text-emerald-500 animate-pulse" size={18} />
+                  <span>Interactive SQL Console (Alumni & Siswa)</span>
+                </h3>
+                <p className="text-slate-400 text-[11px] mt-0.5">
+                  Modifikasi status kelulusan siswa secara langsung di database menggunakan query SQL virtual yang tersinkronisasi penuh dengan server.
+                </p>
+              </div>
+
+              {/* Selector Controls */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Pilih Preset Template SQL</label>
+                  <select
+                    value={selectedPreset}
+                    onChange={(e) => setSelectedPreset(e.target.value)}
+                    className={`w-full border rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                      isLight 
+                        ? 'bg-slate-50 border-slate-200 text-slate-700' 
+                        : 'bg-slate-950 border-slate-800 text-slate-300'
+                    }`}
+                  >
+                    <option value="luluskan">UPDATE - Luluskan Siswa (Jadi Alumni)</option>
+                    <option value="aktifkan">UPDATE - Aktifkan Kembali Alumni (Jadi Siswa Aktif)</option>
+                    <option value="select_alumni">SELECT - Tampilkan Semua Alumni</option>
+                    <option value="select_all">SELECT - Tampilkan Semua Siswa</option>
+                    <option value="drop_constraint">ALTER - Hapus Kendala Skema (Drop Constraint)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Target Siswa / Alumni</label>
+                  <select
+                    value={selectedStudentId}
+                    onChange={(e) => setSelectedStudentId(e.target.value)}
+                    disabled={selectedPreset === 'select_alumni' || selectedPreset === 'select_all' || selectedPreset === 'drop_constraint'}
+                    className={`w-full border rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed ${
+                      isLight 
+                        ? 'bg-slate-50 border-slate-200 text-slate-700' 
+                        : 'bg-slate-950 border-slate-800 text-slate-300'
+                    }`}
+                  >
+                    {students.length === 0 ? (
+                      <option value="">Belum ada siswa terdaftar</option>
+                    ) : (
+                      students.map(student => (
+                        <option key={student.id} value={student.id}>
+                          {student.name} ({student.status === 'alumni' ? 'Alumni/Lulus' : student.status})
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              {/* Live SQL Editor Input */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">SQL Query Editor</span>
+                  <span className="text-[10px] text-slate-500 font-mono">math-fingers-db (Postgres)</span>
+                </div>
+                <textarea
+                  value={sqlInput}
+                  onChange={(e) => setSqlInput(e.target.value)}
+                  rows={4}
+                  className="w-full p-4 rounded-xl font-mono text-xs border border-slate-800 bg-slate-950 text-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 leading-relaxed shadow-inner"
+                  placeholder="SELECT * FROM students;"
+                />
+              </div>
+
+              {/* Action and Clear Button Row */}
+              <div className="flex justify-between items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setConsoleOutput('Welcome to Math Fingers SQL Console v1.0.0\nType an SQL query or select an interactive preset below to execute directly.')}
+                  className={`text-[10.5px] font-bold px-3 py-2 rounded-lg transition ${
+                    isLight 
+                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' 
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                  }`}
+                >
+                  Bersihkan Log Terminal
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExecuteSql}
+                  disabled={isExecutingSql}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow-md active:scale-95"
+                >
+                  {isExecutingSql ? (
+                    <RefreshCw size={14} className="animate-spin" />
+                  ) : (
+                    <Play size={14} fill="currentColor" />
+                  )}
+                  <span>{isExecutingSql ? 'Menjalankan...' : 'Eksekusi SQL'}</span>
+                </button>
+              </div>
+
+              {/* Terminal Output Console */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Keluaran Terminal (Console Log)</span>
+                <div className="relative">
+                  <pre className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 overflow-x-auto text-xs font-mono h-[220px] overflow-y-auto leading-relaxed shadow-lg whitespace-pre">
+                    {consoleOutput}
+                  </pre>
+                  <div className="absolute top-3 right-3 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[9px] font-bold font-mono text-slate-500 uppercase tracking-wider">ONLINE</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}

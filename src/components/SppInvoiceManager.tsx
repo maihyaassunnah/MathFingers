@@ -16,7 +16,9 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
-  History
+  History,
+  UserPlus,
+  BookOpen
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
@@ -52,6 +54,9 @@ export function SppInvoiceManager({
   const [statusFilter, setStatusFilter] = useState('All');
   const [isFormOpen, setIsFormOpen] = useState(false);
   
+  const [activeCategory, setActiveCategory] = useState<'spp' | 'pendaftaran' | 'buku'>('spp');
+  const [invoiceCategory, setInvoiceCategory] = useState<'spp' | 'pendaftaran' | 'buku'>('spp');
+
   // Payment confirmation states
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'Transfer' | 'Tunai'>('Transfer');
@@ -80,13 +85,36 @@ export function SppInvoiceManager({
 
   const activeStudents = students.filter(s => s.status === 'active');
 
+  const handleInvoiceCategoryChange = (cat: 'spp' | 'pendaftaran' | 'buku') => {
+    setInvoiceCategory(cat);
+    if (cat === 'spp') {
+      setAmount(settings.defaultSppAmount);
+      const curMonthName = months[new Date().getMonth()];
+      setMonth(`${curMonthName} ${currentYear}`);
+    } else if (cat === 'pendaftaran') {
+      setAmount(100000);
+      setMonth('Pendaftaran Siswa Baru');
+    } else {
+      setAmount(150000);
+      setMonth('Paket Buku Pegangan');
+    }
+  };
+
   const handleOpenForm = () => {
     setSelectedStudentId(activeStudents[0]?.id || '');
-    setAmount(settings.defaultSppAmount);
+    setInvoiceCategory(activeCategory);
     
-    // Set default month to current month + year
-    const curMonthName = months[new Date().getMonth()];
-    setMonth(`${curMonthName} ${currentYear}`);
+    if (activeCategory === 'spp') {
+      setAmount(settings.defaultSppAmount);
+      const curMonthName = months[new Date().getMonth()];
+      setMonth(`${curMonthName} ${currentYear}`);
+    } else if (activeCategory === 'pendaftaran') {
+      setAmount(100000);
+      setMonth('Pendaftaran Siswa Baru');
+    } else {
+      setAmount(150000);
+      setMonth('Paket Buku Pegangan');
+    }
     
     // Set default due date to 10th of next month or 10th of this month
     const nextDue = new Date();
@@ -112,7 +140,8 @@ export function SppInvoiceManager({
       amount,
       month,
       dueDate,
-      status: 'unpaid'
+      status: 'unpaid',
+      category: invoiceCategory
     });
 
     setIsFormOpen(false);
@@ -505,6 +534,9 @@ function angkaKeTerbilang(nominal: number): string {
 
   // Filter invoices
   const filteredInvoices = invoices.filter(invoice => {
+    const invoiceCat = invoice.category || 'spp';
+    if (invoiceCat !== activeCategory) return false;
+
     const matchesSearch = invoice.studentName.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           invoice.invoiceNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           invoice.month.toLowerCase().includes(searchQuery.toLowerCase());
@@ -552,11 +584,59 @@ function angkaKeTerbilang(nominal: number): string {
 
   return (
     <div id="spp-invoice-manager-section" className="space-y-6">
+      {/* Sub-navigation Tabs for Payments */}
+      <div className="flex border-b border-slate-200 dark:border-slate-800 print:hidden mb-2">
+        <button
+          type="button"
+          onClick={() => setActiveCategory('pendaftaran')}
+          className={`px-5 py-3 text-sm font-bold border-b-2 transition duration-150 flex items-center gap-2 ${
+            activeCategory === 'pendaftaran'
+              ? 'border-emerald-500 text-emerald-500 font-extrabold'
+              : 'border-transparent text-slate-400 hover:text-slate-350'
+          }`}
+        >
+          <UserPlus size={16} />
+          <span>Pembayaran Pendaftaran</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveCategory('spp')}
+          className={`px-5 py-3 text-sm font-bold border-b-2 transition duration-150 flex items-center gap-2 ${
+            activeCategory === 'spp'
+              ? 'border-emerald-500 text-emerald-500 font-extrabold'
+              : 'border-transparent text-slate-400 hover:text-slate-350'
+          }`}
+        >
+          <Receipt size={16} />
+          <span>SPP</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveCategory('buku')}
+          className={`px-5 py-3 text-sm font-bold border-b-2 transition duration-150 flex items-center gap-2 ${
+            activeCategory === 'buku'
+              ? 'border-emerald-500 text-emerald-500 font-extrabold'
+              : 'border-transparent text-slate-400 hover:text-slate-350'
+          }`}
+        >
+          <BookOpen size={16} />
+          <span>Buku</span>
+        </button>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className={`text-2xl font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>SPP & Invoice Manajemen</h2>
-          <p className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-sm`}>Terbitkan tagihan SPP bulanan, catat pembayaran lunas, dan ekspor kuitansi PDF serta kirim via WhatsApp.</p>
+          <h2 className={`text-2xl font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>
+            {activeCategory === 'pendaftaran' ? 'Pembayaran Pendaftaran' : activeCategory === 'spp' ? 'SPP & Invoice Manajemen' : 'Pembayaran Buku'}
+          </h2>
+          <p className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-sm`}>
+            {activeCategory === 'pendaftaran' 
+              ? 'Kelola pembayaran pendaftaran siswa baru, terbitkan invoice pendaftaran, dan cetak kuitansi resmi.'
+              : activeCategory === 'spp'
+              ? 'Terbitkan tagihan SPP bulanan, catat pembayaran lunas/cicilan, dan ekspor kuitansi PDF serta kirim via WhatsApp.'
+              : 'Kelola pembayaran pembelian paket buku materi siswa, catat pelunasan, dan buat kuitansi digital.'}
+          </p>
         </div>
         
         <button
@@ -564,8 +644,10 @@ function angkaKeTerbilang(nominal: number): string {
           onClick={handleOpenForm}
           className={`flex items-center justify-center gap-2 ${getAccentBgClass()} text-white font-medium px-4 py-2.5 rounded-xl transition duration-150 shadow-sm`}
         >
-          <Receipt size={18} />
-          <span>Buat Invoice Baru</span>
+          {activeCategory === 'pendaftaran' ? <UserPlus size={18} /> : activeCategory === 'spp' ? <Receipt size={18} /> : <BookOpen size={18} />}
+          <span>
+            {activeCategory === 'pendaftaran' ? 'Buat Tagihan Baru' : activeCategory === 'spp' ? 'Buat Invoice Baru' : 'Buat Tagihan Buku'}
+          </span>
         </button>
       </div>
 
@@ -614,11 +696,52 @@ function angkaKeTerbilang(nominal: number): string {
             isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#020617] border-slate-800'
           }`}>
             <div className={`p-6 border-b flex items-center justify-between ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-              <h3 className={`text-lg font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Terbitkan Invoice SPP Baru</h3>
+              <h3 className={`text-lg font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>
+                Buat Tagihan {invoiceCategory === 'pendaftaran' ? 'Pendaftaran' : invoiceCategory === 'spp' ? 'SPP' : 'Buku'} Baru
+              </h3>
               <button onClick={() => setIsFormOpen(false)} className="text-slate-400 hover:text-white font-medium text-lg">✕</button>
             </div>
 
             <form onSubmit={handleSubmitInvoice} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Pilih Kategori Pembayaran *</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleInvoiceCategoryChange('pendaftaran')}
+                    className={`px-3 py-2 text-xs font-bold rounded-xl border transition ${
+                      invoiceCategory === 'pendaftaran'
+                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-500 font-extrabold'
+                        : isLight ? 'border-slate-200 text-slate-600 hover:bg-slate-50' : 'border-slate-800 text-slate-400 hover:bg-slate-900'
+                    }`}
+                  >
+                    Pendaftaran
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleInvoiceCategoryChange('spp')}
+                    className={`px-3 py-2 text-xs font-bold rounded-xl border transition ${
+                      invoiceCategory === 'spp'
+                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-500 font-extrabold'
+                        : isLight ? 'border-slate-200 text-slate-600 hover:bg-slate-50' : 'border-slate-800 text-slate-400 hover:bg-slate-900'
+                    }`}
+                  >
+                    SPP
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleInvoiceCategoryChange('buku')}
+                    className={`px-3 py-2 text-xs font-bold rounded-xl border transition ${
+                      invoiceCategory === 'buku'
+                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-500 font-extrabold'
+                        : isLight ? 'border-slate-200 text-slate-600 hover:bg-slate-50' : 'border-slate-800 text-slate-400 hover:bg-slate-900'
+                    }`}
+                  >
+                    Buku
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Pilih Siswa *</label>
                 {activeStudents.length === 0 ? (
@@ -629,7 +752,7 @@ function angkaKeTerbilang(nominal: number): string {
                     value={selectedStudentId}
                     onChange={(e) => setSelectedStudentId(e.target.value)}
                     className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 ${getAccentBorderClass()} ${
-                      isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
+                      isLight ? 'bg-slate-100 border-slate-200 text-slate-750 font-semibold' : 'bg-slate-900 border-slate-800 text-slate-300'
                     }`}
                   >
                     {activeStudents.map(s => (
@@ -640,7 +763,9 @@ function angkaKeTerbilang(nominal: number): string {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Jumlah SPP Bulanan (IDR) *</label>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                  {invoiceCategory === 'pendaftaran' ? 'Jumlah Biaya Pendaftaran (IDR) *' : invoiceCategory === 'spp' ? 'Jumlah SPP Bulanan (IDR) *' : 'Jumlah Biaya Buku (IDR) *'}
+                </label>
                 <input
                   type="number"
                   required
@@ -655,11 +780,13 @@ function angkaKeTerbilang(nominal: number): string {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Periode Bulan SPP *</label>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                    {invoiceCategory === 'pendaftaran' ? 'Keterangan Pendaftaran *' : invoiceCategory === 'spp' ? 'Periode Bulan SPP *' : 'Keterangan Buku *'}
+                  </label>
                   <input
                     type="text"
                     required
-                    placeholder="Contoh: Juni 2026"
+                    placeholder={invoiceCategory === 'pendaftaran' ? 'Misal: Pendaftaran Siswa Baru' : invoiceCategory === 'spp' ? 'Misal: Juni 2026' : 'Misal: Buku Level 1'}
                     value={month}
                     onChange={(e) => setMonth(e.target.value)}
                     className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 ${getAccentBorderClass()} ${
@@ -867,9 +994,11 @@ function angkaKeTerbilang(nominal: number): string {
       }`}>
         {filteredInvoices.length === 0 ? (
           <div className="p-12 text-center text-slate-500">
-            <Receipt size={44} className="mx-auto text-slate-600 mb-3" />
-            <p className="font-medium text-slate-400">Tidak ada tagihan SPP diterbitkan</p>
-            <p className="text-xs text-slate-500 mt-1">Gunakan tombol diatas untuk menerbitkan tagihan pertama.</p>
+            {activeCategory === 'pendaftaran' ? <UserPlus size={44} className="mx-auto text-slate-600 mb-3" /> : activeCategory === 'spp' ? <Receipt size={44} className="mx-auto text-slate-600 mb-3" /> : <BookOpen size={44} className="mx-auto text-slate-600 mb-3" />}
+            <p className="font-medium text-slate-400">
+              Tidak ada tagihan {activeCategory === 'pendaftaran' ? 'pendaftaran' : activeCategory === 'spp' ? 'SPP' : 'buku'} diterbitkan
+            </p>
+            <p className="text-xs text-slate-500 mt-1">Gunakan tombol diatas untuk mencatat tagihan pertama.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -880,7 +1009,9 @@ function angkaKeTerbilang(nominal: number): string {
                 }`}>
                   <th className="p-4">No Invoice</th>
                   <th className="p-4">Nama Siswa</th>
-                  <th className="p-4">Periode & Tempo</th>
+                  <th className="p-4">
+                    {activeCategory === 'pendaftaran' ? 'Keterangan' : activeCategory === 'spp' ? 'Periode & Tempo' : 'Keterangan & Tempo'}
+                  </th>
                   <th className="p-4">Jumlah Biaya</th>
                   <th className="p-4">Status</th>
                   <th className="p-4 text-center">Tindakan</th>

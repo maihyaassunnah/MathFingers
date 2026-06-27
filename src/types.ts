@@ -57,6 +57,7 @@ export interface Invoice {
   createdAt: number;
   amountPaid?: number; // Cumulative payment amount
   installments?: Installment[]; // List of installment records
+  category?: 'spp' | 'pendaftaran' | 'buku';
 }
 
 export interface Grade {

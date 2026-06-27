@@ -72,12 +72,14 @@ export default function App() {
     deleteStudent,
     addAttendanceBatch,
     addTeacherNote,
+    addTeacherNotesBatch,
     deleteTeacherNote,
     createInvoice,
     updateInvoiceStatus,
     deleteInvoice,
     addGrade,
     deleteGrade,
+    updateGrade,
     addMaterial,
     updateMaterial,
     deleteMaterial,
@@ -95,10 +97,9 @@ export default function App() {
     { id: 'attendance', name: 'Absensi', icon: CheckSquare },
     { id: 'notes', name: 'Jurnal Guru', icon: FileText },
     { id: 'journal_history', name: 'Riwayat Jurnal', icon: History },
-    { id: 'spp', name: 'SPP & Invoice', icon: Receipt },
-    { id: 'spp_history', name: 'Riwayat SPP', icon: History },
+    { id: 'spp', name: 'Pembayaran', icon: Receipt },
+    { id: 'spp_history', name: 'Riwayat Pembayaran', icon: History },
     { id: 'grades', name: 'Input Nilai', icon: Award },
-    { id: 'simulator', name: 'Kurikulum', icon: BookOpen },
     { id: 'report', name: 'Rapor Perkembangan', icon: TrendingUp },
     { id: 'supabase_sql', name: 'SQL Editor Supabase', icon: Database },
     { id: 'settings', name: 'Pengaturan', icon: Settings },
@@ -207,6 +208,7 @@ export default function App() {
             students={students} 
             notes={notes} 
             onAddNote={addTeacherNote} 
+            onAddNotesBatch={addTeacherNotesBatch}
             onDeleteNote={deleteTeacherNote} 
             theme={theme}
           />
@@ -246,6 +248,7 @@ export default function App() {
             grades={grades} 
             onAddGrade={addGrade} 
             onDeleteGrade={deleteGrade} 
+            onUpdateGrade={updateGrade}
             theme={theme}
           />
         );

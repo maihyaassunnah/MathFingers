@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Student, Attendance } from '../types';
 import { getWhatsAppLink } from '../utils';
-import { Calendar, Check, X, ShieldAlert, Send, Save, CheckSquare, Clock, Search, Users, TrendingUp } from 'lucide-react';
+import { Calendar, Check, X, ShieldAlert, Send, Save, CheckSquare, Clock, Search, Users, TrendingUp, ChevronDown } from 'lucide-react';
 
 interface AttendanceTrackerProps {
   students: Student[];
@@ -18,14 +18,37 @@ export function AttendanceTracker({
 }: AttendanceTrackerProps) {
   const [activeSubTab, setActiveSubTab] = useState<'record' | 'history'>('record');
   const [historySearchQuery, setHistorySearchQuery] = useState('');
+  const [recordSearchQuery, setRecordSearchQuery] = useState('');
+  const [selectedLetter, setSelectedLetter] = useState<string>('ALL');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [viewingDetailDate, setViewingDetailDate] = useState<string | null>(null);
   
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const [attendanceMap, setAttendanceMap] = useState<Record<string, { status: 'present' | 'absent' | 'permission'; notes: string }>>({});
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
-  // Filter only active students for attendance
-  const activeStudents = students.filter(s => s.status === 'active');
+  // Filter only active students for attendance & sort alphabetically based on sortOrder
+  const activeStudents = [...students]
+    .filter(s => s.status === 'active')
+    .sort((a, b) => {
+      const cmp = a.name.localeCompare(b.name);
+      return sortOrder === 'asc' ? cmp : -cmp;
+    });
+
+  // Extract initial letters of active students to render as quick filter buttons
+  const availableLetters = Array.from(
+    new Set(
+      activeStudents
+        .map(s => s.name.trim().charAt(0).toUpperCase())
+        .filter(char => /[A-Z]/.test(char))
+    )
+  ).sort();
+
+  const filteredActiveStudents = activeStudents.filter(s => {
+    const matchesSearch = s.name.toLowerCase().includes(recordSearchQuery.toLowerCase());
+    const matchesLetter = selectedLetter === 'ALL' || s.name.trim().toUpperCase().startsWith(selectedLetter);
+    return matchesSearch && matchesLetter;
+  });
 
   // Load existing attendance for selectedDate
   useEffect(() => {
@@ -258,6 +281,104 @@ export function AttendanceTracker({
             </div>
           </div>
 
+          {/* Student Name Filter for Attendance */}
+          {activeStudents.length > 0 && (
+            <div className={`p-4 rounded-2xl shadow-sm border flex flex-col gap-3.5 ${
+              isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+            }`}>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3.5 top-3 text-slate-500" size={18} />
+                  <input
+                    id="attendance-record-search"
+                    type="text"
+                    placeholder="Cari nama siswa..."
+                    value={recordSearchQuery}
+                    onChange={(e) => setRecordSearchQuery(e.target.value)}
+                    className={`w-full pl-10 pr-4 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm placeholder:text-slate-550 ${
+                      isLight 
+                        ? 'bg-slate-50 border-slate-200 text-slate-800' 
+                        : 'bg-slate-950/40 border-slate-800 text-white'
+                    }`}
+                  />
+                </div>
+
+                {/* Sort Dropdown Selector */}
+                <div className="relative shrink-0 min-w-[140px]">
+                  <select
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                    className={`w-full pl-4 pr-10 py-2 border rounded-xl appearance-none focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm font-medium transition duration-150 cursor-pointer ${
+                      isLight 
+                        ? 'bg-slate-50 border-slate-200 text-slate-850 hover:bg-slate-100' 
+                        : 'bg-slate-950/40 border-emerald-500/80 text-emerald-400 hover:bg-slate-900'
+                    }`}
+                  >
+                    <option value="asc">Nama: A - Z</option>
+                    <option value="desc">Nama: Z - A</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-emerald-500/80">
+                    <ChevronDown size={16} />
+                  </div>
+                </div>
+
+                {(recordSearchQuery || selectedLetter !== 'ALL' || sortOrder !== 'asc') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRecordSearchQuery('');
+                      setSelectedLetter('ALL');
+                      setSortOrder('asc');
+                    }}
+                    className={`px-4 py-2 text-xs font-bold rounded-xl border transition shrink-0 ${
+                      isLight 
+                        ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200' 
+                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                    }`}
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+
+              {/* Alphabet Quick Filter Bar */}
+              {availableLetters.length > 0 && (
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                  <span className="text-xs font-bold text-slate-400 mr-1 shrink-0">Inisial Abjad:</span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedLetter('ALL')}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg transition shrink-0 ${
+                      selectedLetter === 'ALL'
+                        ? 'bg-emerald-600 text-white'
+                        : isLight
+                          ? 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                          : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                    }`}
+                  >
+                    Semua
+                  </button>
+                  {availableLetters.map((letter) => (
+                    <button
+                      key={letter}
+                      type="button"
+                      onClick={() => setSelectedLetter(letter)}
+                      className={`w-8 h-8 flex items-center justify-center text-xs font-bold rounded-lg transition shrink-0 ${
+                        selectedLetter === letter
+                          ? 'bg-emerald-600 text-white'
+                          : isLight
+                            ? 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                      }`}
+                    >
+                      {letter}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className={`rounded-2xl border shadow-sm overflow-hidden ${
             isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
           }`}>
@@ -269,8 +390,15 @@ export function AttendanceTracker({
               </div>
             ) : (
               <div className={`divide-y ${isLight ? 'divide-slate-200' : 'divide-slate-800/80'}`}>
-                {activeStudents.map((student) => {
-                  const state = attendanceMap[student.id] || { status: 'present', notes: '' };
+                {filteredActiveStudents.length === 0 ? (
+                  <div className="p-12 text-center text-slate-500">
+                    <Search size={44} className="mx-auto text-slate-700 mb-3" />
+                    <p className="font-medium text-slate-400">Tidak ada siswa yang cocok dengan pencarian</p>
+                    <p className="text-xs text-slate-550 mt-1">Coba cari dengan nama siswa lain.</p>
+                  </div>
+                ) : (
+                  filteredActiveStudents.map((student) => {
+                    const state = attendanceMap[student.id] || { status: 'present', notes: '' };
                   
                   return (
                     <div key={student.id} className={`p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition duration-150 ${
@@ -353,7 +481,7 @@ export function AttendanceTracker({
                       </div>
                     </div>
                   );
-                })}
+                }))}
               </div>
             )}
 

@@ -366,6 +366,26 @@ export function useMathFinggersDb() {
     }
   };
 
+  const addTeacherNotesBatch = async (notesData: Omit<TeacherNote, 'id'>[]) => {
+    const newNotes = notesData.map(n => ({
+      ...n,
+      id: generateId()
+    }));
+
+    const updated = [...newNotes, ...notes];
+    setNotes(updated);
+    saveLocalData('notes', updated);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        const { error } = await supabase.from('notes').insert(newNotes);
+        if (error) throw error;
+      } catch (err) {
+        console.error('Failed to save teacher notes batch to Supabase:', err);
+      }
+    }
+  };
+
   const deleteTeacherNote = async (id: string) => {
     const updated = notes.filter(n => n.id !== id);
     setNotes(updated);
@@ -472,6 +492,21 @@ export function useMathFinggersDb() {
         if (error) throw error;
       } catch (err) {
         console.error('Failed to delete grade from Supabase:', err);
+      }
+    }
+  };
+
+  const updateGrade = async (updatedGrade: Grade) => {
+    const updated = grades.map(g => g.id === updatedGrade.id ? updatedGrade : g);
+    setGrades(updated);
+    saveLocalData('grades', updated);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        const { error } = await supabase.from('grades').update(updatedGrade).eq('id', updatedGrade.id);
+        if (error) throw error;
+      } catch (err) {
+        console.error('Failed to update grade in Supabase:', err);
       }
     }
   };
@@ -642,12 +677,14 @@ export function useMathFinggersDb() {
     deleteStudent,
     addAttendanceBatch,
     addTeacherNote,
+    addTeacherNotesBatch,
     deleteTeacherNote,
     createInvoice,
     updateInvoiceStatus,
     deleteInvoice,
     addGrade,
     deleteGrade,
+    updateGrade,
     addMaterial,
     updateMaterial,
     deleteMaterial,

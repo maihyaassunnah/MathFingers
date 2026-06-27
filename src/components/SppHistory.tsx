@@ -139,9 +139,9 @@ export function SppHistory({ students, invoices, theme = 'dark' }: SppHistoryPro
         <div>
           <h2 className="text-2xl font-black tracking-tight flex items-center gap-2">
             <History className="text-emerald-500" />
-            <span>Buku Besar & Riwayat SPP</span>
+            <span>Buku Besar & Riwayat Pembayaran</span>
           </h2>
-          <p className="text-slate-400 text-sm mt-1">Laporan mutasi kas masuk, rekapitulasi realisasi iuran, dan sisa piutang outstanding.</p>
+          <p className="text-slate-400 text-sm mt-1">Laporan mutasi kas masuk, rekapitulasi realisasi iuran pendaftaran, SPP, buku, dan sisa piutang outstanding.</p>
         </div>
 
         <button
@@ -160,7 +160,7 @@ export function SppHistory({ students, invoices, theme = 'dark' }: SppHistoryPro
           isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
         }`}>
           <div className="flex justify-between items-center">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Tagihan SPP</span>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Tagihan</span>
             <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500"><DollarSign size={14} /></span>
           </div>
           <div className="text-xl font-extrabold font-mono mt-2">{formatRupiah(totalBilled)}</div>
@@ -263,7 +263,7 @@ export function SppHistory({ students, invoices, theme = 'dark' }: SppHistoryPro
           <div className="p-12 text-center text-slate-500">
             <History size={44} className="mx-auto text-slate-650 mb-3" />
             <p className="font-medium text-slate-400">Belum ada kas masuk tercatat</p>
-            <p className="text-xs text-slate-500 mt-1">Catat pembayaran SPP atau cicilan pada tab SPP untuk memunculkan riwayat kas.</p>
+            <p className="text-xs text-slate-500 mt-1">Catat pembayaran atau cicilan pada menu Pembayaran untuk memunculkan riwayat kas.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -275,7 +275,7 @@ export function SppHistory({ students, invoices, theme = 'dark' }: SppHistoryPro
                   <th className="p-4">Tanggal Terima</th>
                   <th className="p-4">No Invoice</th>
                   <th className="p-4">Siswa</th>
-                  <th className="p-4">Periode Bulan</th>
+                  <th className="p-4">Keterangan / Periode</th>
                   <th className="p-4">Metode & Jenis</th>
                   <th className="p-4">Keterangan</th>
                   <th className="p-4 text-right">Nominal Masuk</th>

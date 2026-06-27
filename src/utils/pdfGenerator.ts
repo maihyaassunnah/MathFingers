@@ -32,10 +32,6 @@ export function generateStudentPDFReport(
     ? Math.round(studentGrades.reduce((sum, g) => sum + g.score, 0) / studentGrades.length)
     : 0;
 
-  const averageSpeed = studentGrades.length > 0
-    ? Number((studentGrades.reduce((sum, g) => sum + g.speedSeconds, 0) / studentGrades.length).toFixed(1))
-    : 0;
-
   // Header Banner
   doc.setFillColor(16, 185, 129); // Emerald Green
   doc.rect(0, 0, 210, 40, 'F');
@@ -79,30 +75,26 @@ export function generateStudentPDFReport(
   
   // Statistics Blocks
   doc.setFillColor(241, 245, 249);
-  doc.rect(15, 96, 56, 22, 'F');
-  doc.rect(77, 96, 56, 22, 'F');
-  doc.rect(139, 96, 56, 22, 'F');
+  doc.rect(15, 96, 86, 22, 'F');
+  doc.rect(109, 96, 86, 22, 'F');
   
   doc.setFont("Helvetica", "bold");
   doc.setFontSize(8);
   doc.setTextColor(100, 116, 139);
   doc.text("PERSENTASE PRESENSI", 18, 102);
-  doc.text("SKOR RATA-RATA", 80, 102);
-  doc.text("KECEPATAN RATA-RATA", 142, 102);
+  doc.text("SKOR RATA-RATA", 112, 102);
   
   doc.setFontSize(12);
   doc.setTextColor(16, 185, 129); // Emerald
   doc.text(`${attendanceRate}%`, 18, 110);
   doc.setTextColor(245, 158, 11); // Amber
-  doc.text(averageScore ? `${averageScore} / 100` : 'N/A', 80, 110);
-  doc.setTextColor(59, 130, 246); // Blue
-  doc.text(averageSpeed ? `${averageSpeed} detik` : 'N/A', 142, 110);
+  doc.text(averageScore ? `${averageScore} / 100` : 'N/A', 112, 110);
   
   // Section Title: Perkembangan Nilai
   doc.setTextColor(30, 41, 59);
   doc.setFont("Helvetica", "bold");
   doc.setFontSize(12);
-  doc.text("RIWAYAT UJI KETERAMPILAN JARI (AKURASI & DURASI)", 15, 130);
+  doc.text("RIWAYAT UJI KETERAMPILAN JARI (AKURASI)", 15, 130);
   doc.line(15, 132, 195, 132);
   
   // Grades Table
@@ -112,9 +104,7 @@ export function generateStudentPDFReport(
   doc.setTextColor(51, 65, 85);
   doc.text("Tanggal", 18, y);
   doc.text("Materi / Bab Uji Kompetensi", 45, y);
-  doc.text("Skor Akurasi", 125, y);
-  doc.text("Durasi", 155, y);
-  doc.text("Predikat", 175, y);
+  doc.text("Skor Akurasi", 155, y);
   
   doc.line(15, y+2, 195, y+2);
   
@@ -128,12 +118,9 @@ export function generateStudentPDFReport(
     studentGrades.slice(0, 8).forEach((g) => {
       y += 8;
       doc.text(g.date, 18, y);
-      const topicTxt = g.topic.length > 38 ? g.topic.slice(0, 35) + '...' : g.topic;
+      const topicTxt = g.topic.length > 55 ? g.topic.slice(0, 52) + '...' : g.topic;
       doc.text(topicTxt, 45, y);
-      doc.text(`${g.score}/100`, 125, y);
-      doc.text(`${g.speedSeconds} detik`, 155, y);
-      const agility = getAgilityBadge(g.score, g.speedSeconds);
-      doc.text(agility.text, 175, y);
+      doc.text(`${g.score}/100`, 155, y);
     });
   }
   

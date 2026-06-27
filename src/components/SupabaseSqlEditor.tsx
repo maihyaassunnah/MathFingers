@@ -150,7 +150,8 @@ CREATE TABLE IF NOT EXISTS invoices (
   "paymentMethod" TEXT,
   "createdAt" BIGINT NOT NULL,
   "amountPaid" NUMERIC DEFAULT 0,
-  installments JSONB DEFAULT '[]'::jsonb
+  installments JSONB DEFAULT '[]'::jsonb,
+  category TEXT DEFAULT 'spp'
 );
 
 -- 5. TABEL GRADES (Input Nilai Perkembangan)
@@ -231,7 +232,8 @@ CREATE TABLE IF NOT EXISTS materials (
   "paymentMethod" TEXT,
   "createdAt" BIGINT NOT NULL,
   "amountPaid" NUMERIC DEFAULT 0,
-  installments JSONB DEFAULT '[]'::jsonb
+  installments JSONB DEFAULT '[]'::jsonb,
+  category TEXT DEFAULT 'spp'
 );`,
 
     grades: `CREATE TABLE IF NOT EXISTS grades (
@@ -273,9 +275,10 @@ ALTER TABLE students ADD COLUMN IF NOT EXISTS "jenisKelamin" TEXT DEFAULT 'Laki-
 ALTER TABLE students ADD COLUMN IF NOT EXISTS alamat TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "activeMaterialId" TEXT;
 
--- 2. Kolom tambahan untuk tabel 'invoices' (Untuk sistem Cicilan SPP)
+-- 2. Kolom tambahan untuk tabel 'invoices' (Untuk sistem Cicilan SPP & Kategori Pembayaran)
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "amountPaid" NUMERIC DEFAULT 0;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS installments JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'spp';
 
 -- 3. Kolom tambahan untuk tabel 'materials' (Untuk Link Video & Foto Kurikulum)
 ALTER TABLE materials ADD COLUMN IF NOT EXISTS "videoUrl" TEXT;
@@ -309,9 +312,10 @@ ALTER TABLE students ADD COLUMN IF NOT EXISTS "jenisPaket" TEXT DEFAULT '4P';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "jenisKelamin" TEXT DEFAULT 'Laki-laki';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS alamat TEXT;`,
 
-    invoices: `-- Melengkapi kolom invoice untuk Cicilan & Riwayat Pembayaran
+    invoices: `-- Melengkapi kolom invoice untuk Cicilan & Riwayat Pembayaran & Kategori Pembayaran
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "amountPaid" NUMERIC DEFAULT 0;
-ALTER TABLE invoices ADD COLUMN IF NOT EXISTS installments JSONB DEFAULT '[]'::jsonb;`,
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS installments JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'spp';`,
 
     materials: `-- Melengkapi kolom materials untuk Video & Foto Kurikulum (Kurikulum)
 ALTER TABLE materials ADD COLUMN IF NOT EXISTS "videoUrl" TEXT;

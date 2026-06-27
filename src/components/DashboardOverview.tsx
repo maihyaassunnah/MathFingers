@@ -155,10 +155,10 @@ export function DashboardOverview({
           </p>
           <div className="pt-3 flex flex-wrap gap-2">
             <button
-              onClick={() => onNavigate('simulator')}
+              onClick={() => onNavigate('students')}
               className={`${getAccentBgClass()} text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow-sm`}
             >
-              Daftar Materi & Kurikulum
+              Kelola Data Siswa
             </button>
             <button
               onClick={() => onNavigate('attendance')}

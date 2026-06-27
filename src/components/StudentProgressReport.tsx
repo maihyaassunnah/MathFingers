@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Student, Attendance, TeacherNote, Grade } from '../types';
 import { getWhatsAppLink } from '../utils';
-import { generateStudentPDFReport, getAgilityBadge } from '../utils/pdfGenerator';
+import { generateStudentPDFReport } from '../utils/pdfGenerator';
 import { 
   TrendingUp, 
   MessageSquare, 
@@ -43,10 +43,6 @@ export function StudentProgressReport({ students, attendance, notes, grades, the
     ? Math.round(studentGrades.reduce((sum, g) => sum + g.score, 0) / studentGrades.length)
     : 0;
 
-  const averageSpeed = studentGrades.length > 0
-    ? Number((studentGrades.reduce((sum, g) => sum + g.speedSeconds, 0) / studentGrades.length).toFixed(1))
-    : 0;
-
   // WhatsApp formatted progress report message sender
   const shareWhatsAppReport = () => {
     if (!currentStudent) return;
@@ -56,10 +52,10 @@ export function StudentProgressReport({ students, attendance, notes, grades, the
       : 'Belum ada catatan tertulis harian.';
 
     const gradesSummary = studentGrades.length > 0
-      ? studentGrades.slice(0, 3).map(g => `• ${g.topic}: Skor ${g.score}/100, Kecepatan: ${g.speedSeconds} Detik`).join('\n')
+      ? studentGrades.slice(0, 3).map(g => `• ${g.topic}: Skor ${g.score}/100`).join('\n')
       : 'Belum ada rekaman tes keterampilan.';
 
-    const message = `*LAPORAN PERKEMBANGAN BELAJAR - MATH FINGERS* 📊🌸\n\nHalo Ayah/Bunda dari ananda *${currentStudent.name}*,\nBerikut adalah perkembangan ananda di bimbingan Jaritmatika harian:\n\n📅 *Ringkasan Sesi Presensi:*\n- Kehadiran: *${attendanceRate}%* (${presentCount} dari ${totalAttendance} sesi)\n\n⚡ *Rata-Rata Keterampilan Jari:*\n- Akurasi Berhitung: *${averageScore ? `${averageScore}/100` : 'Belum Ada Tes'}*\n- Kecepatan Gerak Refleks: *${averageSpeed ? `${averageSpeed} detik` : 'Belum Ada Tes'}* (Semakin cepat semakin luar biasa!)\n\n📈 *Riwayat Ujian Terakhir:*\n${gradesSummary}\n\n📝 *Catatan Pengajar & Saran Pendampingan:*\n${notesSummary}\n\n_Mari terus latih jari ananda di rumah minimal 10 menit setiap hari ya Ayah/Bunda agar refleks jari semakin lincah dan kilat! Terima kasih_ 🌸✨`;
+    const message = `*LAPORAN PERKEMBANGAN BELAJAR - MATH FINGERS* 📊🌸\n\nHalo Ayah/Bunda dari ananda *${currentStudent.name}*,\nBerikut adalah perkembangan ananda di bimbingan Jaritmatika harian:\n\n📅 *Ringkasan Sesi Presensi:*\n- Kehadiran: *${attendanceRate}%* (${presentCount} dari ${totalAttendance} sesi)\n\n⚡ *Rata-Rata Keterampilan Jari:*\n- Akurasi Berhitung: *${averageScore ? `${averageScore}/100` : 'Belum Ada Tes'}*\n\n📈 *Riwayat Ujian Terakhir:*\n${gradesSummary}\n\n📝 *Catatan Pengajar & Saran Pendampingan:*\n${notesSummary}\n\n_Mari terus latih jari ananda di rumah minimal 10 menit setiap hari ya Ayah/Bunda agar refleks jari semakin lincah dan kilat! Terima kasih_ 🌸✨`;
 
     window.open(getWhatsAppLink(currentStudent.parentPhone, message), '_blank');
   };
@@ -112,7 +108,7 @@ export function StudentProgressReport({ students, attendance, notes, grades, the
       ) : (
         <div className="space-y-6">
           {/* Stat summary cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             
             {/* Card 1: Attendance percentage */}
             <div className={`p-5 rounded-2xl border shadow-sm flex items-center gap-4 ${
@@ -139,20 +135,6 @@ export function StudentProgressReport({ students, attendance, notes, grades, the
                 <span className="text-slate-500 text-xs font-semibold block tracking-wider">SKOR RATA-RATA</span>
                 <span className={`text-2xl font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>{averageScore ? `${averageScore}/100` : 'N/A'}</span>
                 <span className="text-xs text-slate-400 block mt-0.5">{studentGrades.length} Sesi Latihan</span>
-              </div>
-            </div>
-
-            {/* Card 3: Speed Score */}
-            <div className={`p-5 rounded-2xl border shadow-sm flex items-center gap-4 ${
-              isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-            }`}>
-              <div className="w-12 h-12 bg-blue-500/10 text-blue-500 rounded-xl flex items-center justify-center font-bold">
-                <Clock size={20} />
-              </div>
-              <div>
-                <span className="text-slate-500 text-xs font-semibold block tracking-wider">KECEPATAN RATA-RATA</span>
-                <span className={`text-2xl font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>{averageSpeed ? `${averageSpeed}s` : 'N/A'}</span>
-                <span className="text-xs text-slate-400 block mt-0.5 font-mono">Semakin rendah semakin kilat</span>
               </div>
             </div>
           </div>
@@ -198,7 +180,7 @@ export function StudentProgressReport({ students, attendance, notes, grades, the
               <div className="space-y-4">
                 <div className="flex items-center gap-1.5">
                   <TrendingUp className="text-slate-500" size={16} />
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Perkembangan Uji Refleks Jari</h4>
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Perkembangan Akurasi & Nilai</h4>
                 </div>
 
                 {studentGrades.length === 0 ? (
@@ -216,7 +198,7 @@ export function StudentProgressReport({ students, attendance, notes, grades, the
                           <span className="text-xs text-slate-500 font-mono">{g.date}</span>
                         </div>
                         
-                        {/* Custom progress bars mapping for visual speed and score */}
+                        {/* Custom progress bars mapping for visual score */}
                         <div className="space-y-1.5 pt-1">
                           <div className="flex justify-between text-[11px] text-slate-400">
                             <span>Akurasi Jawaban:</span>
@@ -225,23 +207,6 @@ export function StudentProgressReport({ students, attendance, notes, grades, the
                           <div className={`w-full h-2 rounded-full overflow-hidden ${isLight ? 'bg-slate-200' : 'bg-slate-800'}`}>
                             <div className="bg-emerald-500 h-full transition-all" style={{ width: `${g.score}%` }} />
                           </div>
-
-                          <div className="flex justify-between text-[11px] text-slate-400 mt-1">
-                            <span>Durasi Penyelesaian:</span>
-                            <span className="font-semibold text-blue-500">{g.speedSeconds} detik</span>
-                          </div>
-                          <div className={`w-full h-2 rounded-full overflow-hidden ${isLight ? 'bg-slate-200' : 'bg-slate-800'}`}>
-                            {/* Max representation is 30 seconds for speed bar scale */}
-                            <div className="bg-blue-500 h-full transition-all" style={{ width: `${Math.min((g.speedSeconds / 30) * 100, 100)}%` }} />
-                          </div>
-                        </div>
-
-                        {/* Predicate Speed Badge */}
-                        <div className="flex items-center justify-between pt-1">
-                          <span className="text-[10px] text-slate-500">Hasil Predikat:</span>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${getAgilityBadge(g.score, g.speedSeconds).color}`}>
-                            {getAgilityBadge(g.score, g.speedSeconds).text}
-                          </span>
                         </div>
                       </div>
                     ))}

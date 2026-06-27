@@ -178,10 +178,30 @@ CREATE TABLE IF NOT EXISTS materials (
   "tutorialImages" TEXT[]
 );
 
--- AKTIFKAN ROW LEVEL SECURITY (RLS) - Opsional, atau ijinkan akses penuh anon untuk kemudahan bimbingan les
--- ALTER TABLE students ENABLE ROW LEVEL SECURITY;
--- CREATE POLICY "Allow Anonymous Access" ON students FOR ALL USING (true) WITH CHECK (true);
--- Lakuan hal serupa untuk tabel lainnya jika RLS diaktifkan di Supabase Anda`,
+-- AKTIFKAN ROW LEVEL SECURITY (RLS) & IZINKAN AKSES FULL UNTUK KEMUDAHAN APLIKASI
+ALTER TABLE students ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON students;
+CREATE POLICY "Allow public read-write for demo" ON students FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE materials ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON materials;
+CREATE POLICY "Allow public read-write for demo" ON materials FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE attendance ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON attendance;
+CREATE POLICY "Allow public read-write for demo" ON attendance FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON notes;
+CREATE POLICY "Allow public read-write for demo" ON notes FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON invoices;
+CREATE POLICY "Allow public read-write for demo" ON invoices FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE grades ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON grades;
+CREATE POLICY "Allow public read-write for demo" ON grades FOR ALL USING (true) WITH CHECK (true);`,
 
     students: `CREATE TABLE IF NOT EXISTS students (
   id TEXT PRIMARY KEY,

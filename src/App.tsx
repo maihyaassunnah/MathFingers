@@ -437,6 +437,8 @@ export default function App() {
           <SupabaseSqlEditor 
             theme={theme}
             students={filteredStudents}
+            branches={branches}
+            adminUsers={adminUsers}
             onUpdateStudent={updateStudent}
             onAddStudent={handleAddStudent}
             onDeleteStudent={deleteStudent}

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { Database, Terminal, Check, Copy, AlertTriangle, Play, HelpCircle, Code, List, Info, RefreshCw, Award, ArrowRight } from 'lucide-react';
-import { Student } from '../types';
+import { Student, Branch, AdminUser } from '../types';
 
 interface SupabaseSqlEditorProps {
   theme?: string;
   students?: Student[];
+  branches?: Branch[];
+  adminUsers?: AdminUser[];
   onUpdateStudent?: (id: string, updatedFields: Partial<Student>) => Promise<void>;
   onAddStudent?: (studentData: Omit<Student, 'id' | 'createdAt'>) => Promise<void>;
   onDeleteStudent?: (id: string) => Promise<void>;
@@ -14,6 +16,8 @@ interface SupabaseSqlEditorProps {
 export function SupabaseSqlEditor({ 
   theme = 'dark',
   students = [],
+  branches = [],
+  adminUsers = [],
   onUpdateStudent,
   onAddStudent,
   onDeleteStudent
@@ -22,6 +26,19 @@ export function SupabaseSqlEditor({
   const [activeTab, setActiveTab] = useState<'guide' | 'create' | 'alter' | 'test'>('guide');
   const [selectedTable, setSelectedTable] = useState<string>('all');
   const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
+
+  // Dynamic SQL Generators following current database state
+  const branchesSqlValues = (branches && branches.length > 0 ? branches : [
+    { id: 'br-1', name: 'Pusat', address: 'Kantor Pusat Math Fingers', phone: '08123456789', createdAt: 1719600000 },
+    { id: 'br-2', name: 'Bandung', address: 'Cabang Kota Bandung', phone: '08123456780', createdAt: 1719600000 }
+  ]).map(b => `  ('${b.id}', '${b.name.replace(/'/g, "''")}', '${(b.address || '').replace(/'/g, "''")}', '${(b.phone || '').replace(/'/g, "''")}', ${b.createdAt || 1719600000})`).join(',\n');
+
+  const adminUsersSqlValues = (adminUsers && adminUsers.length > 0 ? adminUsers : [
+    { username: 'febrianti', name: 'Febrianti Dewi', role: 'super_admin' as const, branch: 'Pusat', password: 'admin123', avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200' },
+    { username: 'dewi', name: 'Dewi Safitri', role: 'branch_admin' as const, branch: 'Pusat', password: 'dewi123', avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200' },
+    { username: 'les_bandung', name: 'Les Privat Bandung', role: 'branch_admin' as const, branch: 'Bandung', password: 'bdg123', avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200' }
+  ]).map(u => `  ('${u.username}', '${u.name.replace(/'/g, "''")}', '${u.role}', '${u.branch.replace(/'/g, "''")}', '${(u.password || '123456').replace(/'/g, "''")}', ${u.avatarUrl ? `'${u.avatarUrl.replace(/'/g, "''")}'` : 'NULL'})`).join(',\n');
+
   
   // Connection Test State
   const [isTesting, setIsTesting] = useState(false);
@@ -243,21 +260,20 @@ ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read-write for demo" ON admin_users;
 CREATE POLICY "Allow public read-write for demo" ON admin_users FOR ALL USING (true) WITH CHECK (true);
 
+-- Pastikan kolom avatarUrl ada jika tabel admin_users sudah ada sebelumnya
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS "avatarUrl" TEXT;
 
 -- ====================================================================
 -- SEED DATA AWAL (Jalankan Sekali Saja)
 -- ====================================================================
 INSERT INTO branches (id, name, address, phone, "createdAt")
 VALUES 
-  ('br-1', 'Pusat', 'Kantor Pusat Math Fingers', '08123456789', 1719600000),
-  ('br-2', 'Bandung', 'Cabang Kota Bandung', '08123456780', 1719600000)
+${branchesSqlValues}
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO admin_users (username, name, role, branch, password, "avatarUrl")
 VALUES 
-  ('febrianti', 'Febrianti Dewi', 'super_admin', 'Pusat', 'admin123', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200'),
-  ('dewi', 'Dewi Safitri', 'branch_admin', 'Pusat', 'dewi123', 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200'),
-  ('les_bandung', 'Les Privat Bandung', 'branch_admin', 'Bandung', 'bdg123', 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200')
+${adminUsersSqlValues}
 ON CONFLICT (username) DO NOTHING;`,
     students: `CREATE TABLE IF NOT EXISTS students (
   id TEXT PRIMARY KEY,
@@ -378,18 +394,18 @@ ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read-write for demo" ON admin_users;
 CREATE POLICY "Allow public read-write for demo" ON admin_users FOR ALL USING (true) WITH CHECK (true);
 
+-- Pastikan kolom avatarUrl ada jika tabel admin_users sudah ada sebelumnya
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS "avatarUrl" TEXT;
+
 -- 4. Isi seed data awal untuk Cabang & Admin (jika belum ada)
 INSERT INTO branches (id, name, address, phone, "createdAt")
 VALUES 
-  ('br-1', 'Pusat', 'Kantor Pusat Math Fingers', '08123456789', 1719600000),
-  ('br-2', 'Bandung', 'Cabang Kota Bandung', '08123456780', 1719600000)
+${branchesSqlValues}
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO admin_users (username, name, role, branch, password, "avatarUrl")
 VALUES 
-  ('febrianti', 'Febrianti Dewi', 'super_admin', 'Pusat', 'admin123', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200'),
-  ('dewi', 'Dewi Safitri', 'branch_admin', 'Pusat', 'dewi123', 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200'),
-  ('les_bandung', 'Les Privat Bandung', 'branch_admin', 'Bandung', 'bdg123', 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200')
+${adminUsersSqlValues}
 ON CONFLICT (username) DO NOTHING;
 
 -- 5. Tambah kolom kelengkapan lain (jika ada yang tertinggal)

@@ -95,6 +95,15 @@ export function AttendanceTracker({
     setSaveStatus('idle');
   };
 
+  const handleStatusCycle = (studentId: string, currentStatus: 'present' | 'absent' | 'permission') => {
+    const nextStatusMap: Record<string, 'present' | 'absent' | 'permission'> = {
+      present: 'permission',
+      permission: 'absent',
+      absent: 'present'
+    };
+    handleStatusChange(studentId, nextStatusMap[currentStatus]);
+  };
+
   const handleNoteChange = (studentId: string, notes: string) => {
     setAttendanceMap(prev => ({
       ...prev,
@@ -387,6 +396,14 @@ export function AttendanceTracker({
             </div>
           )}
 
+          {/* Spanduk Tip Mobile (Only on Mobile screens) */}
+          <div className="md:hidden bg-indigo-500/10 border border-indigo-500/20 p-3.5 rounded-2xl flex items-start gap-2.5">
+            <CheckSquare className="text-indigo-500 dark:text-indigo-400 shrink-0 mt-0.5" size={16} />
+            <div className="text-xs text-indigo-700 dark:text-indigo-300 leading-relaxed font-medium">
+              <strong>Tip Mengabsen Mobile:</strong> Ketuk tombol lingkaran berwarna di sisi kanan nama siswa untuk mengganti status bimbingan (Hadir ➜ Izin ➜ Absen) secara langsung dengan satu sentuhan jari!
+            </div>
+          </div>
+
           <div className={`rounded-2xl border shadow-sm overflow-hidden ${
             isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
           }`}>
@@ -394,159 +411,216 @@ export function AttendanceTracker({
               <div className="p-12 text-center text-slate-500">
                 <ShieldAlert size={44} className="mx-auto text-slate-700 mb-3" />
                 <p className="font-medium text-slate-400">Tidak ada siswa aktif terdaftar</p>
-                <p className="text-xs text-slate-500 mt-1">Silakan tambahkan siswa atau aktifkan status siswa terlebih dahulu di tab Siswa.</p>
+                <p className="text-xs text-slate-550 mt-1">Silakan tambahkan siswa atau aktifkan status siswa terlebih dahulu di tab Siswa.</p>
               </div>
             ) : (
-              <div className={`divide-y ${isLight ? 'divide-slate-200' : 'divide-slate-800/80'}`}>
-                {filteredActiveStudents.length === 0 ? (
-                  <div className="p-12 text-center text-slate-500">
-                    <Search size={44} className="mx-auto text-slate-700 mb-3" />
-                    <p className="font-medium text-slate-400">Tidak ada siswa yang cocok dengan pencarian</p>
-                    <p className="text-xs text-slate-550 mt-1">Coba cari dengan nama siswa lain.</p>
-                  </div>
-                ) : (
-                  filteredActiveStudents.map((student) => {
-                    const state = attendanceMap[student.id] || { status: 'present', notes: '' };
-                    const isExpanded = !!expandedStudentNotes[student.id];
-                  
-                  return (
-                    <div key={student.id} className={`p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition duration-150 ${
-                      isLight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/20'
-                    }`}>
-                      <div className="flex-1 flex flex-col">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-emerald-500 font-mono tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/10">
-                              {student.level.toLowerCase().includes('dasar') 
-                                ? 'LEVEL DASAR' 
-                                : `LEVEL ${student.level.match(/\d+/)?.[0] || '1'}`}
-                            </span>
-                            {/* Mobile status indicator pill */}
-                            <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded md:hidden ${
-                              state.status === 'present'
-                                ? 'bg-emerald-500/10 text-emerald-500'
-                                : state.status === 'permission'
-                                  ? 'bg-amber-500/10 text-amber-500'
-                                  : 'bg-rose-500/10 text-rose-500'
-                            }`}>
-                              {state.status === 'present' ? 'HADIR' : state.status === 'permission' ? 'IZIN' : 'ABSEN'}
-                            </span>
+              <>
+                <div className={`divide-y ${isLight ? 'divide-slate-200' : 'divide-slate-800/80'}`}>
+                  {filteredActiveStudents.length === 0 ? (
+                    <div className="p-12 text-center text-slate-500">
+                      <Search size={44} className="mx-auto text-slate-700 mb-3" />
+                      <p className="font-medium text-slate-400">Tidak ada siswa yang cocok dengan pencarian</p>
+                      <p className="text-xs text-slate-550 mt-1">Coba cari dengan nama siswa lain.</p>
+                    </div>
+                  ) : (
+                    filteredActiveStudents.map((student) => {
+                      const state = attendanceMap[student.id] || { status: 'present', notes: '' };
+                      const isExpanded = !!expandedStudentNotes[student.id];
+                    
+                      return (
+                        <div key={student.id} className={`p-4 sm:p-5 transition duration-150 ${
+                          isLight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/20'
+                        }`}>
+                          {/* === MOBILE ONLY COMPACT ROW === */}
+                          <div className="md:hidden flex items-center justify-between gap-3 w-full">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[9px] font-bold text-emerald-500 font-mono tracking-wider px-1 rounded bg-emerald-500/10">
+                                  {student.level.toLowerCase().includes('dasar') 
+                                    ? 'L. DASAR' 
+                                    : `LEVEL ${student.level.match(/\d+/)?.[0] || '1'}`}
+                                </span>
+                                <span className="text-[10px] text-slate-400 truncate">Wali: {student.parentName}</span>
+                              </div>
+                              <h4 className={`font-bold text-sm mt-0.5 truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</h4>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              {/* Option expand button (Notes & WA) */}
+                              <button
+                                type="button"
+                                onClick={() => toggleNotes(student.id)}
+                                className={`p-2.5 rounded-xl border transition duration-150 shrink-0 ${
+                                  isExpanded
+                                    ? 'bg-emerald-600 text-white border-emerald-600'
+                                    : isLight
+                                      ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-600'
+                                      : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300'
+                                }`}
+                                title="Tulis Catatan / Kirim WA"
+                              >
+                                <MessageSquare size={15} />
+                              </button>
+
+                              {/* One-Tap Cycle Trigger Circle (Innovative mobile UX) */}
+                              <button
+                                type="button"
+                                onClick={() => handleStatusCycle(student.id, state.status)}
+                                className={`w-12 h-12 rounded-full flex flex-col items-center justify-center transition-all duration-200 shadow-sm active:scale-90 shrink-0 border ${
+                                  state.status === 'present'
+                                    ? 'bg-emerald-600 border-emerald-500 text-white shadow-emerald-600/15'
+                                    : state.status === 'permission'
+                                      ? 'bg-amber-500 border-amber-400 text-white shadow-amber-500/15'
+                                      : 'bg-rose-500 border-rose-400 text-white shadow-rose-500/15'
+                                }`}
+                              >
+                                {state.status === 'present' && <Check size={16} className="stroke-[3]" />}
+                                {state.status === 'permission' && <Calendar size={14} className="stroke-[3]" />}
+                                {state.status === 'absent' && <X size={16} className="stroke-[3]" />}
+                                <span className="text-[7.5px] font-extrabold tracking-tight mt-0.5 uppercase">
+                                  {state.status === 'present' ? 'Hadir' : state.status === 'permission' ? 'Izin' : 'Absen'}
+                                </span>
+                              </button>
+                            </div>
                           </div>
 
-                          {/* Mobile option expand button for Notes & WhatsApp */}
-                          <button
-                            type="button"
-                            onClick={() => toggleNotes(student.id)}
-                            className={`md:hidden p-2 rounded-xl border transition duration-150 ${
-                              isExpanded
-                                ? 'bg-emerald-600 text-white border-emerald-600'
-                                : isLight
-                                  ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-600'
-                                  : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300'
-                            }`}
-                            title="Tulis Catatan / Kirim WA"
-                          >
-                            <MessageSquare size={14} />
-                          </button>
+                          {/* === DESKTOP ONLY ROW === */}
+                          <div className="hidden md:flex md:flex-row md:items-center justify-between gap-4 w-full">
+                            <div className="flex-1 flex flex-col">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-bold text-emerald-500 font-mono tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/10">
+                                    {student.level.toLowerCase().includes('dasar') 
+                                      ? 'LEVEL DASAR' 
+                                      : `LEVEL ${student.level.match(/\d+/)?.[0] || '1'}`}
+                                  </span>
+                                </div>
+                              </div>
+                              <h3 className={`font-bold text-base mt-1.5 ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</h3>
+                              <p className="text-slate-400 text-xs mt-0.5">Wali: {student.parentName} ({student.parentPhone})</p>
+                            </div>
+
+                            {/* Desktop Controls */}
+                            <div className="flex flex-row items-center gap-3 shrink-0">
+                              <div className={`flex p-1 rounded-xl border ${
+                                isLight ? 'bg-slate-100 border-slate-250' : 'bg-slate-950/40 border-slate-800/60'
+                              }`}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusChange(student.id, 'present')}
+                                  className={`py-1.5 px-3 rounded-lg text-xs font-bold transition duration-150 flex items-center justify-center gap-1.5 ${
+                                    state.status === 'present'
+                                      ? 'bg-emerald-600 text-white shadow-md font-extrabold'
+                                      : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                  }`}
+                                >
+                                  <Check size={14} />
+                                  <span>Hadir</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusChange(student.id, 'permission')}
+                                  className={`py-1.5 px-3 rounded-lg text-xs font-bold transition duration-150 flex items-center justify-center gap-1.5 ${
+                                    state.status === 'permission'
+                                      ? 'bg-amber-500 text-white shadow-md font-extrabold'
+                                      : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                  }`}
+                                >
+                                  <Calendar size={13} />
+                                  <span>Izin</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusChange(student.id, 'absent')}
+                                  className={`py-1.5 px-3 rounded-lg text-xs font-bold transition duration-150 flex items-center justify-center gap-1.5 ${
+                                    state.status === 'absent'
+                                      ? 'bg-rose-500 text-white shadow-md font-extrabold'
+                                      : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                  }`}
+                                >
+                                  <X size={14} />
+                                  <span>Absen</span>
+                                </button>
+                              </div>
+
+                              {/* Desktop always visible notes and WA block */}
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  placeholder="Catatan..."
+                                  value={state.notes}
+                                  onChange={(e) => handleNoteChange(student.id, e.target.value)}
+                                  className={`px-3 py-1.5 border rounded-xl text-xs w-36 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder-slate-500 ${
+                                    isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950/30 border-slate-800 text-white'
+                                  }`}
+                                />
+
+                                <button
+                                  type="button"
+                                  onClick={() => sendWhatsAppNotification(student)}
+                                  className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-500/25 transition duration-150 flex items-center justify-center shrink-0"
+                                  title="Kirim Konfirmasi WA Orang Tua"
+                                >
+                                  <Send size={13} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* === COLLAPSIBLE OPTION PANEL (For Mobile notes & WhatsApp trigger when expanded) === */}
+                          {isExpanded && (
+                            <div className="md:hidden mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-stretch gap-2.5 w-full">
+                              <div className="flex-1">
+                                <label className="block text-[10px] font-bold text-slate-400 mb-1">Catatan Kehadiran</label>
+                                <input
+                                  type="text"
+                                  placeholder="Tulis catatan (misal: telat 10 menit)..."
+                                  value={state.notes}
+                                  onChange={(e) => handleNoteChange(student.id, e.target.value)}
+                                  className={`px-3 py-2 border rounded-xl text-xs w-full focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder-slate-550 ${
+                                    isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950/30 border-slate-800 text-white'
+                                  }`}
+                                />
+                              </div>
+
+                              <div className="flex items-end">
+                                <button
+                                  type="button"
+                                  onClick={() => sendWhatsAppNotification(student)}
+                                  className="w-full py-2.5 px-4 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/25 transition duration-150 flex items-center gap-2 justify-center shrink-0"
+                                  title="Kirim Konfirmasi WA Orang Tua"
+                                >
+                                  <Send size={13} />
+                                  <span className="text-xs font-bold">Kirim WA Orang Tua</span>
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <h3 className={`font-bold text-base mt-1.5 ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</h3>
-                        <p className="text-slate-400 text-xs mt-0.5">Wali: {student.parentName} ({student.parentPhone})</p>
-                      </div>
+                      );
+                    })
+                  )}
+                </div>
 
-                      {/* Attendance Controls - Responsive flex wrapper */}
-                      <div className="flex flex-col md:flex-row md:items-center gap-3 w-full md:w-auto">
-                        {/* Touch-Friendly Status Segmented Control */}
-                        <div className={`grid grid-cols-3 md:flex p-1 rounded-2xl md:rounded-xl border w-full md:w-auto ${
-                          isLight ? 'bg-slate-100 border-slate-250' : 'bg-slate-950/40 border-slate-800/60'
-                        }`}>
-                          <button
-                            type="button"
-                            onClick={() => handleStatusChange(student.id, 'present')}
-                            className={`py-3 md:py-1.5 px-3 rounded-xl md:rounded-lg text-xs font-bold transition duration-150 flex flex-col md:flex-row items-center justify-center gap-1.5 ${
-                              state.status === 'present'
-                                ? 'bg-emerald-600 text-white shadow-md font-extrabold'
-                                : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                            }`}
-                          >
-                            <Check size={15} />
-                            <span>Hadir</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleStatusChange(student.id, 'permission')}
-                            className={`py-3 md:py-1.5 px-3 rounded-xl md:rounded-lg text-xs font-bold transition duration-150 flex flex-col md:flex-row items-center justify-center gap-1.5 ${
-                              state.status === 'permission'
-                                ? 'bg-amber-500 text-white shadow-md font-extrabold'
-                                : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                            }`}
-                          >
-                            <Calendar size={13} />
-                            <span>Izin</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleStatusChange(student.id, 'absent')}
-                            className={`py-3 md:py-1.5 px-3 rounded-xl md:rounded-lg text-xs font-bold transition duration-150 flex flex-col md:flex-row items-center justify-center gap-1.5 ${
-                              state.status === 'absent'
-                                ? 'bg-rose-500 text-white shadow-md font-extrabold'
-                                : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                            }`}
-                          >
-                            <X size={15} />
-                            <span>Absen</span>
-                          </button>
-                        </div>
-
-                        {/* Collapsible notes & WA options - Expanded toggle on mobile, always visible on desktop */}
-                        <div className={`${
-                          isExpanded ? 'flex' : 'hidden'
-                        } md:flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto`}>
-                          {/* Quick Attendance Notes Input */}
-                          <input
-                            type="text"
-                            placeholder="Tulis catatan (misal: telat)..."
-                            value={state.notes}
-                            onChange={(e) => handleNoteChange(student.id, e.target.value)}
-                            className={`px-3 py-2.5 md:py-1.5 border rounded-xl text-xs w-full md:w-44 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder-slate-500 ${
-                              isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950/30 border-slate-800 text-white'
-                            }`}
-                          />
-
-                          {/* Send WhatsApp notification button */}
-                          <button
-                            type="button"
-                            onClick={() => sendWhatsAppNotification(student)}
-                            className="py-2.5 px-4 md:p-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/25 transition duration-150 flex items-center gap-2 justify-center shrink-0"
-                            title="Kirim Konfirmasi WA Orang Tua"
-                          >
-                            <Send size={13} />
-                            <span className="text-xs font-semibold">Kirim WA</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }))}
-              </div>
-            )}
-
-            {/* Save Footer Bar */}
-            {activeStudents.length > 0 && (
-              <div className={`p-4 border-t flex justify-end ${
-                isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/30 border-slate-800'
-              }`}>
-                <button
-                  id="btn-save-attendance"
-                  onClick={handleSave}
-                  disabled={saveStatus === 'saving'}
-                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm px-6 py-2.5 rounded-xl transition shadow-sm"
-                >
-                  <Save size={16} />
-                  <span>
-                    {saveStatus === 'saving' ? 'Menyimpan...' : saveStatus === 'saved' ? 'Selesai Disimpan!' : 'Simpan Semua Absensi'}
-                  </span>
-                </button>
-              </div>
+                {/* Save Footer Bar */}
+                {activeStudents.length > 0 && (
+                  <div className={`p-4 border-t flex justify-end ${
+                    isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/30 border-slate-800'
+                  }`}>
+                    <button
+                      id="btn-save-attendance"
+                      onClick={handleSave}
+                      disabled={saveStatus === 'saving'}
+                      className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm px-6 py-2.5 rounded-xl transition shadow-sm"
+                    >
+                      <Save size={16} />
+                      <span>
+                        {saveStatus === 'saving' ? 'Menyimpan...' : saveStatus === 'saved' ? 'Selesai Disimpan!' : 'Simpan Semua Absensi'}
+                      </span>
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

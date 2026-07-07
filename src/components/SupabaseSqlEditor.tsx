@@ -31,7 +31,7 @@ export function SupabaseSqlEditor({
     tables: { name: string; status: 'ok' | 'error' | 'unchecked'; errorMsg?: string }[];
   } | null>(null);
 
-  const tables = ['students', 'attendance', 'notes', 'invoices', 'grades', 'materials'];
+  const tables = ['students', 'attendance', 'notes', 'invoices', 'grades', 'materials', 'branches', 'admin_users'];
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -92,11 +92,11 @@ export function SupabaseSqlEditor({
 
   // SQL Script Templates
   const createSqlScripts = {
-    all: `-- ==========================================
--- SCRIPT FULL SETUP DATABASE MATH FINGERS --
--- ==========================================
+    all: `-- ====================================================================
+-- SCRIPT FULL SETUP DATABASE MATH FINGERS (MULTI-CABANG & LATEST SCHEMA) --
+-- ====================================================================
 
--- 1. TABEL STUDENTS (Data Siswa)
+-- 1. TABEL STUDENTS (Data Siswa Lengkap)
 CREATE TABLE IF NOT EXISTS students (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS students (
   "parentPhone" TEXT NOT NULL,
   "joinDate" TEXT NOT NULL,
   level TEXT NOT NULL,
-  status TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
   keterangan TEXT,
   "tempatLahir" TEXT,
   "tanggalLahir" TEXT,
@@ -112,20 +112,50 @@ CREATE TABLE IF NOT EXISTS students (
   "jenisKelamin" TEXT DEFAULT 'Laki-laki',
   alamat TEXT,
   "createdAt" BIGINT NOT NULL,
-  "activeMaterialId" TEXT
+  "activeMaterialId" TEXT,
+  branch TEXT DEFAULT 'Pusat'
 );
 
--- 2. TABEL ATTENDANCE (Presensi Kehadiran)
+-- Enable RLS & Bypass for simple usage
+ALTER TABLE students ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON students;
+CREATE POLICY "Allow public read-write for demo" ON students FOR ALL USING (true) WITH CHECK (true);
+
+
+-- 2. TABEL MATERIALS (Daftar Materi & Kurikulum)
+CREATE TABLE IF NOT EXISTS materials (
+  id TEXT PRIMARY KEY,
+  level TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  formulas TEXT[] DEFAULT '{}'::TEXT[],
+  steps TEXT[] DEFAULT '{}'::TEXT[],
+  "videoUrl" TEXT,
+  "tutorialImages" TEXT[] DEFAULT '{}'::TEXT[]
+);
+
+ALTER TABLE materials ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON materials;
+CREATE POLICY "Allow public read-write for demo" ON materials FOR ALL USING (true) WITH CHECK (true);
+
+
+-- 3. TABEL ATTENDANCE (Presensi Absensi Kehadiran Siswa)
 CREATE TABLE IF NOT EXISTS attendance (
   id TEXT PRIMARY KEY,
   "studentId" TEXT REFERENCES students(id) ON DELETE CASCADE,
   "studentName" TEXT NOT NULL,
   date TEXT NOT NULL,
-  status TEXT NOT NULL,
-  notes TEXT
+  status TEXT NOT NULL CHECK (status IN ('present', 'absent', 'permission')),
+  notes TEXT,
+  branch TEXT DEFAULT 'Pusat'
 );
 
--- 3. TABEL NOTES (Jurnal Harian Guru)
+ALTER TABLE attendance ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON attendance;
+CREATE POLICY "Allow public read-write for demo" ON attendance FOR ALL USING (true) WITH CHECK (true);
+
+
+-- 4. TABEL NOTES (Jurnal Harian & Catatan Guru)
 CREATE TABLE IF NOT EXISTS notes (
   id TEXT PRIMARY KEY,
   "studentId" TEXT REFERENCES students(id) ON DELETE CASCADE,
@@ -133,10 +163,16 @@ CREATE TABLE IF NOT EXISTS notes (
   date TEXT NOT NULL,
   topic TEXT NOT NULL,
   content TEXT NOT NULL,
-  "teacherName" TEXT NOT NULL
+  "teacherName" TEXT NOT NULL,
+  branch TEXT DEFAULT 'Pusat'
 );
 
--- 4. TABEL INVOICES (Tagihan SPP & Cicilan)
+ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON notes;
+CREATE POLICY "Allow public read-write for demo" ON notes FOR ALL USING (true) WITH CHECK (true);
+
+
+-- 5. TABEL INVOICES (Tagihan SPP Bulanan, Pendaftaran, Buku & Cicilan)
 CREATE TABLE IF NOT EXISTS invoices (
   id TEXT PRIMARY KEY,
   "invoiceNo" TEXT NOT NULL,
@@ -145,16 +181,22 @@ CREATE TABLE IF NOT EXISTS invoices (
   amount NUMERIC NOT NULL,
   month TEXT NOT NULL,
   "dueDate" TEXT NOT NULL,
-  status TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('paid', 'unpaid', 'partially_paid')),
   "paidAt" TEXT,
   "paymentMethod" TEXT,
   "createdAt" BIGINT NOT NULL,
   "amountPaid" NUMERIC DEFAULT 0,
   installments JSONB DEFAULT '[]'::jsonb,
-  category TEXT DEFAULT 'spp'
+  category TEXT DEFAULT 'spp',
+  branch TEXT DEFAULT 'Pusat'
 );
 
--- 5. TABEL GRADES (Input Nilai Perkembangan)
+ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON invoices;
+CREATE POLICY "Allow public read-write for demo" ON invoices FOR ALL USING (true) WITH CHECK (true);
+
+
+-- 6. TABEL GRADES (Input & Riwayat Nilai Perkembangan Siswa)
 CREATE TABLE IF NOT EXISTS grades (
   id TEXT PRIMARY KEY,
   "studentId" TEXT REFERENCES students(id) ON DELETE CASCADE,
@@ -163,45 +205,59 @@ CREATE TABLE IF NOT EXISTS grades (
   topic TEXT NOT NULL,
   score NUMERIC NOT NULL,
   "speedSeconds" NUMERIC NOT NULL,
-  notes TEXT
+  notes TEXT,
+  branch TEXT DEFAULT 'Pusat'
 );
-
--- 6. TABEL MATERIALS (Kurikulum & Daftar Materi)
-CREATE TABLE IF NOT EXISTS materials (
-  id TEXT PRIMARY KEY,
-  level TEXT NOT NULL,
-  title TEXT NOT NULL,
-  description TEXT NOT NULL,
-  formulas TEXT[],
-  steps TEXT[],
-  "videoUrl" TEXT,
-  "tutorialImages" TEXT[]
-);
-
--- AKTIFKAN ROW LEVEL SECURITY (RLS) & IZINKAN AKSES FULL UNTUK KEMUDAHAN APLIKASI
-ALTER TABLE students ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow public read-write for demo" ON students;
-CREATE POLICY "Allow public read-write for demo" ON students FOR ALL USING (true) WITH CHECK (true);
-
-ALTER TABLE materials ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow public read-write for demo" ON materials;
-CREATE POLICY "Allow public read-write for demo" ON materials FOR ALL USING (true) WITH CHECK (true);
-
-ALTER TABLE attendance ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow public read-write for demo" ON attendance;
-CREATE POLICY "Allow public read-write for demo" ON attendance FOR ALL USING (true) WITH CHECK (true);
-
-ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow public read-write for demo" ON notes;
-CREATE POLICY "Allow public read-write for demo" ON notes FOR ALL USING (true) WITH CHECK (true);
-
-ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow public read-write for demo" ON invoices;
-CREATE POLICY "Allow public read-write for demo" ON invoices FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE grades ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read-write for demo" ON grades;
-CREATE POLICY "Allow public read-write for demo" ON grades FOR ALL USING (true) WITH CHECK (true);`,
+CREATE POLICY "Allow public read-write for demo" ON grades FOR ALL USING (true) WITH CHECK (true);
+
+
+-- 7. TABEL BRANCHES (Daftar Cabang-cabang Les Privat)
+CREATE TABLE IF NOT EXISTS branches (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  address TEXT,
+  phone TEXT,
+  "createdAt" BIGINT NOT NULL
+);
+
+ALTER TABLE branches ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON branches;
+CREATE POLICY "Allow public read-write for demo" ON branches FOR ALL USING (true) WITH CHECK (true);
+
+
+-- 8. TABEL ADMIN_USERS (Akun Super Admin & Admin Cabang)
+CREATE TABLE IF NOT EXISTS admin_users (
+  username TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('super_admin', 'branch_admin')),
+  branch TEXT NOT NULL,
+  password TEXT,
+  "createdAt" BIGINT DEFAULT 1719600000
+);
+
+ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON admin_users;
+CREATE POLICY "Allow public read-write for demo" ON admin_users FOR ALL USING (true) WITH CHECK (true);
+
+
+-- ====================================================================
+-- SEED DATA AWAL (Jalankan Sekali Saja)
+-- ====================================================================
+INSERT INTO branches (id, name, address, phone, "createdAt")
+VALUES 
+  ('br-1', 'Pusat', 'Kantor Pusat Math Fingers', '08123456789', 1719600000),
+  ('br-2', 'Bandung', 'Cabang Kota Bandung', '08123456780', 1719600000)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO admin_users (username, name, role, branch, password)
+VALUES 
+  ('febrianti', 'Febrianti Dewi', 'super_admin', 'Pusat', 'admin123'),
+  ('dewi', 'Dewi Safitri', 'branch_admin', 'Pusat', 'dewi123'),
+  ('les_bandung', 'Les Privat Bandung', 'branch_admin', 'Bandung', 'bdg123')
+ON CONFLICT (username) DO NOTHING;`,
 
     students: `CREATE TABLE IF NOT EXISTS students (
   id TEXT PRIMARY KEY,
@@ -210,61 +266,66 @@ CREATE POLICY "Allow public read-write for demo" ON grades FOR ALL USING (true) 
   "parentPhone" TEXT NOT NULL,
   "joinDate" TEXT NOT NULL,
   level TEXT NOT NULL,
-  status TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
   keterangan TEXT,
   "tempatLahir" TEXT,
   "tanggalLahir" TEXT,
   "jenisPaket" TEXT DEFAULT '4P',
   "jenisKelamin" TEXT DEFAULT 'Laki-laki',
   alamat TEXT,
-  "createdAt" BIGINT NOT NULL
+  "createdAt" BIGINT NOT NULL,
+  branch TEXT DEFAULT 'Pusat'
 );`,
 
     attendance: `CREATE TABLE IF NOT EXISTS attendance (
   id TEXT PRIMARY KEY,
-  "studentId" TEXT,
+  "studentId" TEXT REFERENCES students(id) ON DELETE CASCADE,
   "studentName" TEXT NOT NULL,
   date TEXT NOT NULL,
-  status TEXT NOT NULL,
-  notes TEXT
+  status TEXT NOT NULL CHECK (status IN ('present', 'absent', 'permission')),
+  notes TEXT,
+  branch TEXT DEFAULT 'Pusat'
 );`,
 
     notes: `CREATE TABLE IF NOT EXISTS notes (
   id TEXT PRIMARY KEY,
-  "studentId" TEXT,
+  "studentId" TEXT REFERENCES students(id) ON DELETE CASCADE,
   "studentName" TEXT NOT NULL,
   date TEXT NOT NULL,
   topic TEXT NOT NULL,
   content TEXT NOT NULL,
-  "teacherName" TEXT NOT NULL
+  "teacherName" TEXT NOT NULL,
+  branch TEXT DEFAULT 'Pusat'
 );`,
 
     invoices: `CREATE TABLE IF NOT EXISTS invoices (
   id TEXT PRIMARY KEY,
   "invoiceNo" TEXT NOT NULL,
-  "studentId" TEXT,
+  "studentId" TEXT REFERENCES students(id) ON DELETE CASCADE,
   "studentName" TEXT NOT NULL,
   amount NUMERIC NOT NULL,
   month TEXT NOT NULL,
   "dueDate" TEXT NOT NULL,
-  status TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('paid', 'unpaid', 'partially_paid')),
   "paidAt" TEXT,
   "paymentMethod" TEXT,
   "createdAt" BIGINT NOT NULL,
   "amountPaid" NUMERIC DEFAULT 0,
   installments JSONB DEFAULT '[]'::jsonb,
-  category TEXT DEFAULT 'spp'
+  category TEXT DEFAULT 'spp',
+  branch TEXT DEFAULT 'Pusat'
 );`,
 
     grades: `CREATE TABLE IF NOT EXISTS grades (
   id TEXT PRIMARY KEY,
-  "studentId" TEXT,
+  "studentId" TEXT REFERENCES students(id) ON DELETE CASCADE,
   "studentName" TEXT NOT NULL,
   date TEXT NOT NULL,
   topic TEXT NOT NULL,
   score NUMERIC NOT NULL,
   "speedSeconds" NUMERIC NOT NULL,
-  notes TEXT
+  notes TEXT,
+  branch TEXT DEFAULT 'Pusat'
 );`,
 
     materials: `CREATE TABLE IF NOT EXISTS materials (
@@ -272,21 +333,65 @@ CREATE POLICY "Allow public read-write for demo" ON grades FOR ALL USING (true) 
   level TEXT NOT NULL,
   title TEXT NOT NULL,
   description TEXT NOT NULL,
-  formulas TEXT[],
-  steps TEXT[],
+  formulas TEXT[] DEFAULT '{}'::TEXT[],
+  steps TEXT[] DEFAULT '{}'::TEXT[],
   "videoUrl" TEXT,
-  "tutorialImages" TEXT[]
+  "tutorialImages" TEXT[] DEFAULT '{}'::TEXT[]
 );`
   };
 
   const alterSqlScripts = {
-    all: `-- ========================================================
--- MIGRASI SCHEMA SAFETY (TANPA MERUBAH / MENGHAPUS DATA LAMA) --
--- ========================================================
--- Jalankan ini di SQL Editor Supabase untuk melengkapi kolom yang kurang
--- tanpa menghapus atau mengganggu data siswa atau transaksi yang sudah ada!
+    all: `-- ====================================================================
+-- MIGRASI MULTI-CABANG & SAFETY PENYELARASAN (TANPA MENGHAPUS DATA LAMA) --
+-- ====================================================================
 
--- 1. Kolom tambahan untuk tabel 'students'
+-- 1. Tambah kolom 'branch' dengan default 'Pusat' ke seluruh tabel transaksi
+ALTER TABLE students ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Pusat';
+ALTER TABLE attendance ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Pusat';
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Pusat';
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Pusat';
+ALTER TABLE grades ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Pusat';
+
+-- 2. Membuat tabel baru 'branches' (Daftar Cabang)
+CREATE TABLE IF NOT EXISTS branches (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  address TEXT,
+  phone TEXT,
+  "createdAt" BIGINT NOT NULL
+);
+ALTER TABLE branches ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON branches;
+CREATE POLICY "Allow public read-write for demo" ON branches FOR ALL USING (true) WITH CHECK (true);
+
+-- 3. Membuat tabel baru 'admin_users' (Daftar Akun)
+CREATE TABLE IF NOT EXISTS admin_users (
+  username TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('super_admin', 'branch_admin')),
+  branch TEXT NOT NULL,
+  password TEXT,
+  "createdAt" BIGINT DEFAULT 1719600000
+);
+ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON admin_users;
+CREATE POLICY "Allow public read-write for demo" ON admin_users FOR ALL USING (true) WITH CHECK (true);
+
+-- 4. Isi seed data awal untuk Cabang & Admin (jika belum ada)
+INSERT INTO branches (id, name, address, phone, "createdAt")
+VALUES 
+  ('br-1', 'Pusat', 'Kantor Pusat Math Fingers', '08123456789', 1719600000),
+  ('br-2', 'Bandung', 'Cabang Kota Bandung', '08123456780', 1719600000)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO admin_users (username, name, role, branch, password)
+VALUES 
+  ('febrianti', 'Febrianti Dewi', 'super_admin', 'Pusat', 'admin123'),
+  ('dewi', 'Dewi Safitri', 'branch_admin', 'Pusat', 'dewi123'),
+  ('les_bandung', 'Les Privat Bandung', 'branch_admin', 'Bandung', 'bdg123')
+ON CONFLICT (username) DO NOTHING;
+
+-- 5. Tambah kolom kelengkapan lain (jika ada yang tertinggal)
 ALTER TABLE students ADD COLUMN IF NOT EXISTS keterangan TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "tempatLahir" TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "tanggalLahir" TEXT;
@@ -295,34 +400,25 @@ ALTER TABLE students ADD COLUMN IF NOT EXISTS "jenisKelamin" TEXT DEFAULT 'Laki-
 ALTER TABLE students ADD COLUMN IF NOT EXISTS alamat TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "activeMaterialId" TEXT;
 
--- 2. Kolom tambahan untuk tabel 'invoices' (Untuk sistem Cicilan SPP & Kategori Pembayaran)
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "amountPaid" NUMERIC DEFAULT 0;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS installments JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'spp';
 
--- 3. Kolom tambahan untuk tabel 'materials' (Untuk Link Video & Foto Kurikulum)
 ALTER TABLE materials ADD COLUMN IF NOT EXISTS "videoUrl" TEXT;
-ALTER TABLE materials ADD COLUMN IF NOT EXISTS "tutorialImages" TEXT[];
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS "tutorialImages" TEXT[] DEFAULT '{}'::TEXT[];
 
--- 4. Memperbaiki relasi Foreign Key Cascade Delete agar menu hapus bekerja mulus
--- Menghapus constraint lama jika ada dan memperbarui menjadi ON DELETE CASCADE
--- (Sehingga saat menghapus siswa, seluruh data absensi, nilai & invoice siswa tersebut ikut terhapus otomatis)
-
+-- 6. Atur ulang relasi Cascade Delete agar data terhapus otomatis saat siswa dihapus
 ALTER TABLE IF EXISTS attendance DROP CONSTRAINT IF EXISTS attendance_studentId_fkey;
-ALTER TABLE attendance ADD CONSTRAINT attendance_studentId_fkey 
-  FOREIGN KEY ("studentId") REFERENCES students(id) ON DELETE CASCADE;
+ALTER TABLE attendance ADD CONSTRAINT attendance_studentId_fkey FOREIGN KEY ("studentId") REFERENCES students(id) ON DELETE CASCADE;
 
 ALTER TABLE IF EXISTS notes DROP CONSTRAINT IF EXISTS notes_studentId_fkey;
-ALTER TABLE notes ADD CONSTRAINT notes_studentId_fkey 
-  FOREIGN KEY ("studentId") REFERENCES students(id) ON DELETE CASCADE;
+ALTER TABLE notes ADD CONSTRAINT notes_studentId_fkey FOREIGN KEY ("studentId") REFERENCES students(id) ON DELETE CASCADE;
 
 ALTER TABLE IF EXISTS invoices DROP CONSTRAINT IF EXISTS invoices_studentId_fkey;
-ALTER TABLE invoices ADD CONSTRAINT invoices_studentId_fkey 
-  FOREIGN KEY ("studentId") REFERENCES students(id) ON DELETE CASCADE;
+ALTER TABLE invoices ADD CONSTRAINT invoices_studentId_fkey FOREIGN KEY ("studentId") REFERENCES students(id) ON DELETE CASCADE;
 
 ALTER TABLE IF EXISTS grades DROP CONSTRAINT IF EXISTS grades_studentId_fkey;
-ALTER TABLE grades ADD CONSTRAINT grades_studentId_fkey 
-  FOREIGN KEY ("studentId") REFERENCES students(id) ON DELETE CASCADE;`,
+ALTER TABLE grades ADD CONSTRAINT grades_studentId_fkey FOREIGN KEY ("studentId") REFERENCES students(id) ON DELETE CASCADE;`,
 
     students: `-- Melengkapi kolom students tanpa merubah data lama
 ALTER TABLE students ADD COLUMN IF NOT EXISTS keterangan TEXT;
@@ -330,12 +426,14 @@ ALTER TABLE students ADD COLUMN IF NOT EXISTS "tempatLahir" TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "tanggalLahir" TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "jenisPaket" TEXT DEFAULT '4P';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "jenisKelamin" TEXT DEFAULT 'Laki-laki';
-ALTER TABLE students ADD COLUMN IF NOT EXISTS alamat TEXT;`,
+ALTER TABLE students ADD COLUMN IF NOT EXISTS alamat TEXT;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Pusat';`,
 
     invoices: `-- Melengkapi kolom invoice untuk Cicilan & Riwayat Pembayaran & Kategori Pembayaran
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "amountPaid" NUMERIC DEFAULT 0;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS installments JSONB DEFAULT '[]'::jsonb;
-ALTER TABLE invoices ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'spp';`,
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'spp';
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Pusat';`,
 
     materials: `-- Melengkapi kolom materials untuk Video & Foto Kurikulum (Kurikulum)
 ALTER TABLE materials ADD COLUMN IF NOT EXISTS "videoUrl" TEXT;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
-import { Student, Attendance, TeacherNote, Invoice, Installment, Grade, LearningMaterial, AppSettings, DashboardTask } from '../types';
+import { Student, Attendance, TeacherNote, Invoice, Installment, Grade, LearningMaterial, AppSettings, DashboardTask, Branch, AdminUser } from '../types';
 import { SEED_MATERIALS, generateInvoiceNo } from '../utils';
 
 // Helper to load localStorage fallbacks
@@ -29,6 +29,8 @@ export function useMathFinggersDb() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
   const [materials, setMaterials] = useState<LearningMaterial[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOfflineFallback, setIsOfflineFallback] = useState(false);
 
@@ -110,12 +112,45 @@ export function useMathFinggersDb() {
 
       if (materialsError) throw materialsError;
 
+      // Fetch Branches
+      let branchesData = null;
+      try {
+        const { data, error } = await supabase.from('branches').select('*');
+        if (!error) branchesData = data;
+      } catch (e) {
+        console.warn('Failed to fetch branches from Supabase:', e);
+      }
+
+      // Fetch Admin Users
+      let adminUsersData = null;
+      try {
+        const { data, error } = await supabase.from('admin_users').select('*');
+        if (!error) adminUsersData = data;
+      } catch (e) {
+        console.warn('Failed to fetch admin users from Supabase:', e);
+      }
+
       // Set state and save locally for offline capabilities
       const loadedStudents = studentsData || [];
       const loadedAttendance = (attendanceData || []).sort((a, b) => b.date.localeCompare(a.date));
       const loadedNotes = (notesData || []).sort((a, b) => b.date.localeCompare(a.date));
       const loadedInvoices = invoicesData || [];
       const loadedGrades = (gradesData || []).sort((a, b) => b.date.localeCompare(a.date));
+
+      const loadedBranches = branchesData || getLocalData<Branch[]>('branches', [
+        { id: 'br-1', name: 'Pusat', address: 'Kantor Pusat Math Fingers', phone: '08123456789', createdAt: 1719600000 },
+        { id: 'br-2', name: 'Bandung', address: 'Cabang Kota Bandung', phone: '08123456780', createdAt: 1719600000 }
+      ]);
+      setBranches(loadedBranches);
+      saveLocalData('branches', loadedBranches);
+
+      const loadedAdminUsers = adminUsersData || getLocalData<AdminUser[]>('admin_users', [
+        { username: 'febrianti', name: 'Febrianti Dewi', role: 'super_admin', branch: 'Pusat' },
+        { username: 'dewi', name: 'Dewi Safitri', role: 'branch_admin', branch: 'Pusat' },
+        { username: 'les_bandung', name: 'Les Privat Bandung', role: 'branch_admin', branch: 'Bandung' }
+      ]);
+      setAdminUsers(loadedAdminUsers);
+      saveLocalData('admin_users', loadedAdminUsers);
 
       setStudents(loadedStudents);
       saveLocalData('students', loadedStudents);
@@ -164,6 +199,15 @@ export function useMathFinggersDb() {
     setNotes(getLocalData<TeacherNote[]>('notes', []));
     setInvoices(getLocalData<Invoice[]>('invoices', []));
     setGrades(getLocalData<Grade[]>('grades', []));
+    setBranches(getLocalData<Branch[]>('branches', [
+      { id: 'br-1', name: 'Pusat', address: 'Kantor Pusat Math Fingers', phone: '08123456789', createdAt: 1719600000 },
+      { id: 'br-2', name: 'Bandung', address: 'Cabang Kota Bandung', phone: '08123456780', createdAt: 1719600000 }
+    ]));
+    setAdminUsers(getLocalData<AdminUser[]>('admin_users', [
+      { username: 'febrianti', name: 'Febrianti Dewi', role: 'super_admin', branch: 'Pusat' },
+      { username: 'dewi', name: 'Dewi Safitri', role: 'branch_admin', branch: 'Pusat' },
+      { username: 'les_bandung', name: 'Les Privat Bandung', role: 'branch_admin', branch: 'Bandung' }
+    ]));
     
     const localMats = getLocalData<LearningMaterial[]>('materials', []);
     const hasOldLocal = localMats.length === 0 || localMats.some(m => m.level.includes('Dasar Satuan'));
@@ -591,6 +635,97 @@ export function useMathFinggersDb() {
     saveLocalData('dashboard_tasks', updated);
   };
 
+  // --- BRANCH WRITERS ---
+  const addBranch = async (branchData: Omit<Branch, 'id' | 'createdAt'>) => {
+    const newBranch: Branch = {
+      ...branchData,
+      id: `br-${Date.now()}`,
+      createdAt: Date.now()
+    };
+    const updated = [...branches, newBranch];
+    setBranches(updated);
+    saveLocalData('branches', updated);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        await supabase.from('branches').insert([newBranch]);
+      } catch (e) {
+        console.error('Failed to save branch to Supabase:', e);
+      }
+    }
+  };
+
+  const updateBranch = async (id: string, updatedFields: Partial<Branch>) => {
+    const updated = branches.map(b => b.id === id ? { ...b, ...updatedFields } : b);
+    setBranches(updated);
+    saveLocalData('branches', updated);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        await supabase.from('branches').update(updatedFields).eq('id', id);
+      } catch (e) {
+        console.error('Failed to update branch in Supabase:', e);
+      }
+    }
+  };
+
+  const deleteBranch = async (id: string) => {
+    const updated = branches.filter(b => b.id !== id);
+    setBranches(updated);
+    saveLocalData('branches', updated);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        await supabase.from('branches').delete().eq('id', id);
+      } catch (e) {
+        console.error('Failed to delete branch in Supabase:', e);
+      }
+    }
+  };
+
+  // --- ADMIN USERS WRITERS ---
+  const addAdminUser = async (userData: AdminUser) => {
+    const updated = [...adminUsers, userData];
+    setAdminUsers(updated);
+    saveLocalData('admin_users', updated);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        await supabase.from('admin_users').insert([userData]);
+      } catch (e) {
+        console.error('Failed to save admin user to Supabase:', e);
+      }
+    }
+  };
+
+  const updateAdminUser = async (username: string, updatedFields: Partial<AdminUser>) => {
+    const updated = adminUsers.map(u => u.username === username ? { ...u, ...updatedFields } : u);
+    setAdminUsers(updated);
+    saveLocalData('admin_users', updated);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        await supabase.from('admin_users').update(updatedFields).eq('username', username);
+      } catch (e) {
+        console.error('Failed to update admin user in Supabase:', e);
+      }
+    }
+  };
+
+  const deleteAdminUser = async (username: string) => {
+    const updated = adminUsers.filter(u => u.username !== username);
+    setAdminUsers(updated);
+    saveLocalData('admin_users', updated);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        await supabase.from('admin_users').delete().eq('username', username);
+      } catch (e) {
+        console.error('Failed to delete admin user in Supabase:', e);
+      }
+    }
+  };
+
   // --- MANUAL BACKUP IMPORT WRITER ---
   const importBackupData = async (backupPayload: any) => {
     try {
@@ -603,55 +738,115 @@ export function useMathFinggersDb() {
       const importedNotes = Array.isArray(data.notes) ? data.notes : null;
       const importedInvoices = Array.isArray(data.invoices) ? data.invoices : null;
       const importedTasks = Array.isArray(data.dashboardTasks) ? data.dashboardTasks : null;
+      const importedBranches = Array.isArray(data.branches) ? data.branches : null;
+      const importedAdminUsers = Array.isArray(data.adminUsers || data.admin_users) ? (data.adminUsers || data.admin_users) : null;
+      const importedSettings = data.settings;
 
-      if (!importedStudents && !importedGrades) {
-        throw new Error('Data siswa atau nilai tidak ditemukan dalam cadangan');
+      if (!importedStudents && !importedGrades && !importedAttendance && !importedNotes && !importedInvoices) {
+        throw new Error('Data tidak ditemukan dalam file cadangan');
       }
 
-      // Update Local State & LocalStorage
+      // 1. Settings
+      if (importedSettings) {
+        setSettings(importedSettings);
+        saveLocalData('settings', importedSettings);
+      }
+
+      // 2. Students
       if (importedStudents) {
         setStudents(importedStudents);
         saveLocalData('students', importedStudents);
         if (supabase && !isOfflineFallback) {
-          await supabase.from('students').upsert(importedStudents);
+          try {
+            await supabase.from('students').upsert(importedStudents);
+          } catch (e) {
+            console.warn('Failed to sync students to Supabase during backup restore:', e);
+          }
         }
       }
 
+      // 3. Grades
       if (importedGrades) {
         setGrades(importedGrades);
         saveLocalData('grades', importedGrades);
         if (supabase && !isOfflineFallback) {
-          await supabase.from('grades').upsert(importedGrades);
+          try {
+            await supabase.from('grades').upsert(importedGrades);
+          } catch (e) {
+            console.warn('Failed to sync grades to Supabase during backup restore:', e);
+          }
         }
       }
 
+      // 4. Attendance
       if (importedAttendance) {
         setAttendance(importedAttendance);
         saveLocalData('attendance', importedAttendance);
         if (supabase && !isOfflineFallback) {
-          await supabase.from('attendance').upsert(importedAttendance);
+          try {
+            await supabase.from('attendance').upsert(importedAttendance);
+          } catch (e) {
+            console.warn('Failed to sync attendance to Supabase during backup restore:', e);
+          }
         }
       }
 
+      // 5. Notes
       if (importedNotes) {
         setNotes(importedNotes);
         saveLocalData('notes', importedNotes);
         if (supabase && !isOfflineFallback) {
-          await supabase.from('notes').upsert(importedNotes);
+          try {
+            await supabase.from('notes').upsert(importedNotes);
+          } catch (e) {
+            console.warn('Failed to sync notes to Supabase during backup restore:', e);
+          }
         }
       }
 
+      // 6. Invoices
       if (importedInvoices) {
         setInvoices(importedInvoices);
         saveLocalData('invoices', importedInvoices);
         if (supabase && !isOfflineFallback) {
-          await supabase.from('invoices').upsert(importedInvoices);
+          try {
+            await supabase.from('invoices').upsert(importedInvoices);
+          } catch (e) {
+            console.warn('Failed to sync invoices to Supabase during backup restore:', e);
+          }
         }
       }
 
+      // 7. Dashboard Tasks
       if (importedTasks) {
         setDashboardTasks(importedTasks);
         saveLocalData('dashboard_tasks', importedTasks);
+      }
+
+      // 8. Branches
+      if (importedBranches) {
+        setBranches(importedBranches);
+        saveLocalData('branches', importedBranches);
+        if (supabase && !isOfflineFallback) {
+          try {
+            await supabase.from('branches').upsert(importedBranches);
+          } catch (e) {
+            console.warn('Failed to sync branches to Supabase during backup restore:', e);
+          }
+        }
+      }
+
+      // 9. Admin Users
+      if (importedAdminUsers) {
+        setAdminUsers(importedAdminUsers);
+        saveLocalData('admin_users', importedAdminUsers);
+        if (supabase && !isOfflineFallback) {
+          try {
+            await supabase.from('admin_users').upsert(importedAdminUsers);
+          } catch (e) {
+            console.warn('Failed to sync admin users to Supabase during backup restore:', e);
+          }
+        }
       }
 
       return { success: true };
@@ -668,6 +863,8 @@ export function useMathFinggersDb() {
     invoices,
     grades,
     materials,
+    branches,
+    adminUsers,
     settings,
     dashboardTasks,
     loading,
@@ -692,6 +889,12 @@ export function useMathFinggersDb() {
     addDashboardTask,
     toggleDashboardTask,
     deleteDashboardTask,
+    addBranch,
+    updateBranch,
+    deleteBranch,
+    addAdminUser,
+    updateAdminUser,
+    deleteAdminUser,
     importBackupData
   };
 }

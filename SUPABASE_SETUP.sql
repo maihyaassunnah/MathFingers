@@ -1,9 +1,6 @@
--- ========================================================
--- SCRIPT FULL SETUP DATABASE MATH FINGERS (LATEST SCHEMA) --
--- ========================================================
-
--- Disable Row Level Security (RLS) enforcement warnings or keep it simple.
--- Kami sarankan mengijinkan akses baca-tulis penuh untuk demo & kelancaran aplikasi.
+-- ====================================================================
+-- SCRIPT FULL SETUP DATABASE MATH FINGERS (MULTI-CABANG & LATEST SCHEMA) --
+-- ====================================================================
 
 -- 1. TABEL STUDENTS (Data Siswa Lengkap)
 CREATE TABLE IF NOT EXISTS students (
@@ -21,7 +18,8 @@ CREATE TABLE IF NOT EXISTS students (
   "jenisKelamin" TEXT DEFAULT 'Laki-laki',
   alamat TEXT,
   "createdAt" BIGINT NOT NULL,
-  "activeMaterialId" TEXT
+  "activeMaterialId" TEXT,
+  branch TEXT DEFAULT 'Pusat'
 );
 
 -- Enable RLS & Bypass for simple usage
@@ -30,7 +28,7 @@ DROP POLICY IF EXISTS "Allow public read-write for demo" ON students;
 CREATE POLICY "Allow public read-write for demo" ON students FOR ALL USING (true) WITH CHECK (true);
 
 
--- 2. TABEL MATERIALS (Daftar Materi & Kurikulum Baru)
+-- 2. TABEL MATERIALS (Daftar Materi & Kurikulum)
 CREATE TABLE IF NOT EXISTS materials (
   id TEXT PRIMARY KEY,
   level TEXT NOT NULL,
@@ -54,7 +52,8 @@ CREATE TABLE IF NOT EXISTS attendance (
   "studentName" TEXT NOT NULL,
   date TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('present', 'absent', 'permission')),
-  notes TEXT
+  notes TEXT,
+  branch TEXT DEFAULT 'Pusat'
 );
 
 ALTER TABLE attendance ENABLE ROW LEVEL SECURITY;
@@ -70,7 +69,8 @@ CREATE TABLE IF NOT EXISTS notes (
   date TEXT NOT NULL,
   topic TEXT NOT NULL,
   content TEXT NOT NULL,
-  "teacherName" TEXT NOT NULL
+  "teacherName" TEXT NOT NULL,
+  branch TEXT DEFAULT 'Pusat'
 );
 
 ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
@@ -87,13 +87,14 @@ CREATE TABLE IF NOT EXISTS invoices (
   amount NUMERIC NOT NULL,
   month TEXT NOT NULL,
   "dueDate" TEXT NOT NULL,
-  status TEXT NOT NULL CHECK (status IN ('paid', 'unpaid')),
+  status TEXT NOT NULL CHECK (status IN ('paid', 'unpaid', 'partially_paid')),
   "paidAt" TEXT,
   "paymentMethod" TEXT,
   "createdAt" BIGINT NOT NULL,
   "amountPaid" NUMERIC DEFAULT 0,
   installments JSONB DEFAULT '[]'::jsonb,
-  category TEXT DEFAULT 'spp'
+  category TEXT DEFAULT 'spp',
+  branch TEXT DEFAULT 'Pusat'
 );
 
 ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
@@ -110,7 +111,8 @@ CREATE TABLE IF NOT EXISTS grades (
   topic TEXT NOT NULL,
   score NUMERIC NOT NULL,
   "speedSeconds" NUMERIC NOT NULL,
-  notes TEXT
+  notes TEXT,
+  branch TEXT DEFAULT 'Pusat'
 );
 
 ALTER TABLE grades ENABLE ROW LEVEL SECURITY;
@@ -118,10 +120,56 @@ DROP POLICY IF EXISTS "Allow public read-write for demo" ON grades;
 CREATE POLICY "Allow public read-write for demo" ON grades FOR ALL USING (true) WITH CHECK (true);
 
 
--- ========================================================
+-- 7. TABEL BRANCHES (Daftar Cabang-cabang Les Privat)
+CREATE TABLE IF NOT EXISTS branches (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  address TEXT,
+  phone TEXT,
+  "createdAt" BIGINT NOT NULL
+);
+
+ALTER TABLE branches ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON branches;
+CREATE POLICY "Allow public read-write for demo" ON branches FOR ALL USING (true) WITH CHECK (true);
+
+
+-- 8. TABEL ADMIN_USERS (Akun Super Admin & Admin Cabang)
+CREATE TABLE IF NOT EXISTS admin_users (
+  username TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('super_admin', 'branch_admin')),
+  branch TEXT NOT NULL,
+  password TEXT,
+  "createdAt" BIGINT DEFAULT 1719600000
+);
+
+ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON admin_users;
+CREATE POLICY "Allow public read-write for demo" ON admin_users FOR ALL USING (true) WITH CHECK (true);
+
+
+-- ====================================================================
+-- SEED DATA AWAL (Jalankan Sekali Saja)
+-- ====================================================================
+INSERT INTO branches (id, name, address, phone, "createdAt")
+VALUES 
+  ('br-1', 'Pusat', 'Kantor Pusat Math Fingers', '08123456789', 1719600000),
+  ('br-2', 'Bandung', 'Cabang Kota Bandung', '08123456780', 1719600000)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO admin_users (username, name, role, branch, password)
+VALUES 
+  ('febrianti', 'Febrianti Dewi', 'super_admin', 'Pusat', 'admin123'),
+  ('dewi', 'Dewi Safitri', 'branch_admin', 'Pusat', 'dewi123'),
+  ('les_bandung', 'Les Privat Bandung', 'branch_admin', 'Bandung', 'bdg123')
+ON CONFLICT (username) DO NOTHING;
+
+
+-- ====================================================================
 -- MIGRASI PENYELARASAN SCHEMA (Mencegah Error Jika Sudah Ada Data)
--- ========================================================
--- Jalankan bagian ini jika tabel Anda sudah ada sebelumnya tapi ingin ditambahkan kolom barunya saja:
+-- ====================================================================
+-- Perintah penambahan kolom jika tabel sudah ada namun ingin di-upgrade:
 
 ALTER TABLE students ADD COLUMN IF NOT EXISTS keterangan TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "tempatLahir" TEXT;
@@ -130,6 +178,12 @@ ALTER TABLE students ADD COLUMN IF NOT EXISTS "jenisPaket" TEXT DEFAULT '4P';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "jenisKelamin" TEXT DEFAULT 'Laki-laki';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS alamat TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "activeMaterialId" TEXT;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Pusat';
+
+ALTER TABLE attendance ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Pusat';
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Pusat';
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Pusat';
+ALTER TABLE grades ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Pusat';
 
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "amountPaid" NUMERIC DEFAULT 0;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS installments JSONB DEFAULT '[]'::jsonb;

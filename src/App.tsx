@@ -15,6 +15,8 @@ import { JournalHistory } from './components/JournalHistory';
 import { SppHistory } from './components/SppHistory';
 import { SupabaseSqlEditor } from './components/SupabaseSqlEditor';
 import { AlumniManager } from './components/AlumniManager';
+import { BranchesManager } from './components/BranchesManager';
+import { AdminUser, Branch } from './types';
 
 import { 
   Home, 
@@ -37,13 +39,27 @@ import {
   LogOut,
   History,
   Database,
-  GraduationCap
+  GraduationCap,
+  Building
 } from 'lucide-react';
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<string | null>(() => {
-    return localStorage.getItem('math_finggers_current_user');
+  const [currentUser, setCurrentUser] = useState<AdminUser | null>(() => {
+    const savedObj = localStorage.getItem('math_finggers_current_user_obj');
+    if (savedObj) {
+      try {
+        return JSON.parse(savedObj);
+      } catch (e) {
+        // Fallback
+      }
+    }
+    const legacyStringUser = localStorage.getItem('math_finggers_current_user');
+    if (legacyStringUser) {
+      return { username: 'febrianti', name: legacyStringUser, role: 'super_admin', branch: 'Pusat' };
+    }
+    return null;
   });
+  const [activeBranch, setActiveBranch] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -56,6 +72,24 @@ export default function App() {
     localStorage.setItem('math_finggers_theme', nextTheme);
   };
 
+  useEffect(() => {
+    if (currentUser) {
+      if (currentUser.role === 'branch_admin') {
+        setActiveBranch(currentUser.branch);
+      } else {
+        setActiveBranch('all');
+      }
+      
+      // Ensure activeTab is always one of the valid tabs for the role
+      const validTabIds = currentUser.role === 'super_admin'
+        ? ['overview', 'branches_mgmt', 'settings', 'supabase_sql']
+        : ['overview', 'students', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'grades', 'report', 'settings'];
+      if (!validTabIds.includes(activeTab)) {
+        setActiveTab('overview');
+      }
+    }
+  }, [currentUser, activeTab]);
+
   const {
     students,
     attendance,
@@ -63,6 +97,8 @@ export default function App() {
     invoices,
     grades,
     materials,
+    branches,
+    adminUsers,
     settings,
     dashboardTasks,
     loading,
@@ -87,23 +123,114 @@ export default function App() {
     addDashboardTask,
     toggleDashboardTask,
     deleteDashboardTask,
+    addBranch,
+    updateBranch,
+    deleteBranch,
+    addAdminUser,
+    updateAdminUser,
+    deleteAdminUser,
     importBackupData
   } = useMathFinggersDb();
 
-  const navigationItems = [
-    { id: 'overview', name: 'Dashboard', icon: Home },
-    { id: 'students', name: 'Siswa', icon: Users },
-    { id: 'alumni', name: 'Alumni / Lulus', icon: GraduationCap },
-    { id: 'attendance', name: 'Absensi', icon: CheckSquare },
-    { id: 'notes', name: 'Jurnal Guru', icon: FileText },
-    { id: 'journal_history', name: 'Riwayat Jurnal', icon: History },
-    { id: 'spp', name: 'Pembayaran', icon: Receipt },
-    { id: 'spp_history', name: 'Riwayat Pembayaran', icon: History },
-    { id: 'grades', name: 'Input Nilai', icon: Award },
-    { id: 'report', name: 'Rapor Perkembangan', icon: TrendingUp },
-    { id: 'supabase_sql', name: 'SQL Editor Supabase', icon: Database },
-    { id: 'settings', name: 'Pengaturan', icon: Settings },
-  ];
+  // Active branch automatic filtering for all data types
+  const filteredStudents = students.filter(s => {
+    const b = s.branch || 'Pusat';
+    return activeBranch === 'all' || b === activeBranch;
+  });
+
+  const filteredAttendance = attendance.filter(a => {
+    const b = a.branch || 'Pusat';
+    return activeBranch === 'all' || b === activeBranch;
+  });
+
+  const filteredNotes = notes.filter(n => {
+    const b = n.branch || 'Pusat';
+    return activeBranch === 'all' || b === activeBranch;
+  });
+
+  const filteredInvoices = invoices.filter(i => {
+    const b = i.branch || 'Pusat';
+    return activeBranch === 'all' || b === activeBranch;
+  });
+
+  const filteredGrades = grades.filter(g => {
+    const b = g.branch || 'Pusat';
+    return activeBranch === 'all' || b === activeBranch;
+  });
+
+  // Multi-branch aware writers
+  const handleAddStudent = async (studentData: any) => {
+    const branchToSet = studentData.branch || (currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : 'Pusat'));
+    await addStudent({
+      ...studentData,
+      branch: branchToSet
+    });
+  };
+
+  const handleAddAttendanceBatch = async (records: any[]) => {
+    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : 'Pusat');
+    const updatedRecords = records.map(r => ({
+      ...r,
+      branch: branchToSet
+    }));
+    await addAttendanceBatch(updatedRecords);
+  };
+
+  const handleAddTeacherNote = async (noteData: any) => {
+    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : 'Pusat');
+    await addTeacherNote({
+      ...noteData,
+      branch: branchToSet
+    });
+  };
+
+  const handleAddTeacherNotesBatch = async (notesData: any[]) => {
+    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : 'Pusat');
+    const updatedNotes = notesData.map(n => ({
+      ...n,
+      branch: branchToSet
+    }));
+    await addTeacherNotesBatch(updatedNotes);
+  };
+
+  const handleCreateInvoice = async (invoiceData: any) => {
+    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : 'Pusat');
+    await createInvoice({
+      ...invoiceData,
+      branch: branchToSet
+    });
+  };
+
+  const handleAddGrade = async (gradeData: any) => {
+    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : 'Pusat');
+    await addGrade({
+      ...gradeData,
+      branch: branchToSet
+    });
+  };
+
+  const isSuperAdmin = currentUser?.role === 'super_admin';
+
+  const navigationItems = isSuperAdmin
+    ? [
+        { id: 'overview', name: 'Statistik & Ringkasan', icon: Home },
+        { id: 'branches_mgmt', name: 'Data Cabang & Admin', icon: Building },
+        { id: 'settings', name: 'Pengaturan & Backup', icon: Settings },
+        { id: 'supabase_sql', name: 'SQL Editor Supabase', icon: Database },
+      ]
+    : [
+        { id: 'overview', name: 'Dashboard Cabang', icon: Home },
+        { id: 'students', name: 'Siswa', icon: Users },
+        { id: 'alumni', name: 'Alumni / Lulus', icon: GraduationCap },
+        { id: 'attendance', name: 'Absensi', icon: CheckSquare },
+        { id: 'notes', name: 'Jurnal Guru', icon: FileText },
+        { id: 'journal_history', name: 'Riwayat Jurnal', icon: History },
+        { id: 'spp', name: 'Pembayaran SPP', icon: Receipt },
+        { id: 'spp_history', name: 'Riwayat Pembayaran', icon: History },
+        { id: 'grades', name: 'Input Nilai', icon: Award },
+        { id: 'report', name: 'Rapor Perkembangan', icon: TrendingUp },
+        { id: 'settings', name: 'Pengaturan Cabang', icon: Settings },
+      ];
 
   if (loading) {
     return (
@@ -157,10 +284,10 @@ export default function App() {
       case 'overview':
         return (
           <DashboardOverview 
-            students={students} 
-            attendance={attendance} 
-            invoices={invoices} 
-            grades={grades} 
+            students={filteredStudents} 
+            attendance={filteredAttendance} 
+            invoices={filteredInvoices} 
+            grades={filteredGrades} 
             settings={settings}
             dashboardTasks={dashboardTasks}
             onAddDashboardTask={addDashboardTask}
@@ -173,12 +300,12 @@ export default function App() {
       case 'students':
         return (
           <StudentManager 
-            students={students} 
+            students={filteredStudents} 
             materials={materials}
-            attendance={attendance}
-            notes={notes}
-            grades={grades}
-            onAddStudent={addStudent} 
+            attendance={filteredAttendance}
+            notes={filteredNotes}
+            grades={filteredGrades}
+            onAddStudent={handleAddStudent} 
             onUpdateStudent={updateStudent} 
             onDeleteStudent={deleteStudent} 
             theme={theme}
@@ -187,7 +314,7 @@ export default function App() {
       case 'alumni':
         return (
           <AlumniManager
-            students={students}
+            students={filteredStudents}
             onUpdateStudent={updateStudent}
             onDeleteStudent={deleteStudent}
             theme={theme}
@@ -196,19 +323,19 @@ export default function App() {
       case 'attendance':
         return (
           <AttendanceTracker 
-            students={students} 
-            attendance={attendance} 
-            onAddAttendanceBatch={addAttendanceBatch} 
+            students={filteredStudents} 
+            attendance={filteredAttendance} 
+            onAddAttendanceBatch={handleAddAttendanceBatch} 
             theme={theme}
           />
         );
       case 'notes':
         return (
           <TeacherNotes 
-            students={students} 
-            notes={notes} 
-            onAddNote={addTeacherNote} 
-            onAddNotesBatch={addTeacherNotesBatch}
+            students={filteredStudents} 
+            notes={filteredNotes} 
+            onAddNote={handleAddTeacherNote} 
+            onAddNotesBatch={handleAddTeacherNotesBatch}
             onDeleteNote={deleteTeacherNote} 
             theme={theme}
           />
@@ -216,18 +343,18 @@ export default function App() {
       case 'journal_history':
         return (
           <JournalHistory 
-            students={students} 
-            notes={notes} 
+            students={filteredStudents} 
+            notes={filteredNotes} 
             theme={theme}
           />
         );
       case 'spp':
         return (
           <SppInvoiceManager 
-            students={students} 
-            invoices={invoices} 
+            students={filteredStudents} 
+            invoices={filteredInvoices} 
             settings={settings}
-            onCreateInvoice={createInvoice} 
+            onCreateInvoice={handleCreateInvoice} 
             onUpdateInvoiceStatus={updateInvoiceStatus} 
             onDeleteInvoice={deleteInvoice} 
             theme={theme}
@@ -236,17 +363,17 @@ export default function App() {
       case 'spp_history':
         return (
           <SppHistory 
-            students={students} 
-            invoices={invoices} 
+            students={filteredStudents} 
+            invoices={filteredInvoices} 
             theme={theme}
           />
         );
       case 'grades':
         return (
           <GradeManager 
-            students={students} 
-            grades={grades} 
-            onAddGrade={addGrade} 
+            students={filteredStudents} 
+            grades={filteredGrades} 
+            onAddGrade={handleAddGrade} 
             onDeleteGrade={deleteGrade} 
             onUpdateGrade={updateGrade}
             theme={theme}
@@ -265,11 +392,25 @@ export default function App() {
       case 'report':
         return (
           <StudentProgressReport 
-            students={students} 
-            attendance={attendance} 
-            notes={notes} 
-            grades={grades} 
+            students={filteredStudents} 
+            attendance={filteredAttendance} 
+            notes={filteredNotes} 
+            grades={filteredGrades} 
             theme={theme}
+          />
+        );
+      case 'branches_mgmt':
+        return (
+          <BranchesManager
+            theme={theme}
+            branches={branches}
+            adminUsers={adminUsers}
+            onAddBranch={addBranch}
+            onUpdateBranch={updateBranch}
+            onDeleteBranch={deleteBranch}
+            onAddAdminUser={addAdminUser}
+            onUpdateAdminUser={updateAdminUser}
+            onDeleteAdminUser={deleteAdminUser}
           />
         );
       case 'settings':
@@ -278,11 +419,11 @@ export default function App() {
             settings={settings} 
             onUpdateSettings={updateSettings} 
             theme={theme}
-            students={students}
-            grades={grades}
-            attendance={attendance}
-            notes={notes}
-            invoices={invoices}
+            students={filteredStudents}
+            grades={filteredGrades}
+            attendance={filteredAttendance}
+            notes={filteredNotes}
+            invoices={filteredInvoices}
             dashboardTasks={dashboardTasks}
             onImportBackup={importBackupData}
           />
@@ -291,19 +432,19 @@ export default function App() {
         return (
           <SupabaseSqlEditor 
             theme={theme}
-            students={students}
+            students={filteredStudents}
             onUpdateStudent={updateStudent}
-            onAddStudent={addStudent}
+            onAddStudent={handleAddStudent}
             onDeleteStudent={deleteStudent}
           />
         );
       default:
         return (
           <DashboardOverview 
-            students={students} 
-            attendance={attendance} 
-            invoices={invoices} 
-            grades={grades} 
+            students={filteredStudents} 
+            attendance={filteredAttendance} 
+            invoices={filteredInvoices} 
+            grades={filteredGrades} 
             settings={settings}
             dashboardTasks={dashboardTasks}
             onAddDashboardTask={addDashboardTask}
@@ -319,10 +460,13 @@ export default function App() {
   if (!currentUser) {
     return (
       <LoginManager 
-        onLogin={(adminName) => {
-          setCurrentUser(adminName);
-          localStorage.setItem('math_finggers_current_user', adminName);
+        onLogin={(adminUser) => {
+          setCurrentUser(adminUser);
+          localStorage.setItem('math_finggers_current_user_obj', JSON.stringify(adminUser));
+          localStorage.setItem('math_finggers_current_user', adminUser.name);
         }} 
+        adminUsers={adminUsers}
+        branches={branches}
         theme={theme} 
       />
     );
@@ -407,6 +551,29 @@ export default function App() {
           )}
         </div>
 
+        {/* Branch Switcher (Desktop - Super Admin Only) */}
+        {currentUser?.role === 'super_admin' && (
+          <div className={`px-6 py-3 border-b flex flex-col gap-1.5 text-xs ${
+            theme === 'dark' ? 'bg-slate-950/20 border-slate-800/60' : 'bg-slate-50/50 border-slate-200'
+          }`}>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cabang Aktif</span>
+            <select
+              value={activeBranch}
+              onChange={(e) => setActiveBranch(e.target.value)}
+              className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-bold focus:outline-none border transition ${
+                theme === 'dark' 
+                  ? 'bg-slate-900 border-slate-800 text-slate-200 focus:border-slate-700' 
+                  : 'bg-white border-slate-200 text-slate-700 focus:border-slate-300'
+              }`}
+            >
+              <option value="all">Semua Cabang (Super)</option>
+              {branches.map(b => (
+                <option key={b.id} value={b.name}>{b.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Desktop Navigation Links */}
         <nav className="flex-1 p-4 space-y-1">
           {navigationItems.map((item) => {
@@ -441,17 +608,20 @@ export default function App() {
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${
               theme === 'dark' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
             }`}>
-              {currentUser?.split(' ').map(n => n[0]).join('')}
+              {currentUser?.name.split(' ').slice(0,2).map(n => n[0]).join('')}
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className={`text-xs font-bold truncate ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>{currentUser}</h4>
-              <span className="text-[10px] text-slate-500 font-medium block">Administrator</span>
+              <h4 className={`text-xs font-bold truncate ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>{currentUser?.name}</h4>
+              <span className="text-[10px] text-slate-500 font-medium block">
+                {currentUser?.role === 'super_admin' ? 'Super Admin' : `Admin Cabang ${currentUser?.branch}`}
+              </span>
             </div>
           </div>
           
           <button
             onClick={() => {
               setCurrentUser(null);
+              localStorage.removeItem('math_finggers_current_user_obj');
               localStorage.removeItem('math_finggers_current_user');
             }}
             className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold border transition ${
@@ -529,17 +699,20 @@ export default function App() {
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black shrink-0 ${
                   theme === 'dark' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-600'
                 }`}>
-                  {currentUser?.split(' ').map(n => n[0]).join('')}
+                  {currentUser?.name.split(' ').slice(0,2).map(n => n[0]).join('')}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className={`text-xs font-bold truncate ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>{currentUser}</h4>
-                  <span className="text-[9px] text-slate-500">Administrator</span>
+                  <h4 className={`text-xs font-bold truncate ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>{currentUser?.name}</h4>
+                  <span className="text-[9px] text-slate-500">
+                    {currentUser?.role === 'super_admin' ? 'Super Admin' : `Admin Cabang ${currentUser?.branch}`}
+                  </span>
                 </div>
               </div>
               
               <button
                 onClick={() => {
                   setCurrentUser(null);
+                  localStorage.removeItem('math_finggers_current_user_obj');
                   localStorage.removeItem('math_finggers_current_user');
                 }}
                 className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold border transition ${
@@ -572,57 +745,102 @@ export default function App() {
         theme === 'dark' ? 'bg-[#020617]/90 border-slate-850 text-white' : 'bg-white/95 border-slate-200 text-slate-800'
       } pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.08)]`}>
         <div className="flex items-center justify-around py-2.5 px-1">
-          {/* Dashboard Shortcut */}
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
-              activeTab === 'overview' 
-                ? getAccentTextClass() 
-                : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
-            }`}
-          >
-            <Home size={20} className={activeTab === 'overview' ? 'scale-110 transition-transform' : 'transition-transform'} />
-            <span className="text-[10px] font-bold tracking-tight">Dashboard</span>
-          </button>
+          {isSuperAdmin ? (
+            <>
+              {/* Statistik Shortcut */}
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
+                  activeTab === 'overview' 
+                    ? getAccentTextClass() 
+                    : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
+                }`}
+              >
+                <Home size={20} className={activeTab === 'overview' ? 'scale-110 transition-transform' : 'transition-transform'} />
+                <span className="text-[10px] font-bold tracking-tight">Statistik</span>
+              </button>
 
-          {/* Siswa Shortcut */}
-          <button
-            onClick={() => setActiveTab('students')}
-            className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
-              activeTab === 'students' 
-                ? getAccentTextClass() 
-                : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
-            }`}
-          >
-            <Users size={20} className={activeTab === 'students' ? 'scale-110 transition-transform' : 'transition-transform'} />
-            <span className="text-[10px] font-bold tracking-tight">Siswa</span>
-          </button>
+              {/* Data Cabang Shortcut */}
+              <button
+                onClick={() => setActiveTab('branches_mgmt')}
+                className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
+                  activeTab === 'branches_mgmt' 
+                    ? getAccentTextClass() 
+                    : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
+                }`}
+              >
+                <Building size={20} className={activeTab === 'branches_mgmt' ? 'scale-110 transition-transform' : 'transition-transform'} />
+                <span className="text-[10px] font-bold tracking-tight">Data Cabang</span>
+              </button>
 
-          {/* Absensi Shortcut */}
-          <button
-            onClick={() => setActiveTab('attendance')}
-            className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
-              activeTab === 'attendance' 
-                ? getAccentTextClass() 
-                : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
-            }`}
-          >
-            <CheckSquare size={20} className={activeTab === 'attendance' ? 'scale-110 transition-transform' : 'transition-transform'} />
-            <span className="text-[10px] font-bold tracking-tight">Absensi</span>
-          </button>
+              {/* Backup / Pengaturan Shortcut */}
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
+                  activeTab === 'settings' 
+                    ? getAccentTextClass() 
+                    : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
+                }`}
+              >
+                <Settings size={20} className={activeTab === 'settings' ? 'scale-110 transition-transform' : 'transition-transform'} />
+                <span className="text-[10px] font-bold tracking-tight">Pengaturan</span>
+              </button>
+            </>
+          ) : (
+            <>
+              {/* Dashboard Shortcut */}
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
+                  activeTab === 'overview' 
+                    ? getAccentTextClass() 
+                    : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
+                }`}
+              >
+                <Home size={20} className={activeTab === 'overview' ? 'scale-110 transition-transform' : 'transition-transform'} />
+                <span className="text-[10px] font-bold tracking-tight">Dashboard</span>
+              </button>
 
-          {/* Input Nilai Shortcut */}
-          <button
-            onClick={() => setActiveTab('grades')}
-            className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
-              activeTab === 'grades' 
-                ? getAccentTextClass() 
-                : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
-            }`}
-          >
-            <Award size={20} className={activeTab === 'grades' ? 'scale-110 transition-transform' : 'transition-transform'} />
-            <span className="text-[10px] font-bold tracking-tight text-center">Input Nilai</span>
-          </button>
+              {/* Siswa Shortcut */}
+              <button
+                onClick={() => setActiveTab('students')}
+                className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
+                  activeTab === 'students' 
+                    ? getAccentTextClass() 
+                    : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
+                }`}
+              >
+                <Users size={20} className={activeTab === 'students' ? 'scale-110 transition-transform' : 'transition-transform'} />
+                <span className="text-[10px] font-bold tracking-tight">Siswa</span>
+              </button>
+
+              {/* Absensi Shortcut */}
+              <button
+                onClick={() => setActiveTab('attendance')}
+                className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
+                  activeTab === 'attendance' 
+                    ? getAccentTextClass() 
+                    : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
+                }`}
+              >
+                <CheckSquare size={20} className={activeTab === 'attendance' ? 'scale-110 transition-transform' : 'transition-transform'} />
+                <span className="text-[10px] font-bold tracking-tight">Absensi</span>
+              </button>
+
+              {/* Input Nilai Shortcut */}
+              <button
+                onClick={() => setActiveTab('grades')}
+                className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
+                  activeTab === 'grades' 
+                    ? getAccentTextClass() 
+                    : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
+                }`}
+              >
+                <Award size={20} className={activeTab === 'grades' ? 'scale-110 transition-transform' : 'transition-transform'} />
+                <span className="text-[10px] font-bold tracking-tight text-center">Input Nilai</span>
+              </button>
+            </>
+          )}
 
           {/* Menu Lainnya Button */}
           <button

@@ -14,6 +14,7 @@ export interface Student {
   alamat?: string;
   createdAt: number;
   activeMaterialId?: string;
+  branch?: string; // e.g. "Pusat", "Bandung"
 }
 
 export interface Attendance {
@@ -23,6 +24,7 @@ export interface Attendance {
   date: string; // YYYY-MM-DD
   status: 'present' | 'absent' | 'permission';
   notes: string;
+  branch?: string;
 }
 
 export interface TeacherNote {
@@ -33,6 +35,7 @@ export interface TeacherNote {
   topic: string;
   content: string; // the journal detail
   teacherName: string;
+  branch?: string;
 }
 
 export interface Installment {
@@ -58,6 +61,7 @@ export interface Invoice {
   amountPaid?: number; // Cumulative payment amount
   installments?: Installment[]; // List of installment records
   category?: 'spp' | 'pendaftaran' | 'buku';
+  branch?: string;
 }
 
 export interface Grade {
@@ -69,6 +73,7 @@ export interface Grade {
   score: number; // 0 - 100
   speedSeconds: number; // Time taken to complete trial
   notes: string;
+  branch?: string;
 }
 
 export interface LearningMaterial {
@@ -99,5 +104,21 @@ export interface DashboardTask {
   text: string;
   completed: boolean;
   date: string;
+}
+
+export interface Branch {
+  id: string;
+  name: string;
+  address?: string;
+  phone?: string;
+  createdAt: number;
+}
+
+export interface AdminUser {
+  username: string; // unik, sbg ID
+  name: string;
+  role: 'super_admin' | 'branch_admin';
+  branch: string; // nama cabang (misal "Pusat", "Bandung")
+  password?: string;
 }
 

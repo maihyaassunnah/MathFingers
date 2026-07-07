@@ -361,39 +361,19 @@ export function StudentManager({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Level Bimbingan (Administratif)</label>
-                  <select
-                    value={level}
-                    onChange={(e) => setLevel(e.target.value)}
-                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                      isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
-                    }`}
-                  >
-                    {levels.map(l => (
-                      <option key={l} value={l} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>{l}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Materi Jaritmatika Aktif</label>
-                  <select
-                    value={activeMaterialId}
-                    onChange={(e) => setActiveMaterialId(e.target.value)}
-                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                      isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
-                    }`}
-                  >
-                    <option value="" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>-- Pilih Materi Aktif (Opsional) --</option>
-                    {materials.map(m => (
-                      <option key={m.id} value={m.id} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>
-                        {m.title} ({m.level || 'Umum'})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Level Bimbingan (Administratif)</label>
+                <select
+                  value={level}
+                  onChange={(e) => setLevel(e.target.value)}
+                  className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                    isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
+                  }`}
+                >
+                  {levels.map(l => (
+                    <option key={l} value={l} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>{l}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

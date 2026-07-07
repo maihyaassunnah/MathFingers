@@ -53,6 +53,7 @@ interface MaterialListProps {
   onAddMaterial: (data: Omit<LearningMaterial, 'id'>) => Promise<void>;
   onUpdateMaterial: (id: string, data: Partial<LearningMaterial>) => Promise<void>;
   onDeleteMaterial: (id: string) => Promise<void>;
+  onClearMaterials?: () => Promise<void>;
   theme?: string;
 }
 
@@ -61,6 +62,7 @@ export function MaterialList({
   onAddMaterial,
   onUpdateMaterial,
   onDeleteMaterial,
+  onClearMaterials,
   theme = 'dark'
 }: MaterialListProps) {
   const [selectedMatId, setSelectedMatId] = useState<string>(materials[0]?.id || '');
@@ -220,14 +222,30 @@ export function MaterialList({
           <p className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-sm`}>Kelola silabus materi bimbingan Jaritmatika, simpan formula, dan panduan latihan siswa.</p>
         </div>
         
-        <button
-          id="btn-add-material"
-          onClick={handleOpenAddForm}
-          className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2.5 rounded-xl transition duration-150 shadow-sm"
-        >
-          <Plus size={18} />
-          <span>Tambah Materi Baru</span>
-        </button>
+        <div className="flex items-center gap-3">
+          {materials.length > 0 && onClearMaterials && (
+            <button
+              onClick={() => {
+                if (window.confirm('Apakah Anda yakin ingin menghapus semua materi kurikulum? Tindakan ini tidak dapat dibatalkan.')) {
+                  onClearMaterials();
+                }
+              }}
+              className="flex items-center justify-center gap-2 border border-rose-500/30 hover:bg-rose-500/10 text-rose-500 font-semibold px-4 py-2.5 rounded-xl transition duration-150"
+            >
+              <Trash2 size={18} />
+              <span>Kosongkan Kurikulum</span>
+            </button>
+          )}
+          
+          <button
+            id="btn-add-material"
+            onClick={handleOpenAddForm}
+            className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2.5 rounded-xl transition duration-150 shadow-sm"
+          >
+            <Plus size={18} />
+            <span>Tambah Materi Baru</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Grid Content */}

@@ -17,6 +17,7 @@ import { SupabaseSqlEditor } from './components/SupabaseSqlEditor';
 import { AlumniManager } from './components/AlumniManager';
 import { BranchesManager } from './components/BranchesManager';
 import { AdminUser, Branch } from './types';
+import { getAdminAvatar } from './utils';
 
 import { 
   Home, 
@@ -83,7 +84,7 @@ export default function App() {
       // Ensure activeTab is always one of the valid tabs for the role
       const validTabIds = currentUser.role === 'super_admin'
         ? ['overview', 'branches_mgmt', 'settings', 'supabase_sql']
-        : ['overview', 'students', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'grades', 'report', 'settings'];
+        : ['overview', 'students', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'grades', 'report', 'settings', 'simulator'];
       if (!validTabIds.includes(activeTab)) {
         setActiveTab('overview');
       }
@@ -119,6 +120,7 @@ export default function App() {
     addMaterial,
     updateMaterial,
     deleteMaterial,
+    clearAllMaterials,
     updateSettings,
     addDashboardTask,
     toggleDashboardTask,
@@ -228,6 +230,7 @@ export default function App() {
         { id: 'spp', name: 'Pembayaran SPP', icon: Receipt },
         { id: 'spp_history', name: 'Riwayat Pembayaran', icon: History },
         { id: 'grades', name: 'Input Nilai', icon: Award },
+        { id: 'simulator', name: 'Kurikulum', icon: BookOpen },
         { id: 'report', name: 'Rapor Perkembangan', icon: TrendingUp },
         { id: 'settings', name: 'Pengaturan Cabang', icon: Settings },
       ];
@@ -386,6 +389,7 @@ export default function App() {
             onAddMaterial={addMaterial}
             onUpdateMaterial={updateMaterial}
             onDeleteMaterial={deleteMaterial}
+            onClearMaterials={clearAllMaterials}
             theme={theme} 
           />
         );
@@ -605,10 +609,16 @@ export default function App() {
         {/* Admin Profile & Logout (Desktop) */}
         <div className={`p-4 border-t flex flex-col gap-3.5 ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'}`}>
           <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${
-              theme === 'dark' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-            }`}>
-              {currentUser?.name.split(' ').slice(0,2).map(n => n[0]).join('')}
+            <div className="relative shrink-0">
+              <img
+                src={getAdminAvatar(currentUser || { username: 'guest' })}
+                alt={currentUser?.name}
+                referrerPolicy="no-referrer"
+                className="w-10 h-10 rounded-xl object-cover border border-slate-250 dark:border-slate-700 shadow-xs"
+              />
+              <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-white dark:border-slate-900 ${
+                currentUser?.role === 'super_admin' ? 'bg-indigo-500' : 'bg-amber-500'
+              }`} />
             </div>
             <div className="flex-1 min-w-0">
               <h4 className={`text-xs font-bold truncate ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>{currentUser?.name}</h4>
@@ -696,10 +706,16 @@ export default function App() {
             {/* Admin Profile & Logout (Mobile Drawer) */}
             <div className={`p-4 border-t flex flex-col gap-3 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black shrink-0 ${
-                  theme === 'dark' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-600'
-                }`}>
-                  {currentUser?.name.split(' ').slice(0,2).map(n => n[0]).join('')}
+                <div className="relative shrink-0">
+                  <img
+                    src={getAdminAvatar(currentUser || { username: 'guest' })}
+                    alt={currentUser?.name}
+                    referrerPolicy="no-referrer"
+                    className="w-8 h-8 rounded-lg object-cover border border-slate-250 dark:border-slate-700 shadow-xs"
+                  />
+                  <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-white dark:border-slate-900 ${
+                    currentUser?.role === 'super_admin' ? 'bg-indigo-500' : 'bg-amber-500'
+                  }`} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className={`text-xs font-bold truncate ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>{currentUser?.name}</h4>

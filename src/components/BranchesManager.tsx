@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Branch, AdminUser } from '../types';
 import { Building, UserPlus, Users, Trash2, Edit2, ShieldAlert, Plus, Shield, Check, Lock, MapPin, Phone, RefreshCw } from 'lucide-react';
+import { getAdminAvatar } from '../utils';
 
 interface BranchesManagerProps {
   theme: 'light' | 'dark';
@@ -41,6 +42,7 @@ export function BranchesManager({
   const [adminRole, setAdminRole] = useState<'super_admin' | 'branch_admin'>('branch_admin');
   const [adminBranch, setAdminBranch] = useState('Pusat');
   const [adminPassword, setAdminPassword] = useState('');
+  const [adminAvatarUrl, setAdminAvatarUrl] = useState('');
   const [editingAdminUsername, setEditingAdminUsername] = useState<string | null>(null);
 
   const [activeSubTab, setActiveSubTab] = useState<'branches' | 'admins'>('branches');
@@ -85,7 +87,8 @@ export function BranchesManager({
         name: adminName.trim(),
         role: adminRole,
         branch: adminBranch,
-        password: adminPassword.trim()
+        password: adminPassword.trim(),
+        avatarUrl: adminAvatarUrl.trim() || undefined
       };
 
       if (editingAdminUsername) {
@@ -99,6 +102,7 @@ export function BranchesManager({
       setAdminName('');
       setAdminRole('branch_admin');
       setAdminPassword('');
+      setAdminAvatarUrl('');
       setEditingAdminUsername(null);
       setShowAdminModal(false);
     } catch (err) {
@@ -121,6 +125,7 @@ export function BranchesManager({
     setAdminRole(admin.role);
     setAdminBranch(admin.branch);
     setAdminPassword(admin.password || '');
+    setAdminAvatarUrl(admin.avatarUrl || '');
     setShowAdminModal(true);
   };
 
@@ -284,7 +289,17 @@ export function BranchesManager({
                       isLight ? 'text-slate-700' : 'text-slate-300'
                     }`}
                   >
-                    <td className="p-4 font-bold">{admin.name}</td>
+                    <td className="p-4 font-bold">
+                      <div className="flex items-center gap-2.5">
+                        <img
+                          src={getAdminAvatar(admin)}
+                          alt={admin.name}
+                          referrerPolicy="no-referrer"
+                          className="w-8 h-8 rounded-lg object-cover border border-slate-200 dark:border-slate-800 shadow-xs"
+                        />
+                        <span>{admin.name}</span>
+                      </div>
+                    </td>
                     <td className="p-4 font-mono">{admin.username}</td>
                     <td className="p-4">
                       <span className="font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">
@@ -458,6 +473,54 @@ export function BranchesManager({
                   onChange={(e) => setAdminPassword(e.target.value)}
                   placeholder="Ketik sandi masuk..."
                   className={`w-full px-4.5 py-3 rounded-xl border text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${
+                    isLight ? 'bg-slate-50 border-slate-200 text-slate-850' : 'bg-slate-950/50 border-slate-800 text-white'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Pilih Foto Profil (Tema Tutor/Math Finger)</label>
+                <div className="flex flex-wrap gap-2.5 mb-2">
+                  {[
+                    { name: 'Febrianti', url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200' },
+                    { name: 'Dewi', url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200' },
+                    { name: 'Guru Bandung', url: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200' },
+                    { name: 'Wahyudin', url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200' },
+                    { name: 'Tutor Kreatif', url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200' },
+                    { name: 'Tutor Cerdas', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200' }
+                  ].map((preset, idx) => {
+                    const isSelected = adminAvatarUrl === preset.url;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setAdminAvatarUrl(preset.url)}
+                        title={preset.name}
+                        className={`relative w-10 h-10 rounded-xl overflow-hidden border-2 transition shrink-0 ${
+                          isSelected ? 'border-emerald-500 scale-105 shadow-md shadow-emerald-500/10' : 'border-transparent opacity-70 hover:opacity-100'
+                        }`}
+                      >
+                        <img
+                          src={preset.url}
+                          alt={preset.name}
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover"
+                        />
+                        {isSelected && (
+                          <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center">
+                            <Check size={14} className="text-white drop-shadow-md" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                <input
+                  type="url"
+                  value={adminAvatarUrl}
+                  onChange={(e) => setAdminAvatarUrl(e.target.value)}
+                  placeholder="Atau masukkan link foto kustom..."
+                  className={`w-full px-4 py-2.5 rounded-xl border text-[11px] font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${
                     isLight ? 'bg-slate-50 border-slate-200 text-slate-850' : 'bg-slate-950/50 border-slate-800 text-white'
                   }`}
                 />

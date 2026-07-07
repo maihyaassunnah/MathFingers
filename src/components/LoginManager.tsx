@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MathFingerLogo } from './MathFingerLogo';
 import { Shield, ArrowRight, UserCheck, AlertCircle, Key, ChevronDown, Check, Building } from 'lucide-react';
 import { AdminUser, Branch } from '../types';
+import { getAdminAvatar } from '../utils';
 
 interface LoginManagerProps {
   onLogin: (user: AdminUser) => void;
@@ -82,7 +83,7 @@ export function LoginManager({ onLogin, theme, adminUsers = [], branches = [] }:
               <Shield size={24} />
             </div>
             <h2 className={`text-2xl font-black tracking-tight ${isLight ? 'text-slate-850' : 'text-white'}`}>
-              Portal Multi-Cabang
+              Portal Multi-Cabang Math Finger
             </h2>
             <p className={`text-xs mt-1 leading-relaxed ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
               Pilih akun administrator Anda untuk masuk ke dashboard cabang Anda secara aman.
@@ -127,16 +128,18 @@ export function LoginManager({ onLogin, theme, adminUsers = [], branches = [] }:
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        {/* Avatar initials fallback */}
-                        <span className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${
-                          isSelected 
-                            ? 'bg-emerald-500 text-white' 
-                            : isLight 
-                              ? 'bg-slate-200 text-slate-600' 
-                              : 'bg-slate-800 text-slate-400'
-                        }`}>
-                          {admin.name.split(' ').slice(0,2).map(n => n[0]).join('')}
-                        </span>
+                        {/* Profile Image according to application theme */}
+                        <div className="relative shrink-0">
+                          <img
+                            src={getAdminAvatar(admin)}
+                            alt={admin.name}
+                            referrerPolicy="no-referrer"
+                            className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shadow-xs"
+                          />
+                          <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-white dark:border-slate-900 ${
+                            isSuper ? 'bg-indigo-500' : 'bg-amber-500'
+                          }`} />
+                        </div>
                         <div>
                           <div className="text-xs font-bold leading-tight flex items-center gap-1.5">
                             <span>{admin.name}</span>

@@ -120,5 +120,6 @@ export interface AdminUser {
   role: 'super_admin' | 'branch_admin';
   branch: string; // nama cabang (misal "Pusat", "Bandung")
   password?: string;
+  avatarUrl?: string;
 }
 

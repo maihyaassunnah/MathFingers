@@ -235,6 +235,7 @@ CREATE TABLE IF NOT EXISTS admin_users (
   role TEXT NOT NULL CHECK (role IN ('super_admin', 'branch_admin')),
   branch TEXT NOT NULL,
   password TEXT,
+  "avatarUrl" TEXT,
   "createdAt" BIGINT DEFAULT 1719600000
 );
 
@@ -252,13 +253,12 @@ VALUES
   ('br-2', 'Bandung', 'Cabang Kota Bandung', '08123456780', 1719600000)
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO admin_users (username, name, role, branch, password)
+INSERT INTO admin_users (username, name, role, branch, password, "avatarUrl")
 VALUES 
-  ('febrianti', 'Febrianti Dewi', 'super_admin', 'Pusat', 'admin123'),
-  ('dewi', 'Dewi Safitri', 'branch_admin', 'Pusat', 'dewi123'),
-  ('les_bandung', 'Les Privat Bandung', 'branch_admin', 'Bandung', 'bdg123')
+  ('febrianti', 'Febrianti Dewi', 'super_admin', 'Pusat', 'admin123', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200'),
+  ('dewi', 'Dewi Safitri', 'branch_admin', 'Pusat', 'dewi123', 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200'),
+  ('les_bandung', 'Les Privat Bandung', 'branch_admin', 'Bandung', 'bdg123', 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200')
 ON CONFLICT (username) DO NOTHING;`,
-
     students: `CREATE TABLE IF NOT EXISTS students (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -371,6 +371,7 @@ CREATE TABLE IF NOT EXISTS admin_users (
   role TEXT NOT NULL CHECK (role IN ('super_admin', 'branch_admin')),
   branch TEXT NOT NULL,
   password TEXT,
+  "avatarUrl" TEXT,
   "createdAt" BIGINT DEFAULT 1719600000
 );
 ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
@@ -384,11 +385,11 @@ VALUES
   ('br-2', 'Bandung', 'Cabang Kota Bandung', '08123456780', 1719600000)
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO admin_users (username, name, role, branch, password)
+INSERT INTO admin_users (username, name, role, branch, password, "avatarUrl")
 VALUES 
-  ('febrianti', 'Febrianti Dewi', 'super_admin', 'Pusat', 'admin123'),
-  ('dewi', 'Dewi Safitri', 'branch_admin', 'Pusat', 'dewi123'),
-  ('les_bandung', 'Les Privat Bandung', 'branch_admin', 'Bandung', 'bdg123')
+  ('febrianti', 'Febrianti Dewi', 'super_admin', 'Pusat', 'admin123', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200'),
+  ('dewi', 'Dewi Safitri', 'branch_admin', 'Pusat', 'dewi123', 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200'),
+  ('les_bandung', 'Les Privat Bandung', 'branch_admin', 'Bandung', 'bdg123', 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200')
 ON CONFLICT (username) DO NOTHING;
 
 -- 5. Tambah kolom kelengkapan lain (jika ada yang tertinggal)
@@ -399,6 +400,7 @@ ALTER TABLE students ADD COLUMN IF NOT EXISTS "jenisPaket" TEXT DEFAULT '4P';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "jenisKelamin" TEXT DEFAULT 'Laki-laki';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS alamat TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "activeMaterialId" TEXT;
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS "avatarUrl" TEXT;
 
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "amountPaid" NUMERIC DEFAULT 0;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS installments JSONB DEFAULT '[]'::jsonb;

@@ -145,9 +145,9 @@ export function useMathFinggersDb() {
       saveLocalData('branches', loadedBranches);
 
       const loadedAdminUsers = adminUsersData || getLocalData<AdminUser[]>('admin_users', [
-        { username: 'febrianti', name: 'Febrianti Dewi', role: 'super_admin', branch: 'Pusat' },
-        { username: 'dewi', name: 'Dewi Safitri', role: 'branch_admin', branch: 'Pusat' },
-        { username: 'les_bandung', name: 'Les Privat Bandung', role: 'branch_admin', branch: 'Bandung' }
+        { username: 'febrianti', name: 'Febrianti Dewi', role: 'super_admin', branch: 'Pusat', avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200' },
+        { username: 'dewi', name: 'Dewi Safitri', role: 'branch_admin', branch: 'Pusat', avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200' },
+        { username: 'les_bandung', name: 'Les Privat Bandung', role: 'branch_admin', branch: 'Bandung', avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200' }
       ]);
       setAdminUsers(loadedAdminUsers);
       saveLocalData('admin_users', loadedAdminUsers);
@@ -167,8 +167,8 @@ export function useMathFinggersDb() {
       setGrades(loadedGrades);
       saveLocalData('grades', loadedGrades);
 
-      const hasOldMaterials = !materialsData || materialsData.length === 0 || materialsData.some(m => m.level.includes('Dasar Satuan'));
-      if (hasOldMaterials) {
+      const hasOldMaterials = !materialsData || (SEED_MATERIALS.length > 0 && materialsData.length === 0) || (materialsData && materialsData.some(m => m.level.includes('Dasar Satuan')));
+      if (hasOldMaterials && SEED_MATERIALS.length > 0) {
         if (supabase && materialsData && materialsData.length > 0) {
           try {
             const oldIds = ['mat-1', 'mat-2', 'mat-3', 'mat-4', 'mat-5'];
@@ -179,8 +179,9 @@ export function useMathFinggersDb() {
         }
         await seedDefaultMaterialsToSupabase();
       } else {
-        setMaterials(materialsData);
-        saveLocalData('materials', materialsData);
+        const loadedMats = materialsData || [];
+        setMaterials(loadedMats);
+        saveLocalData('materials', loadedMats);
       }
 
       setIsOfflineFallback(false);
@@ -204,14 +205,14 @@ export function useMathFinggersDb() {
       { id: 'br-2', name: 'Bandung', address: 'Cabang Kota Bandung', phone: '08123456780', createdAt: 1719600000 }
     ]));
     setAdminUsers(getLocalData<AdminUser[]>('admin_users', [
-      { username: 'febrianti', name: 'Febrianti Dewi', role: 'super_admin', branch: 'Pusat' },
-      { username: 'dewi', name: 'Dewi Safitri', role: 'branch_admin', branch: 'Pusat' },
-      { username: 'les_bandung', name: 'Les Privat Bandung', role: 'branch_admin', branch: 'Bandung' }
+      { username: 'febrianti', name: 'Febrianti Dewi', role: 'super_admin', branch: 'Pusat', avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200' },
+      { username: 'dewi', name: 'Dewi Safitri', role: 'branch_admin', branch: 'Pusat', avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200' },
+      { username: 'les_bandung', name: 'Les Privat Bandung', role: 'branch_admin', branch: 'Bandung', avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200' }
     ]));
     
     const localMats = getLocalData<LearningMaterial[]>('materials', []);
-    const hasOldLocal = localMats.length === 0 || localMats.some(m => m.level.includes('Dasar Satuan'));
-    if (hasOldLocal) {
+    const hasOldLocal = (SEED_MATERIALS.length > 0 && localMats.length === 0) || localMats.some(m => m.level.includes('Dasar Satuan'));
+    if (hasOldLocal && SEED_MATERIALS.length > 0) {
       saveLocalData('materials', SEED_MATERIALS);
       setMaterials(SEED_MATERIALS);
     } else {
@@ -222,8 +223,10 @@ export function useMathFinggersDb() {
   const seedDefaultMaterialsToSupabase = async () => {
     if (!supabase) return;
     try {
-      const { error } = await supabase.from('materials').insert(SEED_MATERIALS);
-      if (error) throw error;
+      if (SEED_MATERIALS.length > 0) {
+        const { error } = await supabase.from('materials').insert(SEED_MATERIALS);
+        if (error) throw error;
+      }
       setMaterials(SEED_MATERIALS);
       saveLocalData('materials', SEED_MATERIALS);
     } catch (err) {
@@ -604,6 +607,21 @@ export function useMathFinggersDb() {
     }
   };
 
+  const clearAllMaterials = async () => {
+    setMaterials([]);
+    saveLocalData('materials', []);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        // Deleting all rows by matching id not equal to empty string
+        const { error } = await supabase.from('materials').delete().neq('id', '');
+        if (error) throw error;
+      } catch (err) {
+        console.error('Failed to clear all materials from Supabase:', err);
+      }
+    }
+  };
+
   // --- SETTINGS WRITERS ---
   const updateSettings = (newSettings: AppSettings) => {
     setSettings(newSettings);
@@ -885,6 +903,7 @@ export function useMathFinggersDb() {
     addMaterial,
     updateMaterial,
     deleteMaterial,
+    clearAllMaterials,
     updateSettings,
     addDashboardTask,
     toggleDashboardTask,

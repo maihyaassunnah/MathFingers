@@ -167,11 +167,18 @@ export function useMathFinggersDb() {
       setGrades(loadedGrades);
       saveLocalData('grades', loadedGrades);
 
-      const hasOldMaterials = !materialsData || (SEED_MATERIALS.length > 0 && materialsData.length === 0) || (materialsData && materialsData.some(m => m.level.includes('Dasar Satuan')));
+      // Detect if the materials table actually has the new column "capaianPembelajaran"
+      const tableHasNewSchema = materialsData && materialsData.length > 0 && ("capaianPembelajaran" in materialsData[0]);
+
+      // Only attempt to replace old records if the table supports the new schema format
+      const hasOldMaterials = !materialsData || 
+                              (SEED_MATERIALS.length > 0 && materialsData.length === 0) || 
+                              (materialsData && tableHasNewSchema && materialsData.some(m => !m.capaianPembelajaran));
+
       if (hasOldMaterials && SEED_MATERIALS.length > 0) {
-        if (supabase && materialsData && materialsData.length > 0) {
+        if (supabase && materialsData && materialsData.length > 0 && tableHasNewSchema) {
           try {
-            const oldIds = ['mat-1', 'mat-2', 'mat-3', 'mat-4', 'mat-5'];
+            const oldIds = materialsData.map(m => m.id);
             await supabase.from('materials').delete().in('id', oldIds);
           } catch (e) {
             console.warn('Could not delete old materials:', e);
@@ -179,7 +186,17 @@ export function useMathFinggersDb() {
         }
         await seedDefaultMaterialsToSupabase();
       } else {
-        const loadedMats = materialsData || [];
+        // Map database records (whether old or new schema format) to the modern LearningMaterial interface
+        const loadedMats = (materialsData || []).map(m => ({
+          id: m.id,
+          level: m.level,
+          capaianPembelajaran: m.capaianPembelajaran || m.description || '',
+          kompetensiDasar: m.kompetensiDasar || '',
+          materiPembelajaran: m.materiPembelajaran || m.title || m.level || '',
+          indikatorPencapaian: m.indikatorPencapaian || '',
+          videoUrl: m.videoUrl || '',
+          tutorialImages: m.tutorialImages || []
+        }));
         setMaterials(loadedMats);
         saveLocalData('materials', loadedMats);
       }
@@ -211,7 +228,7 @@ export function useMathFinggersDb() {
     ]));
     
     const localMats = getLocalData<LearningMaterial[]>('materials', []);
-    const hasOldLocal = (SEED_MATERIALS.length > 0 && localMats.length === 0) || localMats.some(m => m.level.includes('Dasar Satuan'));
+    const hasOldLocal = (SEED_MATERIALS.length > 0 && localMats.length === 0) || localMats.some(m => !m.capaianPembelajaran);
     if (hasOldLocal && SEED_MATERIALS.length > 0) {
       saveLocalData('materials', SEED_MATERIALS);
       setMaterials(SEED_MATERIALS);
@@ -224,14 +241,33 @@ export function useMathFinggersDb() {
     if (!supabase) return;
     try {
       if (SEED_MATERIALS.length > 0) {
+        // Try to insert using the modern schema format
         const { error } = await supabase.from('materials').insert(SEED_MATERIALS);
-        if (error) throw error;
+        if (error) {
+          // If insert failed due to column mismatch (e.g. table still has the old structure)
+          console.warn('Seeding new schema failed, trying old schema format fallback...');
+          const oldFormatMaterials = SEED_MATERIALS.map(m => ({
+            id: m.id,
+            level: m.level,
+            title: m.materiPembelajaran || m.level,
+            description: m.capaianPembelajaran || '',
+            formulas: [],
+            steps: [],
+            videoUrl: m.videoUrl || '',
+            tutorialImages: m.tutorialImages || []
+          }));
+          const { error: fallbackError } = await supabase.from('materials').insert(oldFormatMaterials);
+          if (fallbackError) {
+            throw fallbackError;
+          }
+        }
       }
       setMaterials(SEED_MATERIALS);
       saveLocalData('materials', SEED_MATERIALS);
-    } catch (err) {
-      console.error('Failed to seed materials directly to Supabase:', err);
+    } catch (err: any) {
+      console.warn('Graceful fallback: Failed to seed materials to Supabase database. Using local copy:', err?.message || err);
       setMaterials(SEED_MATERIALS);
+      saveLocalData('materials', SEED_MATERIALS);
     }
   };
 

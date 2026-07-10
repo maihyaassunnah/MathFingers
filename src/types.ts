@@ -78,11 +78,11 @@ export interface Grade {
 
 export interface LearningMaterial {
   id: string;
-  level: string;
-  title: string;
-  description: string;
-  formulas: string[]; // finger combinations, e.g., "Teman Kecil +4 = +5 -1"
-  steps: string[]; // how to practice
+  level: string; // Level
+  capaianPembelajaran: string; // Capaian Pembelajaran
+  kompetensiDasar: string; // Kompetensi Dasar
+  materiPembelajaran: string; // Materi Pembelajaran
+  indikatorPencapaian: string; // Indikator Pencapaian Kompetensi
   videoUrl?: string;
   tutorialImages?: string[];
 }

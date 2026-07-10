@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Student, LearningMaterial, Attendance, TeacherNote, Grade } from '../types';
 import { formatWhatsAppPhone, getWhatsAppLink } from '../utils';
 import { generateStudentPDFReport } from '../utils/pdfGenerator';
-import { Search, Plus, UserPlus, Phone, Calendar, BookOpen, Trash2, Edit2, CheckCircle, XCircle, AlertCircle, Download, Award, Video, ExternalLink, Eye, X, Image as ImageIcon } from 'lucide-react';
+import { Search, Plus, UserPlus, Phone, Calendar, BookOpen, Trash2, Edit2, CheckCircle, XCircle, AlertCircle, Download, Award, Video, ExternalLink, Eye, X, Image as ImageIcon, Check } from 'lucide-react';
 
 interface StudentManagerProps {
   students: Student[];
@@ -596,7 +596,7 @@ export function StudentManager({
                               title={activeMat ? 'Klik untuk melihat Gambar & Panduan Tutorial' : 'Belum ada materi aktif. Klik untuk melihat silabus pertama.'}
                             >
                               <BookOpen size={12} />
-                              <span className="max-w-[150px] truncate">{activeMat ? activeMat.title : 'Pilih / Lihat Panduan'}</span>
+                              <span className="max-w-[150px] truncate">{activeMat ? activeMat.level : 'Pilih / Lihat Panduan'}</span>
                               {activeMat && (
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                               )}
@@ -703,7 +703,7 @@ export function StudentManager({
                     >
                       {materials.map(m => (
                         <option key={m.id} value={m.id}>
-                          {m.title} ({m.level || 'Umum'})
+                          {m.level || 'Umum'}
                         </option>
                       ))}
                     </select>
@@ -722,50 +722,42 @@ export function StudentManager({
 
             {/* Konten Modal */}
             <div className="p-6 overflow-y-auto space-y-6">
-              {/* Judul & Deskripsi */}
+              {/* Level / Tingkatan */}
               <div>
-                <h3 className="text-lg font-bold text-emerald-500 mb-1">{selectedCurriculumMat.title}</h3>
-                <p className={`text-sm leading-relaxed ${theme === 'light' ? 'text-slate-600' : 'text-slate-400'}`}>
-                  {selectedCurriculumMat.description}
-                </p>
+                <h3 className="text-lg font-bold text-emerald-500 mb-1">{selectedCurriculumMat.level}</h3>
               </div>
 
-              {/* Grid Formula & Langkah Latihan */}
+              {/* 1. Capaian Pembelajaran */}
+              <div className="space-y-1.5">
+                <h5 className="text-xs font-bold text-emerald-500 uppercase tracking-wider">Capaian Pembelajaran</h5>
+                <div className={`p-4 rounded-xl border-l-4 border-l-emerald-500 ${theme === 'light' ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-slate-950/40 border-slate-800 text-slate-300'} text-sm leading-relaxed`}>
+                  {selectedCurriculumMat.capaianPembelajaran || '-'}
+                </div>
+              </div>
+
+              {/* 2. Kompetensi Dasar & Materi */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Formula */}
                 <div className={`p-4 rounded-xl border ${theme === 'light' ? 'bg-slate-50 border-slate-150' : 'bg-slate-950/40 border-slate-800'}`}>
-                  <h5 className="text-xs font-bold text-emerald-500 uppercase tracking-wider mb-2.5">Formula Jari</h5>
-                  {selectedCurriculumMat.formulas && selectedCurriculumMat.formulas.length > 0 ? (
-                    <ul className="space-y-1.5">
-                      {selectedCurriculumMat.formulas.map((formula, idx) => (
-                        <li key={idx} className="text-xs flex items-start gap-2">
-                          <span className="text-emerald-500 font-bold">•</span>
-                          <span className="font-mono">{formula}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-xs text-slate-500 italic">Tidak ada formula khusus untuk level ini.</p>
-                  )}
+                  <h5 className="text-xs font-bold text-emerald-500 uppercase tracking-wider mb-2">Kompetensi Dasar</h5>
+                  <p className={`text-xs leading-relaxed ${theme === 'light' ? 'text-slate-600' : 'text-slate-400'}`}>
+                    {selectedCurriculumMat.kompetensiDasar || '-'}
+                  </p>
                 </div>
 
-                {/* Langkah Latihan */}
                 <div className={`p-4 rounded-xl border ${theme === 'light' ? 'bg-slate-50 border-slate-150' : 'bg-slate-950/40 border-slate-800'}`}>
-                  <h5 className="text-xs font-bold text-emerald-500 uppercase tracking-wider mb-2.5">Langkah Latihan</h5>
-                  {selectedCurriculumMat.steps && selectedCurriculumMat.steps.length > 0 ? (
-                    <ol className="space-y-2">
-                      {selectedCurriculumMat.steps.map((step, idx) => (
-                        <li key={idx} className="text-xs flex gap-2">
-                          <span className="w-5 h-5 rounded-full bg-emerald-500/10 text-emerald-500 flex-shrink-0 flex items-center justify-center font-bold font-mono">
-                            {idx + 1}
-                          </span>
-                          <span className="leading-relaxed">{step}</span>
-                        </li>
-                      ))}
-                    </ol>
-                  ) : (
-                    <p className="text-xs text-slate-500 italic">Belum ada langkah latihan tertulis.</p>
-                  )}
+                  <h5 className="text-xs font-bold text-emerald-500 uppercase tracking-wider mb-2">Materi Pembelajaran</h5>
+                  <p className={`text-xs font-semibold leading-relaxed ${theme === 'light' ? 'text-emerald-700' : 'text-emerald-400'}`}>
+                    {selectedCurriculumMat.materiPembelajaran || '-'}
+                  </p>
+                </div>
+              </div>
+
+              {/* 3. Indikator Pencapaian Kompetensi */}
+              <div className="space-y-1.5">
+                <h5 className="text-xs font-bold text-emerald-500 uppercase tracking-wider">Indikator Pencapaian Kompetensi</h5>
+                <div className={`p-4 rounded-xl border ${theme === 'light' ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-slate-950/40 border-slate-800 text-slate-300'} text-xs leading-relaxed flex gap-2`}>
+                  <Check size={14} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                  <span>{selectedCurriculumMat.indikatorPencapaian || '-'}</span>
                 </div>
               </div>
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { LearningMaterial } from '../types';
-import { BookOpen, Sparkles, HelpCircle, Plus, Edit, Trash2, Save, AlertTriangle, Video, Image as ImageIcon, ExternalLink, Eye, X, Film, Upload } from 'lucide-react';
+import { BookOpen, Sparkles, HelpCircle, Plus, Edit, Trash2, Save, AlertTriangle, Video, Image as ImageIcon, ExternalLink, Eye, X, Film, Upload, Check } from 'lucide-react';
 
 function getYoutubeEmbedUrl(url: string): string | null {
   if (!url) return null;
@@ -74,10 +74,10 @@ export function MaterialList({
 
   // Form fields
   const [level, setLevel] = useState('');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [formulasText, setFormulasText] = useState('');
-  const [stepsText, setStepsText] = useState('');
+  const [capaianPembelajaran, setCapaianPembelajaran] = useState('');
+  const [kompetensiDasar, setKompetensiDasar] = useState('');
+  const [materiPembelajaran, setMateriPembelajaran] = useState('');
+  const [indikatorPencapaian, setIndikatorPencapaian] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [tutorialImages, setTutorialImages] = useState<string[]>([]);
   
@@ -93,10 +93,10 @@ export function MaterialList({
     setFormMode('add');
     setEditMatId(null);
     setLevel(`Level ${materials.length + 1}: `);
-    setTitle('');
-    setDescription('');
-    setFormulasText('');
-    setStepsText('');
+    setCapaianPembelajaran('');
+    setKompetensiDasar('');
+    setMateriPembelajaran('');
+    setIndikatorPencapaian('');
     setVideoUrl('');
     setTutorialImages([]);
     setIsFormOpen(true);
@@ -106,10 +106,10 @@ export function MaterialList({
     setFormMode('edit');
     setEditMatId(mat.id);
     setLevel(mat.level);
-    setTitle(mat.title);
-    setDescription(mat.description);
-    setFormulasText(mat.formulas.join('\n'));
-    setStepsText(mat.steps.join('\n'));
+    setCapaianPembelajaran(mat.capaianPembelajaran || '');
+    setKompetensiDasar(mat.kompetensiDasar || '');
+    setMateriPembelajaran(mat.materiPembelajaran || '');
+    setIndikatorPencapaian(mat.indikatorPencapaian || '');
     setVideoUrl(mat.videoUrl || '');
     setTutorialImages(mat.tutorialImages || []);
     setIsFormOpen(true);
@@ -164,27 +164,17 @@ export function MaterialList({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!level || !title) {
-      alert('Mohon isi Level dan Judul Materi!');
+    if (!level || !capaianPembelajaran) {
+      alert('Mohon isi Level dan Capaian Pembelajaran!');
       return;
     }
 
-    const formulas = formulasText
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line !== '');
-
-    const steps = stepsText
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line !== '');
-
     const materialData = {
       level,
-      title,
-      description,
-      formulas,
-      steps,
+      capaianPembelajaran: capaianPembelajaran.trim(),
+      kompetensiDasar: kompetensiDasar.trim(),
+      materiPembelajaran: materiPembelajaran.trim(),
+      indikatorPencapaian: indikatorPencapaian.trim(),
       videoUrl: videoUrl.trim(),
       tutorialImages
     };
@@ -199,7 +189,7 @@ export function MaterialList({
   };
 
   const handleDelete = async (mat: LearningMaterial) => {
-    if (confirm(`Apakah Anda yakin ingin menghapus materi "${mat.title}"?`)) {
+    if (confirm(`Apakah Anda yakin ingin menghapus materi "${mat.level}"?`)) {
       await onDeleteMaterial(mat.id);
       // Fallback selection
       const remaining = materials.filter(m => m.id !== mat.id);
@@ -286,10 +276,10 @@ export function MaterialList({
                     </div>
                     
                     <div className="flex-1 min-w-0 font-sans">
-                      <div className="text-xs font-semibold text-slate-400 font-mono tracking-wider truncate">
-                        Kategori: {mat.level || 'Umum'}
+                      <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 font-mono tracking-wider truncate">
+                        {mat.level || 'Umum'}
                       </div>
-                      <div className={`font-bold truncate text-sm mt-0.5 ${isLight ? 'text-slate-800' : 'text-white'}`}>{mat.title}</div>
+                      <div className={`font-bold truncate text-sm mt-0.5 ${isLight ? 'text-slate-800' : 'text-white'}`}>{mat.materiPembelajaran || 'Umum'}</div>
                     </div>
                   </button>
                 );
@@ -311,8 +301,7 @@ export function MaterialList({
                       <BookOpen size={12} />
                       <span>{activeMaterial.level}</span>
                     </span>
-                    <h3 className={`text-xl font-bold truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>{activeMaterial.title}</h3>
-                    <p className={`text-sm mt-1.5 leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>{activeMaterial.description}</p>
+                    <h3 className={`text-xl font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>{activeMaterial.level}</h3>
                   </div>
 
                   {/* Actions (Edit / Delete) */}
@@ -320,60 +309,63 @@ export function MaterialList({
                     <button
                       onClick={() => handleOpenEditForm(activeMaterial)}
                       className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-slate-500/10 rounded-xl transition"
-                      title="Edit Materi"
+                      title="Edit Kurikulum"
                     >
                       <Edit size={16} />
                     </button>
                     <button
                       onClick={() => handleDelete(activeMaterial)}
                       className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition"
-                      title="Hapus Materi"
+                      title="Hapus Kurikulum"
                     >
                       <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
 
-                {/* Formulas sheet */}
-                <div className="space-y-3">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Formula Jari / Formasi Rumus</h4>
-                  {activeMaterial.formulas && activeMaterial.formulas.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {activeMaterial.formulas.map((formula, idx) => (
-                        <div key={idx} className={`flex items-center gap-2.5 p-3 border rounded-xl ${
-                          isLight ? 'bg-slate-50 border-slate-150' : 'bg-slate-950/40 border-slate-800'
-                        }`}>
-                          <div className="w-5 h-5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center font-mono text-xs font-bold">
-                            =
-                          </div>
-                          <span className={`text-sm font-semibold font-mono ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>{formula}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-slate-500 italic">Tidak ada formula khusus untuk level ini.</p>
-                  )}
+                {/* 1. Capaian Pembelajaran */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    <span>Capaian Pembelajaran</span>
+                  </h4>
+                  <div className={`p-4 rounded-xl border-l-4 border-l-emerald-500 ${isLight ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-slate-950/40 border-slate-800 text-slate-300'} text-sm leading-relaxed font-medium`}>
+                    {activeMaterial.capaianPembelajaran || '-'}
+                  </div>
                 </div>
 
-                {/* Practicing Steps list */}
-                <div className="space-y-3">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Langkah-Langkah Latihan</h4>
-                  {activeMaterial.steps && activeMaterial.steps.length > 0 ? (
-                    <div className="space-y-3">
-                      {activeMaterial.steps.map((step, idx) => (
-                        <div key={idx} className="flex gap-3">
-                          <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center font-mono text-xs font-bold mt-0.5 ${
-                            isLight ? 'bg-slate-100 text-slate-500' : 'bg-slate-950/60 text-slate-400'
-                          }`}>
-                            {idx + 1}
-                          </div>
-                          <p className={`text-sm leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>{step}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-slate-500 italic">Belum ada langkah latihan tertulis.</p>
-                  )}
+                {/* 2. Kompetensi Dasar */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    <span>Kompetensi Dasar</span>
+                  </h4>
+                  <p className={`text-sm leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                    {activeMaterial.kompetensiDasar || '-'}
+                  </p>
+                </div>
+
+                {/* 3. Materi Pembelajaran */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    <span>Materi Pembelajaran</span>
+                  </h4>
+                  <p className={`text-sm leading-relaxed font-semibold text-emerald-600 dark:text-emerald-400 ${isLight ? 'bg-emerald-50' : 'bg-emerald-500/5'} p-3 rounded-xl border border-emerald-500/10`}>
+                    {activeMaterial.materiPembelajaran || '-'}
+                  </p>
+                </div>
+
+                {/* 4. Indikator Pencapaian Kompetensi */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    <span>Indikator Pencapaian Kompetensi</span>
+                  </h4>
+                  <div className={`p-4 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-slate-950/40 border-slate-800 text-slate-300'} text-sm leading-relaxed flex gap-2.5`}>
+                    <Check size={18} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <span>{activeMaterial.indikatorPencapaian || '-'}</span>
+                  </div>
                 </div>
 
                 {/* Tutorial Video Section */}
@@ -388,7 +380,7 @@ export function MaterialList({
                         <iframe
                           className="w-full h-full"
                           src={getYoutubeEmbedUrl(activeMaterial.videoUrl)!}
-                          title={`Video Tutorial - ${activeMaterial.title}`}
+                          title={`Video Tutorial - ${activeMaterial.level}`}
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                           allowFullScreen
                         ></iframe>
@@ -502,13 +494,13 @@ export function MaterialList({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Judul Pokok Bahasan *</label>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Capaian Pembelajaran *</label>
                   <input
                     type="text"
                     required
-                    placeholder="Contoh: Pengenalan Jari Kanan"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Contoh: Siswa mampu melakukan operasi penambahan..."
+                    value={capaianPembelajaran}
+                    onChange={(e) => setCapaianPembelajaran(e.target.value)}
                     className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm font-semibold ${
                       isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
                     }`}
@@ -517,12 +509,12 @@ export function MaterialList({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Deskripsi Ringkas</label>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Kompetensi Dasar</label>
                 <textarea
                   rows={2}
-                  placeholder="Deskripsikan secara garis besar apa yang dipelajari pada level ini..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Contoh: Memahami konsep nilai satuan pada jari tangan kanan..."
+                  value={kompetensiDasar}
+                  onChange={(e) => setKompetensiDasar(e.target.value)}
                   className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm ${
                     isLight ? 'bg-slate-100 border-slate-200 text-slate-850' : 'bg-slate-900 border-slate-800 text-slate-200'
                   }`}
@@ -531,31 +523,29 @@ export function MaterialList({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
-                    Formula Jari (Satu per baris)
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 font-sans">
+                    Materi Pembelajaran
                   </label>
-                  <p className="text-[10px] text-slate-500 mb-1.5">Tekan Enter untuk membuat rumus baru.</p>
                   <textarea
-                    rows={4}
-                    placeholder="Jempol Kanan = 5&#10;Telunjuk Kanan = 1"
-                    value={formulasText}
-                    onChange={(e) => setFormulasText(e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono text-xs ${
+                    rows={3}
+                    placeholder="Contoh: Formasi angka 1 sampai 9 pada jari tangan kanan..."
+                    value={materiPembelajaran}
+                    onChange={(e) => setMateriPembelajaran(e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs leading-relaxed ${
                       isLight ? 'bg-slate-100 border-slate-200 text-slate-850' : 'bg-slate-900 border-slate-800 text-slate-200'
                     }`}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
-                    Langkah Latihan (Satu per baris)
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 font-sans">
+                    Indikator Pencapaian Kompetensi
                   </label>
-                  <p className="text-[10px] text-slate-500 mb-1.5">Tekan Enter untuk baris instruksi baru.</p>
                   <textarea
-                    rows={4}
-                    placeholder="Latih tangan kanan tertutup melambangkan 0&#10;Buka telunjuk untuk nilai 1"
-                    value={stepsText}
-                    onChange={(e) => setStepsText(e.target.value)}
+                    rows={3}
+                    placeholder="Contoh: Siswa dapat melambangkan angka 1-9 dengan jari kanan..."
+                    value={indikatorPencapaian}
+                    onChange={(e) => setIndikatorPencapaian(e.target.value)}
                     className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs leading-relaxed ${
                       isLight ? 'bg-slate-100 border-slate-200 text-slate-850' : 'bg-slate-900 border-slate-800 text-slate-200'
                     }`}

@@ -143,10 +143,10 @@ CREATE POLICY "Allow public read-write for demo" ON students FOR ALL USING (true
 CREATE TABLE IF NOT EXISTS materials (
   id TEXT PRIMARY KEY,
   level TEXT NOT NULL,
-  title TEXT NOT NULL,
-  description TEXT NOT NULL,
-  formulas TEXT[] DEFAULT '{}'::TEXT[],
-  steps TEXT[] DEFAULT '{}'::TEXT[],
+  "capaianPembelajaran" TEXT,
+  "kompetensiDasar" TEXT,
+  "materiPembelajaran" TEXT,
+  "indikatorPencapaian" TEXT,
   "videoUrl" TEXT,
   "tutorialImages" TEXT[] DEFAULT '{}'::TEXT[]
 );
@@ -347,10 +347,10 @@ ON CONFLICT (username) DO NOTHING;`,
     materials: `CREATE TABLE IF NOT EXISTS materials (
   id TEXT PRIMARY KEY,
   level TEXT NOT NULL,
-  title TEXT NOT NULL,
-  description TEXT NOT NULL,
-  formulas TEXT[] DEFAULT '{}'::TEXT[],
-  steps TEXT[] DEFAULT '{}'::TEXT[],
+  "capaianPembelajaran" TEXT,
+  "kompetensiDasar" TEXT,
+  "materiPembelajaran" TEXT,
+  "indikatorPencapaian" TEXT,
   "videoUrl" TEXT,
   "tutorialImages" TEXT[] DEFAULT '{}'::TEXT[]
 );`
@@ -422,6 +422,10 @@ ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "amountPaid" NUMERIC DEFAULT 0;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS installments JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'spp';
 
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS "capaianPembelajaran" TEXT;
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS "kompetensiDasar" TEXT;
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS "materiPembelajaran" TEXT;
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS "indikatorPencapaian" TEXT;
 ALTER TABLE materials ADD COLUMN IF NOT EXISTS "videoUrl" TEXT;
 ALTER TABLE materials ADD COLUMN IF NOT EXISTS "tutorialImages" TEXT[] DEFAULT '{}'::TEXT[];
 
@@ -454,6 +458,10 @@ ALTER TABLE invoices ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'spp';
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Pusat';`,
 
     materials: `-- Melengkapi kolom materials untuk Video & Foto Kurikulum (Kurikulum)
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS "capaianPembelajaran" TEXT;
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS "kompetensiDasar" TEXT;
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS "materiPembelajaran" TEXT;
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS "indikatorPencapaian" TEXT;
 ALTER TABLE materials ADD COLUMN IF NOT EXISTS "videoUrl" TEXT;
 ALTER TABLE materials ADD COLUMN IF NOT EXISTS "tutorialImages" TEXT[];`,
 

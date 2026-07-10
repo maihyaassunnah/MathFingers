@@ -28,7 +28,35 @@ export function getWhatsAppLink(phone: string, text: string): string {
 }
 
 // Default/Seed Learning Materials for Math Fingers
-export const SEED_MATERIALS: LearningMaterial[] = [];
+export const SEED_MATERIALS: LearningMaterial[] = [
+  {
+    id: 'mat-1',
+    level: 'Level 1: Dasar Satuan',
+    capaianPembelajaran: 'Siswa mampu melakukan operasi penambahan dan pengurangan sederhana menggunakan metode jari tangan kanan (satuan 1-9) secara refleks dan mandiri.',
+    kompetensiDasar: 'Memahami konsep nilai satuan pada jari tangan kanan (1-9) dan mempraktikkan gerakan membuka/menutup jari secara runtut.',
+    materiPembelajaran: 'Formasi angka 1 sampai 9 pada jari tangan kanan, teknik penambahan dan pengurangan dasar tanpa rumus teman kecil.',
+    indikatorPencapaian: 'Siswa dapat melambangkan angka 1-9 dengan jari kanan secara cepat, serta menyelesaikan kuis penambahan/pengurangan satuan dengan akurasi 100%.',
+    videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+  },
+  {
+    id: 'mat-2',
+    level: 'Level 2: Teman Kecil',
+    capaianPembelajaran: 'Siswa mampu memecahkan perhitungan penambahan dan pengurangan dengan rumus "Teman Kecil" (kombinasi jumlah 5) menggunakan bantuan jari jempol.',
+    kompetensiDasar: 'Menerapkan konsep Teman Kecil untuk operasi penambahan dan pengurangan (+1 s.d +4 dan -1 s.d -4).',
+    materiPembelajaran: 'Rumus Teman Kecil Tambah (+4 = +5 -1, +3 = +5 -2, +2 = +5 -3, +1 = +5 -4) dan Teman Kecil Kurang (-4 = -5 +1, -3 = -5 +2, -2 = -5 +3, -1 = -5 +4).',
+    indikatorPencapaian: 'Siswa terampil melipat dan membuka jari jempol serta jari lainnya secara serentak untuk mengaplikasikan rumus Teman Kecil dalam waktu kurang dari 3 detik per soal.',
+    videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+  },
+  {
+    id: 'mat-3',
+    level: 'Level 3: Teman Besar',
+    capaianPembelajaran: 'Siswa mampu menyelesaikan operasi penambahan dan pengurangan puluhan menggunakan kombinasi jari tangan kiri dan rumus "Teman Besar" (kombinasi jumlah 10).',
+    kompetensiDasar: 'Menganalisis dan mempraktikkan rumus Teman Besar (+1 s.d +9 dan -1 s.d -9) pada kombinasi jari tangan kanan dan kiri.',
+    materiPembelajaran: 'Rumus Teman Besar Tambah (+9 = +10 -1, +8 = +10 -2, dst) dan Teman Besar Kurang (-9 = -10 +1, -8 = -10 +2, dst) serta penggabungan tangan kanan & kiri.',
+    indikatorPencapaian: 'Siswa mampu mengoordinasikan gerakan tangan kiri (puluhan) dan tangan kanan (satuan) secara sinkron saat mengaplikasikan rumus Teman Besar.',
+    videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+  }
+];
 
 // Helper to generate a unique Invoice Number
 export function generateInvoiceNo(prefix: string = 'INV/MF'): string {

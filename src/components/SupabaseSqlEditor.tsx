@@ -428,6 +428,8 @@ ALTER TABLE materials ADD COLUMN IF NOT EXISTS "materiPembelajaran" TEXT;
 ALTER TABLE materials ADD COLUMN IF NOT EXISTS "indikatorPencapaian" TEXT;
 ALTER TABLE materials ADD COLUMN IF NOT EXISTS "videoUrl" TEXT;
 ALTER TABLE materials ADD COLUMN IF NOT EXISTS "tutorialImages" TEXT[] DEFAULT '{}'::TEXT[];
+ALTER TABLE materials ALTER COLUMN title DROP NOT NULL;
+ALTER TABLE materials ALTER COLUMN description DROP NOT NULL;
 
 -- 6. Atur ulang relasi Cascade Delete agar data terhapus otomatis saat siswa dihapus
 ALTER TABLE IF EXISTS attendance DROP CONSTRAINT IF EXISTS attendance_studentId_fkey;
@@ -463,7 +465,9 @@ ALTER TABLE materials ADD COLUMN IF NOT EXISTS "kompetensiDasar" TEXT;
 ALTER TABLE materials ADD COLUMN IF NOT EXISTS "materiPembelajaran" TEXT;
 ALTER TABLE materials ADD COLUMN IF NOT EXISTS "indikatorPencapaian" TEXT;
 ALTER TABLE materials ADD COLUMN IF NOT EXISTS "videoUrl" TEXT;
-ALTER TABLE materials ADD COLUMN IF NOT EXISTS "tutorialImages" TEXT[];`,
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS "tutorialImages" TEXT[];
+ALTER TABLE materials ALTER COLUMN title DROP NOT NULL;
+ALTER TABLE materials ALTER COLUMN description DROP NOT NULL;`,
 
     constraints: `-- Mengatur Cascade Delete Supabase agar Menu Hapus bekerja dengan mulus
 ALTER TABLE IF EXISTS attendance DROP CONSTRAINT IF EXISTS attendance_studentId_fkey;

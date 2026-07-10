@@ -241,8 +241,16 @@ export function useMathFinggersDb() {
     if (!supabase) return;
     try {
       if (SEED_MATERIALS.length > 0) {
+        // Map SEED_MATERIALS to include fallback title & description to satisfy older NOT NULL constraints
+        const modernPayload = SEED_MATERIALS.map(m => ({
+          ...m,
+          title: m.materiPembelajaran || m.level,
+          description: m.capaianPembelajaran || '',
+          formulas: [],
+          steps: []
+        }));
         // Try to insert using the modern schema format
-        const { error } = await supabase.from('materials').insert(SEED_MATERIALS);
+        const { error } = await supabase.from('materials').insert(modernPayload);
         if (error) {
           // If insert failed due to column mismatch (e.g. table still has the old structure)
           console.warn('Seeding new schema failed, trying old schema format fallback...');
@@ -605,8 +613,31 @@ export function useMathFinggersDb() {
 
     if (supabase && !isOfflineFallback) {
       try {
-        const { error } = await supabase.from('materials').insert([newMat]);
-        if (error) throw error;
+        // Supply title & description as fallbacks for the old not-null constraints
+        const insertPayload = {
+          ...newMat,
+          title: newMat.materiPembelajaran || newMat.level,
+          description: newMat.capaianPembelajaran || '',
+          formulas: [],
+          steps: []
+        };
+        const { error } = await supabase.from('materials').insert([insertPayload]);
+        if (error) {
+          // Fallback if the table doesn't have the new columns at all
+          console.warn('Inserting with new schema columns failed. Attempting insert with old schema fallback...');
+          const fallbackPayload = {
+            id: newMat.id,
+            level: newMat.level,
+            title: newMat.materiPembelajaran || newMat.level,
+            description: newMat.capaianPembelajaran || '',
+            formulas: [],
+            steps: [],
+            videoUrl: newMat.videoUrl || '',
+            tutorialImages: newMat.tutorialImages || []
+          };
+          const { error: fallbackError } = await supabase.from('materials').insert([fallbackPayload]);
+          if (fallbackError) throw fallbackError;
+        }
       } catch (err) {
         console.error('Failed to add material to Supabase:', err);
       }
@@ -620,8 +651,31 @@ export function useMathFinggersDb() {
 
     if (supabase && !isOfflineFallback) {
       try {
-        const { error } = await supabase.from('materials').update(updatedFields).eq('id', id);
-        if (error) throw error;
+        const updatePayload: any = { ...updatedFields };
+        if (updatedFields.materiPembelajaran !== undefined || updatedFields.level !== undefined) {
+          updatePayload.title = updatedFields.materiPembelajaran || updatedFields.level || '';
+        }
+        if (updatedFields.capaianPembelajaran !== undefined) {
+          updatePayload.description = updatedFields.capaianPembelajaran || '';
+        }
+        const { error } = await supabase.from('materials').update(updatePayload).eq('id', id);
+        if (error) {
+          // Fallback if update fails due to non-existent columns (new schema not applied yet)
+          console.warn('Updating with new schema columns failed. Attempting update with old schema fallback...');
+          const fallbackPayload: any = {};
+          if (updatedFields.level !== undefined) fallbackPayload.level = updatedFields.level;
+          if (updatedFields.materiPembelajaran !== undefined || updatedFields.level !== undefined) {
+            fallbackPayload.title = updatedFields.materiPembelajaran || updatedFields.level || '';
+          }
+          if (updatedFields.capaianPembelajaran !== undefined) {
+            fallbackPayload.description = updatedFields.capaianPembelajaran || '';
+          }
+          if (updatedFields.videoUrl !== undefined) fallbackPayload.videoUrl = updatedFields.videoUrl;
+          if (updatedFields.tutorialImages !== undefined) fallbackPayload.tutorialImages = updatedFields.tutorialImages;
+          
+          const { error: fallbackError } = await supabase.from('materials').update(fallbackPayload).eq('id', id);
+          if (fallbackError) throw fallbackError;
+        }
       } catch (err) {
         console.error('Failed to update material in Supabase:', err);
       }

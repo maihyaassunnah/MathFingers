@@ -48,7 +48,7 @@ export function SupabaseSqlEditor({
     tables: { name: string; status: 'ok' | 'error' | 'unchecked'; errorMsg?: string }[];
   } | null>(null);
 
-  const tables = ['students', 'attendance', 'notes', 'invoices', 'grades', 'materials', 'branches', 'admin_users'];
+  const tables = ['students', 'attendance', 'notes', 'invoices', 'grades', 'materials', 'branches', 'admin_users', 'hari_les'];
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -264,6 +264,21 @@ CREATE POLICY "Allow public read-write for demo" ON admin_users FOR ALL USING (t
 -- Pastikan kolom avatarUrl ada jika tabel admin_users sudah ada sebelumnya
 ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS "avatarUrl" TEXT;
 
+
+-- 9. TABEL HARI_LES (Daftar Hari Les / Jadwal Bimbingan)
+CREATE TABLE IF NOT EXISTS hari_les (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  "createdAt" BIGINT NOT NULL DEFAULT 1719600000,
+  branch TEXT DEFAULT 'Pusat'
+);
+
+ALTER TABLE hari_les ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON hari_les;
+CREATE POLICY "Allow public read-write for demo" ON hari_les FOR ALL USING (true) WITH CHECK (true);
+
+
 -- ====================================================================
 -- SEED DATA AWAL (Jalankan Sekali Saja)
 -- ====================================================================
@@ -275,7 +290,15 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO admin_users (username, name, role, branch, password, "avatarUrl")
 VALUES 
 ` + adminUsersSqlValues + `
-ON CONFLICT (username) DO NOTHING;`,
+ON CONFLICT (username) DO NOTHING;
+
+INSERT INTO hari_les (id, name, description, "createdAt", branch)
+VALUES
+  ('hl-1', 'Hari Jum''at dan Ahad', 'Jadwal les hari Jumat sore dan Minggu pagi', 1719600000, 'Pusat'),
+  ('hl-2', 'Sabtu dan Ahad', 'Jadwal les akhir pekan (Weekend)', 1719600000, 'Pusat'),
+  ('hl-3', 'Senin dan Kamis', 'Jadwal les tengah pekan (Weekday)', 1719600000, 'Pusat'),
+  ('hl-4', 'Selasa dan Jumat', 'Jadwal les alternatif tengah pekan', 1719600000, 'Pusat')
+ON CONFLICT (id) DO NOTHING;`,
     students: `CREATE TABLE IF NOT EXISTS students (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -354,7 +377,27 @@ ON CONFLICT (username) DO NOTHING;`,
   "indikatorPencapaian" TEXT,
   "videoUrl" TEXT,
   "tutorialImages" TEXT[] DEFAULT '{}'::TEXT[]
-);`
+);`,
+
+    hari_les: `CREATE TABLE IF NOT EXISTS hari_les (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  "createdAt" BIGINT NOT NULL DEFAULT 1719600000,
+  branch TEXT DEFAULT 'Pusat'
+);
+
+ALTER TABLE hari_les ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON hari_les;
+CREATE POLICY "Allow public read-write for demo" ON hari_les FOR ALL USING (true) WITH CHECK (true);
+
+INSERT INTO hari_les (id, name, description, "createdAt", branch)
+VALUES
+  ('hl-1', 'Hari Jum''at dan Ahad', 'Jadwal les hari Jumat sore dan Minggu pagi', 1719600000, 'Pusat'),
+  ('hl-2', 'Sabtu dan Ahad', 'Jadwal les akhir pekan (Weekend)', 1719600000, 'Pusat'),
+  ('hl-3', 'Senin dan Kamis', 'Jadwal les tengah pekan (Weekday)', 1719600000, 'Pusat'),
+  ('hl-4', 'Selasa dan Jumat', 'Jadwal les alternatif tengah pekan', 1719600000, 'Pusat')
+ON CONFLICT (id) DO NOTHING;`
   };
 
   const alterSqlScripts = {
@@ -444,7 +487,28 @@ ALTER TABLE IF EXISTS invoices DROP CONSTRAINT IF EXISTS invoices_studentId_fkey
 ALTER TABLE invoices ADD CONSTRAINT invoices_studentId_fkey FOREIGN KEY ("studentId") REFERENCES students(id) ON DELETE CASCADE;
 
 ALTER TABLE IF EXISTS grades DROP CONSTRAINT IF EXISTS grades_studentId_fkey;
-ALTER TABLE grades ADD CONSTRAINT grades_studentId_fkey FOREIGN KEY ("studentId") REFERENCES students(id) ON DELETE CASCADE;`,
+ALTER TABLE grades ADD CONSTRAINT grades_studentId_fkey FOREIGN KEY ("studentId") REFERENCES students(id) ON DELETE CASCADE;
+
+-- 7. Tambah Tabel Hari Les & Jadwal Bimbingan (Migrasi Mandiri)
+CREATE TABLE IF NOT EXISTS hari_les (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  "createdAt" BIGINT NOT NULL DEFAULT 1719600000,
+  branch TEXT DEFAULT 'Pusat'
+);
+
+ALTER TABLE hari_les ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON hari_les;
+CREATE POLICY "Allow public read-write for demo" ON hari_les FOR ALL USING (true) WITH CHECK (true);
+
+INSERT INTO hari_les (id, name, description, "createdAt", branch)
+VALUES
+  ('hl-1', 'Hari Jum''at dan Ahad', 'Jadwal les hari Jumat sore dan Minggu pagi', 1719600000, 'Pusat'),
+  ('hl-2', 'Sabtu dan Ahad', 'Jadwal les akhir pekan (Weekend)', 1719600000, 'Pusat'),
+  ('hl-3', 'Senin dan Kamis', 'Jadwal les tengah pekan (Weekday)', 1719600000, 'Pusat'),
+  ('hl-4', 'Selasa dan Jumat', 'Jadwal les alternatif tengah pekan', 1719600000, 'Pusat')
+ON CONFLICT (id) DO NOTHING;`,
 
     students: `-- Melengkapi kolom students tanpa merubah data lama
 ALTER TABLE students ADD COLUMN IF NOT EXISTS keterangan TEXT;
@@ -483,7 +547,28 @@ ALTER TABLE IF EXISTS invoices DROP CONSTRAINT IF EXISTS invoices_studentId_fkey
 ALTER TABLE invoices ADD CONSTRAINT invoices_studentId_fkey FOREIGN KEY ("studentId") REFERENCES students(id) ON DELETE CASCADE;
 
 ALTER TABLE IF EXISTS grades DROP CONSTRAINT IF EXISTS grades_studentId_fkey;
-ALTER TABLE grades ADD CONSTRAINT grades_studentId_fkey FOREIGN KEY ("studentId") REFERENCES students(id) ON DELETE CASCADE;`
+ALTER TABLE grades ADD CONSTRAINT grades_studentId_fkey FOREIGN KEY ("studentId") REFERENCES students(id) ON DELETE CASCADE;`,
+
+    hari_les: `-- Pembuatan Tabel Hari Les & Jadwal Bimbingan (Migrasi Mandiri)
+CREATE TABLE IF NOT EXISTS hari_les (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  "createdAt" BIGINT NOT NULL DEFAULT 1719600000,
+  branch TEXT DEFAULT 'Pusat'
+);
+
+ALTER TABLE hari_les ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON hari_les;
+CREATE POLICY "Allow public read-write for demo" ON hari_les FOR ALL USING (true) WITH CHECK (true);
+
+INSERT INTO hari_les (id, name, description, "createdAt", branch)
+VALUES
+  ('hl-1', 'Hari Jum''at dan Ahad', 'Jadwal les hari Jumat sore dan Minggu pagi', 1719600000, 'Pusat'),
+  ('hl-2', 'Sabtu dan Ahad', 'Jadwal les akhir pekan (Weekend)', 1719600000, 'Pusat'),
+  ('hl-3', 'Senin dan Kamis', 'Jadwal les tengah pekan (Weekday)', 1719600000, 'Pusat'),
+  ('hl-4', 'Selasa dan Jumat', 'Jadwal les alternatif tengah pekan', 1719600000, 'Pusat')
+ON CONFLICT (id) DO NOTHING;`
   };
 
   return (

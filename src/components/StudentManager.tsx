@@ -49,6 +49,7 @@ export function StudentManager({
   const [jenisKelamin, setJenisKelamin] = useState<'Laki-laki' | 'Perempuan'>('Laki-laki');
   const [alamat, setAlamat] = useState('');
   const [activeMaterialId, setActiveMaterialId] = useState('');
+  const [hariLes, setHariLes] = useState('Hari Jum\'at dan Ahad');
 
   // Curriculum overlay modal states
   const [selectedCurriculumMat, setSelectedCurriculumMat] = useState<LearningMaterial | null>(null);
@@ -80,6 +81,7 @@ export function StudentManager({
     setJenisKelamin('Laki-laki');
     setAlamat('');
     setActiveMaterialId('');
+    setHariLes('Hari Jum\'at dan Ahad');
     setIsFormOpen(true);
   };
 
@@ -98,6 +100,7 @@ export function StudentManager({
     setJenisKelamin(student.jenisKelamin || 'Laki-laki');
     setAlamat(student.alamat || '');
     setActiveMaterialId(student.activeMaterialId || '');
+    setHariLes(student.hariLes || 'Hari Jum\'at dan Ahad');
     setIsFormOpen(true);
   };
 
@@ -121,7 +124,8 @@ export function StudentManager({
       jenisPaket,
       jenisKelamin,
       alamat,
-      activeMaterialId: activeMaterialId || ''
+      activeMaterialId: activeMaterialId || '',
+      hariLes
     };
 
     if (editingStudent) {
@@ -432,6 +436,20 @@ export function StudentManager({
               </div>
 
               <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Pilihan Hari Les *</label>
+                <select
+                  value={hariLes}
+                  onChange={(e) => setHariLes(e.target.value)}
+                  className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                    isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
+                  }`}
+                >
+                  <option value="Hari Jum'at dan Ahad" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Hari Jum'at dan Ahad</option>
+                  <option value="Sabtu dan Ahad" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Sabtu dan Ahad</option>
+                </select>
+              </div>
+
+              <div>
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Alamat Rumah</label>
                 <textarea
                   placeholder="Masukkan alamat lengkap rumah"
@@ -525,6 +543,11 @@ export function StudentManager({
                           {student.jenisPaket && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/15">
                               {student.jenisPaket}
+                            </span>
+                          )}
+                          {student.hariLes && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/15">
+                              📅 {student.hariLes}
                             </span>
                           )}
                         </div>

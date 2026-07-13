@@ -130,7 +130,8 @@ CREATE TABLE IF NOT EXISTS students (
   alamat TEXT,
   "createdAt" BIGINT NOT NULL,
   "activeMaterialId" TEXT,
-  branch TEXT DEFAULT 'Pusat'
+  branch TEXT DEFAULT 'Pusat',
+  "hariLes" TEXT DEFAULT 'Hari Jum\'at dan Ahad'
 );
 
 -- Enable RLS & Bypass for simple usage
@@ -268,12 +269,12 @@ ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS "avatarUrl" TEXT;
 -- ====================================================================
 INSERT INTO branches (id, name, address, phone, "createdAt")
 VALUES 
-${branchesSqlValues}
+` + branchesSqlValues + `
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO admin_users (username, name, role, branch, password, "avatarUrl")
 VALUES 
-${adminUsersSqlValues}
+` + adminUsersSqlValues + `
 ON CONFLICT (username) DO NOTHING;`,
     students: `CREATE TABLE IF NOT EXISTS students (
   id TEXT PRIMARY KEY,
@@ -400,12 +401,12 @@ ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS "avatarUrl" TEXT;
 -- 4. Isi seed data awal untuk Cabang & Admin (jika belum ada)
 INSERT INTO branches (id, name, address, phone, "createdAt")
 VALUES 
-${branchesSqlValues}
+` + branchesSqlValues + `
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO admin_users (username, name, role, branch, password, "avatarUrl")
 VALUES 
-${adminUsersSqlValues}
+` + adminUsersSqlValues + `
 ON CONFLICT (username) DO NOTHING;
 
 -- 5. Tambah kolom kelengkapan lain (jika ada yang tertinggal)
@@ -416,6 +417,7 @@ ALTER TABLE students ADD COLUMN IF NOT EXISTS "jenisPaket" TEXT DEFAULT '4P';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "jenisKelamin" TEXT DEFAULT 'Laki-laki';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS alamat TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "activeMaterialId" TEXT;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS "hariLes" TEXT DEFAULT 'Hari Jum\'at dan Ahad';
 ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS "avatarUrl" TEXT;
 
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "amountPaid" NUMERIC DEFAULT 0;
@@ -451,7 +453,8 @@ ALTER TABLE students ADD COLUMN IF NOT EXISTS "tanggalLahir" TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "jenisPaket" TEXT DEFAULT '4P';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "jenisKelamin" TEXT DEFAULT 'Laki-laki';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS alamat TEXT;
-ALTER TABLE students ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Pusat';`,
+ALTER TABLE students ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Pusat';
+ALTER TABLE students ADD COLUMN IF NOT EXISTS "hariLes" TEXT DEFAULT 'Hari Jum\'at dan Ahad';`,
 
     invoices: `-- Melengkapi kolom invoice untuk Cicilan & Riwayat Pembayaran & Kategori Pembayaran
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "amountPaid" NUMERIC DEFAULT 0;

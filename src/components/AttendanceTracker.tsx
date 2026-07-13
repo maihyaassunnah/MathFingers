@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Student, Attendance } from '../types';
 import { getWhatsAppLink } from '../utils';
-import { Calendar, Check, X, ShieldAlert, Send, Save, CheckSquare, Clock, Search, Users, TrendingUp, ChevronDown, MessageSquare } from 'lucide-react';
+import { Calendar, Check, X, ShieldAlert, Send, Save, CheckSquare, Clock, Search, Users, TrendingUp, ChevronDown, MessageSquare, Trash2 } from 'lucide-react';
 
 interface AttendanceTrackerProps {
   students: Student[];
   attendance: Attendance[];
   onAddAttendanceBatch: (records: Omit<Attendance, 'id'>[]) => Promise<void>;
+  onDeleteAttendanceByDate?: (date: string) => Promise<void>;
+  onDeleteSingleAttendance?: (id: string) => Promise<void>;
+  onUpdateSingleAttendance?: (id: string, updatedFields: Partial<Attendance>) => Promise<void>;
   theme?: string;
 }
 
@@ -14,6 +17,9 @@ export function AttendanceTracker({
   students, 
   attendance, 
   onAddAttendanceBatch,
+  onDeleteAttendanceByDate,
+  onDeleteSingleAttendance,
+  onUpdateSingleAttendance,
   theme = 'dark'
 }: AttendanceTrackerProps) {
   const [activeSubTab, setActiveSubTab] = useState<'record' | 'history'>('record');
@@ -27,6 +33,7 @@ export function AttendanceTracker({
   const [attendanceMap, setAttendanceMap] = useState<Record<string, { status: 'present' | 'absent' | 'permission'; notes: string }>>({});
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [expandedStudentNotes, setExpandedStudentNotes] = useState<Record<string, boolean>>({});
+  const [filterBySchedule, setFilterBySchedule] = useState(true);
 
   const toggleNotes = (studentId: string) => {
     setExpandedStudentNotes(prev => ({
@@ -43,16 +50,36 @@ export function AttendanceTracker({
       return sortOrder === 'asc' ? cmp : -cmp;
     });
 
+  // Check if student is scheduled for the day
+  const isScheduledForDay = (student: Student) => {
+    if (!filterBySchedule) return true;
+    if (!student.hariLes) return true; // Show by default if no schedule specified (backward compatibility)
+    
+    const dateObj = new Date(selectedDate);
+    const day = dateObj.getDay(); // 0 = Sunday (Ahad), 5 = Friday (Jum'at), 6 = Saturday (Sabtu)
+    
+    if (student.hariLes === "Hari Jum'at dan Ahad") {
+      return day === 5 || day === 0;
+    }
+    if (student.hariLes === "Sabtu dan Ahad") {
+      return day === 6 || day === 0;
+    }
+    
+    return true;
+  };
+
+  const scheduledActiveStudents = activeStudents.filter(isScheduledForDay);
+
   // Extract initial letters of active students to render as quick filter buttons
   const availableLetters = Array.from(
     new Set(
-      activeStudents
+      scheduledActiveStudents
         .map(s => s.name.trim().charAt(0).toUpperCase())
         .filter(char => /[A-Z]/.test(char))
     )
   ).sort();
 
-  const filteredActiveStudents = activeStudents.filter(s => {
+  const filteredActiveStudents = scheduledActiveStudents.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(recordSearchQuery.toLowerCase());
     const matchesLetter = selectedLetter === 'ALL' || s.name.trim().toUpperCase().startsWith(selectedLetter);
     return matchesSearch && matchesLetter;
@@ -117,7 +144,7 @@ export function AttendanceTracker({
 
   const handleMarkAllPresent = () => {
     const updated = { ...attendanceMap };
-    activeStudents.forEach(student => {
+    scheduledActiveStudents.forEach(student => {
       updated[student.id] = {
         ...updated[student.id],
         status: 'present'
@@ -129,7 +156,7 @@ export function AttendanceTracker({
 
   const handleSave = async () => {
     setSaveStatus('saving');
-    const recordsToSave = activeStudents.map(student => {
+    const recordsToSave = scheduledActiveStudents.map(student => {
       const state = attendanceMap[student.id] || { status: 'present', notes: '' };
       return {
         studentId: student.id,
@@ -266,7 +293,19 @@ export function AttendanceTracker({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-emerald-500/5 p-4 rounded-2xl border border-emerald-500/10">
             <div>
               <h3 className={`font-semibold text-base ${isLight ? 'text-slate-850' : 'text-white'}`}>Pilih Tanggal Sesi Bimbingan</h3>
-              <p className="text-xs text-slate-400 mt-0.5">Semua data siswa aktif otomatis terdaftar di bawah.</p>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-x-2.5 gap-y-1 mt-0.5">
+                <p className="text-xs text-slate-400">Siswa aktif otomatis disaring sesuai jadwal.</p>
+                <span className="hidden sm:inline text-slate-500 text-xs">•</span>
+                <label className="flex items-center gap-1.5 text-xs font-semibold text-emerald-500 dark:text-emerald-400 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={filterBySchedule}
+                    onChange={(e) => setFilterBySchedule(e.target.checked)}
+                    className="rounded border-emerald-500/30 text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5 bg-emerald-500/5 cursor-pointer"
+                  />
+                  <span>Filter Jadwal Hari Les</span>
+                </label>
+              </div>
             </div>
             
             <div className="flex items-center gap-3 self-start sm:self-center">
@@ -418,9 +457,30 @@ export function AttendanceTracker({
                 <div className={`divide-y ${isLight ? 'divide-slate-200' : 'divide-slate-800/80'}`}>
                   {filteredActiveStudents.length === 0 ? (
                     <div className="p-12 text-center text-slate-500">
-                      <Search size={44} className="mx-auto text-slate-700 mb-3" />
-                      <p className="font-medium text-slate-400">Tidak ada siswa yang cocok dengan pencarian</p>
-                      <p className="text-xs text-slate-550 mt-1">Coba cari dengan nama siswa lain.</p>
+                      {filterBySchedule && scheduledActiveStudents.length === 0 ? (
+                        <div className="max-w-md mx-auto">
+                          <Calendar size={44} className="mx-auto text-emerald-500/80 mb-3 animate-pulse" />
+                          <p className={`font-bold ${isLight ? 'text-slate-800' : 'text-slate-300'}`}>Tidak ada siswa yang dijadwalkan les hari ini</p>
+                          <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                            Berdasarkan jadwal bimbingan, tidak ada siswa aktif yang memiliki jadwal les pada hari ini ({
+                              new Date(selectedDate).toLocaleDateString('id-ID', { weekday: 'long' })
+                            }).
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setFilterBySchedule(false)}
+                            className="mt-4 px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition duration-150 shadow-sm cursor-pointer"
+                          >
+                            Tampilkan Semua Siswa Aktif
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <Search size={44} className="mx-auto text-slate-700 mb-3" />
+                          <p className="font-medium text-slate-400">Tidak ada siswa yang cocok dengan pencarian</p>
+                          <p className="text-xs text-slate-550 mt-1">Coba cari dengan nama siswa lain.</p>
+                        </>
+                      )}
                     </div>
                   ) : (
                     filteredActiveStudents.map((student) => {
@@ -442,7 +502,14 @@ export function AttendanceTracker({
                                 </span>
                                 <span className="text-[10px] text-slate-400 truncate">Wali: {student.parentName}</span>
                               </div>
-                              <h4 className={`font-bold text-sm mt-0.5 truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</h4>
+                              <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                                <h4 className={`font-bold text-sm truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</h4>
+                                {student.hariLes && (
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded font-medium bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/15">
+                                    📅 {student.hariLes}
+                                  </span>
+                                )}
+                              </div>
                             </div>
 
                             <div className="flex items-center gap-2">
@@ -496,7 +563,14 @@ export function AttendanceTracker({
                                   </span>
                                 </div>
                               </div>
-                              <h3 className={`font-bold text-base mt-1.5 ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</h3>
+                              <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
+                                <h3 className={`font-bold text-base ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</h3>
+                                {student.hariLes && (
+                                  <span className="text-[10px] px-2 py-0.5 rounded font-medium bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/15">
+                                    📅 {student.hariLes}
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-slate-400 text-xs mt-0.5">Wali: {student.parentName} ({student.parentPhone})</p>
                             </div>
 
@@ -686,28 +760,55 @@ export function AttendanceTracker({
                   uniqueDates.map(date => {
                     const stats = dateStats.find(s => s.date === date);
                     return (
-                      <button
+                      <div
                         key={date}
-                        onClick={() => setViewingDetailDate(date)}
-                        className={`w-full text-left p-4 flex items-center justify-between transition hover:bg-slate-500/5 ${
-                          isLight ? 'hover:bg-slate-50' : ''
+                        className={`w-full p-4 flex items-center justify-between transition border-b last:border-b-0 ${
+                          isLight ? 'hover:bg-slate-55 border-slate-100' : 'hover:bg-slate-800/10 border-slate-800/50'
                         }`}
                       >
-                        <div className="space-y-1">
-                          <span className={`font-bold text-sm ${isLight ? 'text-slate-800' : 'text-slate-100'}`}>
+                        <button
+                          type="button"
+                          onClick={() => setViewingDetailDate(date)}
+                          className="flex-1 text-left space-y-1 focus:outline-none cursor-pointer"
+                        >
+                          <span className={`font-bold text-sm block ${isLight ? 'text-slate-800' : 'text-slate-100'}`}>
                             {new Date(date).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                           </span>
                           <span className="block font-mono text-[10px] text-slate-500">{date}</span>
-                        </div>
+                        </button>
 
-                        {stats && (
-                          <div className="flex gap-1.5 text-xs">
-                            <span className="px-2 py-0.5 rounded font-bold bg-emerald-500/15 text-emerald-500" title="Hadir">{stats.present}H</span>
-                            <span className="px-2 py-0.5 rounded font-bold bg-amber-500/15 text-amber-500" title="Izin">{stats.permission}I</span>
-                            <span className="px-2 py-0.5 rounded font-bold bg-rose-500/15 text-rose-500" title="Absen">{stats.absent}A</span>
-                          </div>
-                        )}
-                      </button>
+                        <div className="flex items-center gap-3">
+                          {stats && (
+                            <div className="flex gap-1.5 text-[10px] sm:text-xs">
+                              <span className="px-2 py-0.5 rounded font-bold bg-emerald-500/15 text-emerald-500" title="Hadir">{stats.present}H</span>
+                              <span className="px-2 py-0.5 rounded font-bold bg-amber-500/15 text-amber-500" title="Izin">{stats.permission}I</span>
+                              <span className="px-2 py-0.5 rounded font-bold bg-rose-500/15 text-rose-500" title="Absen">{stats.absent}A</span>
+                            </div>
+                          )}
+
+                          {onDeleteAttendanceByDate && (
+                            <button
+                              type="button"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (confirm(`Apakah Anda yakin ingin menghapus seluruh sesi absensi tanggal ${date}? Tindakan ini akan menghapus data dari database.`)) {
+                                  try {
+                                    await onDeleteAttendanceByDate(date);
+                                    alert('Sesi absensi berhasil dihapus.');
+                                  } catch (err) {
+                                    console.error(err);
+                                    alert('Gagal menghapus sesi absensi.');
+                                  }
+                                }
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition cursor-pointer"
+                              title="Hapus Sesi Absensi"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     );
                   })
                 )}
@@ -879,6 +980,7 @@ export function AttendanceTracker({
                       <th className="p-3">Nama Siswa</th>
                       <th className="p-3 text-center">Status</th>
                       <th className="p-3">Catatan</th>
+                      <th className="p-3 text-center">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className={`divide-y ${isLight ? 'divide-slate-200' : 'divide-slate-800/80'}`}>
@@ -890,19 +992,73 @@ export function AttendanceTracker({
                             <span className="font-bold block">{record.studentName}</span>
                             <span className="text-[10px] text-slate-450 font-semibold">{student?.level || 'Math Fingers'}</span>
                           </td>
-                          <td className="p-3 text-center">
-                            <span className={`inline-block px-2 py-1.5 rounded-lg text-[10px] font-bold ${
-                              record.status === 'present' 
-                                ? 'bg-emerald-600/15 text-emerald-500' 
-                                : record.status === 'permission'
-                                ? 'bg-amber-500/15 text-amber-500'
-                                : 'bg-rose-500/15 text-rose-500'
-                            }`}>
-                              {record.status === 'present' ? 'HADIR' : record.status === 'permission' ? 'IZIN' : 'ABSEN'}
-                            </span>
+                          <td className="p-3">
+                            <div className="flex justify-center gap-1">
+                              {(['present', 'permission', 'absent'] as const).map((st) => {
+                                const active = record.status === st;
+                                const colors = {
+                                  present: active ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-emerald-500 hover:bg-emerald-500/10',
+                                  permission: active ? 'bg-amber-500 text-white' : 'text-slate-400 hover:text-amber-500 hover:bg-amber-500/10',
+                                  absent: active ? 'bg-rose-500 text-white' : 'text-slate-400 hover:text-rose-500 hover:bg-rose-500/10'
+                                };
+                                const labels = {
+                                  present: 'H',
+                                  permission: 'I',
+                                  absent: 'A'
+                                };
+                                const titles = {
+                                  present: 'Hadir',
+                                  permission: 'Izin',
+                                  absent: 'Alpa'
+                                };
+                                return (
+                                  <button
+                                    key={st}
+                                    type="button"
+                                    title={titles[st]}
+                                    onClick={async () => {
+                                      if (onUpdateSingleAttendance) {
+                                        await onUpdateSingleAttendance(record.id, { status: st });
+                                      }
+                                    }}
+                                    className={`w-6 h-6 rounded-md text-[10px] font-black transition flex items-center justify-center cursor-pointer ${colors[st]}`}
+                                  >
+                                    {labels[st]}
+                                  </button>
+                                );
+                              })}
+                            </div>
                           </td>
-                          <td className="p-3 italic text-slate-400">
-                            {record.notes || '-'}
+                          <td className="p-3">
+                            <input
+                              type="text"
+                              value={record.notes || ''}
+                              onChange={async (e) => {
+                                if (onUpdateSingleAttendance) {
+                                  await onUpdateSingleAttendance(record.id, { notes: e.target.value });
+                                }
+                              }}
+                              placeholder="Tambah catatan..."
+                              className={`w-full px-2 py-1 text-xs border rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                                isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950 border-slate-800 text-white'
+                              }`}
+                            />
+                          </td>
+                          <td className="p-3 text-center">
+                            {onDeleteSingleAttendance && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (confirm(`Hapus rekor absensi ${record.studentName} pada tanggal ${viewingDetailDate}?`)) {
+                                    await onDeleteSingleAttendance(record.id);
+                                  }
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition cursor-pointer"
+                                title="Hapus Rekor"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
                           </td>
                         </tr>
                       );
@@ -910,6 +1066,56 @@ export function AttendanceTracker({
                   </tbody>
                 </table>
               </div>
+
+              {/* Add Missing Student Option */}
+              {(() => {
+                const recordsForDate = attendance.filter(a => a.date === viewingDetailDate);
+                const missingStudents = activeStudents.filter(s => !recordsForDate.some(r => r.studentId === s.id));
+                if (missingStudents.length === 0) return null;
+                return (
+                  <div className={`p-4 rounded-xl border mt-4 ${
+                    isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/20 border-slate-800'
+                  }`}>
+                    <h4 className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Tambah Siswa Ke Sesi Ini</h4>
+                    <div className="flex gap-2">
+                      <select
+                        id="select-add-missing-student"
+                        className={`flex-1 px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                          isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+                        }`}
+                      >
+                        <option value="">-- Pilih Siswa --</option>
+                        {missingStudents.map(s => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const selectEl = document.getElementById('select-add-missing-student') as HTMLSelectElement | null;
+                          if (selectEl && selectEl.value) {
+                            const studentId = selectEl.value;
+                            const student = students.find(s => s.id === studentId);
+                            if (student) {
+                              await onAddAttendanceBatch([{
+                                studentId: student.id,
+                                studentName: student.name,
+                                date: viewingDetailDate!,
+                                status: 'present',
+                                notes: ''
+                              }]);
+                              selectEl.value = "";
+                            }
+                          }
+                        }}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition cursor-pointer whitespace-nowrap"
+                      >
+                        Tambah Kehadiran
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className={`p-4 border-t flex justify-between items-center ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/40 border-slate-800'}`}>

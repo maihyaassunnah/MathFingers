@@ -436,6 +436,51 @@ export function useMathFinggersDb() {
     }
   };
 
+  const deleteAttendanceByDate = async (date: string) => {
+    const updated = attendance.filter(a => a.date !== date);
+    setAttendance(updated);
+    saveLocalData('attendance', updated);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        const { error } = await supabase.from('attendance').delete().eq('date', date);
+        if (error) throw error;
+      } catch (err) {
+        console.error('Failed to delete attendance by date in Supabase:', err);
+      }
+    }
+  };
+
+  const deleteSingleAttendance = async (id: string) => {
+    const updated = attendance.filter(a => a.id !== id);
+    setAttendance(updated);
+    saveLocalData('attendance', updated);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        const { error } = await supabase.from('attendance').delete().eq('id', id);
+        if (error) throw error;
+      } catch (err) {
+        console.error('Failed to delete single attendance in Supabase:', err);
+      }
+    }
+  };
+
+  const updateSingleAttendance = async (id: string, updatedFields: Partial<Attendance>) => {
+    const updated = attendance.map(a => a.id === id ? { ...a, ...updatedFields } : a);
+    setAttendance(updated);
+    saveLocalData('attendance', updated);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        const { error } = await supabase.from('attendance').update(updatedFields).eq('id', id);
+        if (error) throw error;
+      } catch (err) {
+        console.error('Failed to update attendance in Supabase:', err);
+      }
+    }
+  };
+
   // --- TEACHER NOTE WRITERS ---
   const addTeacherNote = async (noteData: Omit<TeacherNote, 'id'>) => {
     const newNote = {
@@ -981,6 +1026,9 @@ export function useMathFinggersDb() {
     updateStudent,
     deleteStudent,
     addAttendanceBatch,
+    deleteAttendanceByDate,
+    deleteSingleAttendance,
+    updateSingleAttendance,
     addTeacherNote,
     addTeacherNotesBatch,
     deleteTeacherNote,

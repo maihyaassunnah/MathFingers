@@ -108,6 +108,9 @@ export default function App() {
     updateStudent,
     deleteStudent,
     addAttendanceBatch,
+    deleteAttendanceByDate,
+    deleteSingleAttendance,
+    updateSingleAttendance,
     addTeacherNote,
     addTeacherNotesBatch,
     deleteTeacherNote,
@@ -329,6 +332,9 @@ export default function App() {
             students={filteredStudents} 
             attendance={filteredAttendance} 
             onAddAttendanceBatch={handleAddAttendanceBatch} 
+            onDeleteAttendanceByDate={deleteAttendanceByDate}
+            onDeleteSingleAttendance={deleteSingleAttendance}
+            onUpdateSingleAttendance={updateSingleAttendance}
             theme={theme}
           />
         );

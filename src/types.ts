@@ -15,6 +15,7 @@ export interface Student {
   createdAt: number;
   activeMaterialId?: string;
   branch?: string; // e.g. "Pusat", "Bandung"
+  hariLes?: string; // e.g. "Hari Jum'at dan Ahad", "Sabtu dan Ahad"
 }
 
 export interface Attendance {

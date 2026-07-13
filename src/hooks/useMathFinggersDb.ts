@@ -285,10 +285,16 @@ export function useMathFinggersDb() {
 
   // --- STUDENT WRITERS ---
   const addStudent = async (studentData: Omit<Student, 'id' | 'createdAt'>) => {
+    let uCode = '';
+    do {
+      uCode = Math.floor(10000 + Math.random() * 90000).toString();
+    } while (students.some(s => s.uniqueCode === uCode));
+
     const newStudent: Student = {
       ...studentData,
       id: generateId(),
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      uniqueCode: uCode
     };
 
     const updated = [newStudent, ...students];

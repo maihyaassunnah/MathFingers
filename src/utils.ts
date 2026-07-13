@@ -105,3 +105,20 @@ export function getAdminAvatar(admin: { name?: string; username: string; avatarU
   const index = charSum % thematicPresets.length;
   return thematicPresets[index];
 }
+
+// Helper to get or generate a deterministic 5-digit unique code for a student
+export function getStudentUniqueCode(student: Student): string {
+  if (student.uniqueCode && student.uniqueCode.trim().length === 5) {
+    return student.uniqueCode;
+  }
+  
+  // Fallback: generate a stable, deterministic 5-digit number from student ID
+  let hash = 0;
+  const idStr = student.id || '';
+  for (let i = 0; i < idStr.length; i++) {
+    hash = idStr.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const code = Math.abs(hash % 90000) + 10000; // ensures 5 digits between 10000 and 99999
+  return code.toString();
+}
+

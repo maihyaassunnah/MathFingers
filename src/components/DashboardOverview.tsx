@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Student, Attendance, Invoice, Grade, AppSettings, DashboardTask } from '../types';
-import { formatRupiah, getWhatsAppLink } from '../utils';
+import { formatRupiah, getWhatsAppLink, getStudentUniqueCode } from '../utils';
 import { MathFingerLogo } from './MathFingerLogo';
 import { 
   Users, 
@@ -307,7 +307,12 @@ export function DashboardOverview({
                     }`}
                   >
                     <div className="min-w-0 flex-1 pr-2">
-                      <div className={`font-bold truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</div>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className={`font-bold truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</span>
+                        <span className="text-[9px] font-mono font-bold px-1 py-0.2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15 rounded shrink-0">
+                          #{getStudentUniqueCode(student)}
+                        </span>
+                      </div>
                       <div className="text-[10px] text-slate-400 truncate mt-0.5">{student.level}</div>
                     </div>
                     

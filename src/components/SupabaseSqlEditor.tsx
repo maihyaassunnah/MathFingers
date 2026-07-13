@@ -131,7 +131,8 @@ CREATE TABLE IF NOT EXISTS students (
   "createdAt" BIGINT NOT NULL,
   "activeMaterialId" TEXT,
   branch TEXT DEFAULT 'Pusat',
-  "hariLes" TEXT DEFAULT 'Hari Jum\'at dan Ahad'
+  "hariLes" TEXT DEFAULT 'Hari Jumat dan Ahad',
+  "uniqueCode" TEXT
 );
 
 -- Enable RLS & Bypass for simple usage
@@ -294,7 +295,7 @@ ON CONFLICT (username) DO NOTHING;
 
 INSERT INTO hari_les (id, name, description, "createdAt", branch)
 VALUES
-  ('hl-1', 'Hari Jum''at dan Ahad', 'Jadwal les hari Jumat sore dan Minggu pagi', 1719600000, 'Pusat'),
+  ('hl-1', 'Hari Jumat dan Ahad', 'Jadwal les hari Jumat sore dan Minggu pagi', 1719600000, 'Pusat'),
   ('hl-2', 'Sabtu dan Ahad', 'Jadwal les akhir pekan (Weekend)', 1719600000, 'Pusat'),
   ('hl-3', 'Senin dan Kamis', 'Jadwal les tengah pekan (Weekday)', 1719600000, 'Pusat'),
   ('hl-4', 'Selasa dan Jumat', 'Jadwal les alternatif tengah pekan', 1719600000, 'Pusat')
@@ -314,7 +315,9 @@ ON CONFLICT (id) DO NOTHING;`,
   "jenisKelamin" TEXT DEFAULT 'Laki-laki',
   alamat TEXT,
   "createdAt" BIGINT NOT NULL,
-  branch TEXT DEFAULT 'Pusat'
+  branch TEXT DEFAULT 'Pusat',
+  "hariLes" TEXT DEFAULT 'Hari Jumat dan Ahad',
+  "uniqueCode" TEXT
 );`,
 
     attendance: `CREATE TABLE IF NOT EXISTS attendance (
@@ -393,7 +396,7 @@ CREATE POLICY "Allow public read-write for demo" ON hari_les FOR ALL USING (true
 
 INSERT INTO hari_les (id, name, description, "createdAt", branch)
 VALUES
-  ('hl-1', 'Hari Jum''at dan Ahad', 'Jadwal les hari Jumat sore dan Minggu pagi', 1719600000, 'Pusat'),
+  ('hl-1', 'Hari Jumat dan Ahad', 'Jadwal les hari Jumat sore dan Minggu pagi', 1719600000, 'Pusat'),
   ('hl-2', 'Sabtu dan Ahad', 'Jadwal les akhir pekan (Weekend)', 1719600000, 'Pusat'),
   ('hl-3', 'Senin dan Kamis', 'Jadwal les tengah pekan (Weekday)', 1719600000, 'Pusat'),
   ('hl-4', 'Selasa dan Jumat', 'Jadwal les alternatif tengah pekan', 1719600000, 'Pusat')
@@ -460,7 +463,8 @@ ALTER TABLE students ADD COLUMN IF NOT EXISTS "jenisPaket" TEXT DEFAULT '4P';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "jenisKelamin" TEXT DEFAULT 'Laki-laki';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS alamat TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "activeMaterialId" TEXT;
-ALTER TABLE students ADD COLUMN IF NOT EXISTS "hariLes" TEXT DEFAULT 'Hari Jum\'at dan Ahad';
+ALTER TABLE students ADD COLUMN IF NOT EXISTS "hariLes" TEXT DEFAULT 'Hari Jumat dan Ahad';
+ALTER TABLE students ADD COLUMN IF NOT EXISTS "uniqueCode" TEXT;
 ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS "avatarUrl" TEXT;
 
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "amountPaid" NUMERIC DEFAULT 0;
@@ -504,7 +508,7 @@ CREATE POLICY "Allow public read-write for demo" ON hari_les FOR ALL USING (true
 
 INSERT INTO hari_les (id, name, description, "createdAt", branch)
 VALUES
-  ('hl-1', 'Hari Jum''at dan Ahad', 'Jadwal les hari Jumat sore dan Minggu pagi', 1719600000, 'Pusat'),
+  ('hl-1', 'Hari Jumat dan Ahad', 'Jadwal les hari Jumat sore dan Minggu pagi', 1719600000, 'Pusat'),
   ('hl-2', 'Sabtu dan Ahad', 'Jadwal les akhir pekan (Weekend)', 1719600000, 'Pusat'),
   ('hl-3', 'Senin dan Kamis', 'Jadwal les tengah pekan (Weekday)', 1719600000, 'Pusat'),
   ('hl-4', 'Selasa dan Jumat', 'Jadwal les alternatif tengah pekan', 1719600000, 'Pusat')
@@ -518,7 +522,8 @@ ALTER TABLE students ADD COLUMN IF NOT EXISTS "jenisPaket" TEXT DEFAULT '4P';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "jenisKelamin" TEXT DEFAULT 'Laki-laki';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS alamat TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Pusat';
-ALTER TABLE students ADD COLUMN IF NOT EXISTS "hariLes" TEXT DEFAULT 'Hari Jum\'at dan Ahad';`,
+ALTER TABLE students ADD COLUMN IF NOT EXISTS "hariLes" TEXT DEFAULT 'Hari Jumat dan Ahad';
+ALTER TABLE students ADD COLUMN IF NOT EXISTS "uniqueCode" TEXT;`,
 
     invoices: `-- Melengkapi kolom invoice untuk Cicilan & Riwayat Pembayaran & Kategori Pembayaran
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "amountPaid" NUMERIC DEFAULT 0;
@@ -564,7 +569,7 @@ CREATE POLICY "Allow public read-write for demo" ON hari_les FOR ALL USING (true
 
 INSERT INTO hari_les (id, name, description, "createdAt", branch)
 VALUES
-  ('hl-1', 'Hari Jum''at dan Ahad', 'Jadwal les hari Jumat sore dan Minggu pagi', 1719600000, 'Pusat'),
+  ('hl-1', 'Hari Jumat dan Ahad', 'Jadwal les hari Jumat sore dan Minggu pagi', 1719600000, 'Pusat'),
   ('hl-2', 'Sabtu dan Ahad', 'Jadwal les akhir pekan (Weekend)', 1719600000, 'Pusat'),
   ('hl-3', 'Senin dan Kamis', 'Jadwal les tengah pekan (Weekday)', 1719600000, 'Pusat'),
   ('hl-4', 'Selasa dan Jumat', 'Jadwal les alternatif tengah pekan', 1719600000, 'Pusat')

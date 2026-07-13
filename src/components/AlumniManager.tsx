@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { Student } from '../types';
 import { Search, GraduationCap, RefreshCw, Trash2, Edit3, Award, Calendar, Phone, MapPin, ShieldAlert } from 'lucide-react';
+import { getStudentUniqueCode } from '../utils';
 
 interface AlumniManagerProps {
   students: Student[];
@@ -229,7 +230,12 @@ export function AlumniManager({
 
                 {/* Name */}
                 <div>
-                  <h3 className="font-extrabold text-lg tracking-tight truncate pr-6">{student.name}</h3>
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <h3 className="font-extrabold text-lg tracking-tight truncate">{student.name}</h3>
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15">
+                      #{getStudentUniqueCode(student)}
+                    </span>
+                  </div>
                   <p className="text-xs text-slate-400 font-semibold mt-0.5 flex items-center gap-1">
                     <span>Wali:</span>
                     <span className={isLight ? 'text-slate-650' : 'text-slate-300'}>{student.parentName}</span>

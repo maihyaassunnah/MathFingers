@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Student, LearningMaterial, Attendance, TeacherNote, Grade } from '../types';
-import { formatWhatsAppPhone, getWhatsAppLink } from '../utils';
+import { formatWhatsAppPhone, getWhatsAppLink, getStudentUniqueCode } from '../utils';
 import { generateStudentPDFReport } from '../utils/pdfGenerator';
 import { Search, Plus, UserPlus, Phone, Calendar, BookOpen, Trash2, Edit2, CheckCircle, XCircle, AlertCircle, Download, Award, Video, ExternalLink, Eye, X, Image as ImageIcon, Check } from 'lucide-react';
 
@@ -49,7 +49,7 @@ export function StudentManager({
   const [jenisKelamin, setJenisKelamin] = useState<'Laki-laki' | 'Perempuan'>('Laki-laki');
   const [alamat, setAlamat] = useState('');
   const [activeMaterialId, setActiveMaterialId] = useState('');
-  const [hariLes, setHariLes] = useState('Hari Jum\'at dan Ahad');
+  const [hariLes, setHariLes] = useState('Hari Jumat dan Ahad');
 
   // Curriculum overlay modal states
   const [selectedCurriculumMat, setSelectedCurriculumMat] = useState<LearningMaterial | null>(null);
@@ -81,7 +81,7 @@ export function StudentManager({
     setJenisKelamin('Laki-laki');
     setAlamat('');
     setActiveMaterialId('');
-    setHariLes('Hari Jum\'at dan Ahad');
+    setHariLes('Hari Jumat dan Ahad');
     setIsFormOpen(true);
   };
 
@@ -100,7 +100,7 @@ export function StudentManager({
     setJenisKelamin(student.jenisKelamin || 'Laki-laki');
     setAlamat(student.alamat || '');
     setActiveMaterialId(student.activeMaterialId || '');
-    setHariLes(student.hariLes || 'Hari Jum\'at dan Ahad');
+    setHariLes(student.hariLes || 'Hari Jumat dan Ahad');
     setIsFormOpen(true);
   };
 
@@ -444,7 +444,7 @@ export function StudentManager({
                     isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
                   }`}
                 >
-                  <option value="Hari Jum'at dan Ahad" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Hari Jum'at dan Ahad</option>
+                  <option value="Hari Jumat dan Ahad" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Hari Jumat dan Ahad</option>
                   <option value="Sabtu dan Ahad" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Sabtu dan Ahad</option>
                 </select>
               </div>
@@ -531,6 +531,9 @@ export function StudentManager({
                       <td className="p-4">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={`font-semibold text-sm sm:text-base ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</span>
+                          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15" title="Nomor Unik Siswa">
+                            #{getStudentUniqueCode(student)}
+                          </span>
                           {student.jenisKelamin && (
                             <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
                               student.jenisKelamin === 'Laki-laki' 

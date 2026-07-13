@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Student, Attendance } from '../types';
-import { getWhatsAppLink } from '../utils';
+import { getWhatsAppLink, getStudentUniqueCode } from '../utils';
 import { Calendar, Check, X, ShieldAlert, Send, Save, CheckSquare, Clock, Search, Users, TrendingUp, ChevronDown, MessageSquare, Trash2 } from 'lucide-react';
 
 interface AttendanceTrackerProps {
@@ -56,9 +56,9 @@ export function AttendanceTracker({
     if (!student.hariLes) return true; // Show by default if no schedule specified (backward compatibility)
     
     const dateObj = new Date(selectedDate);
-    const day = dateObj.getDay(); // 0 = Sunday (Ahad), 5 = Friday (Jum'at), 6 = Saturday (Sabtu)
+    const day = dateObj.getDay(); // 0 = Sunday (Ahad), 5 = Friday (Jumat), 6 = Saturday (Sabtu)
     
-    if (student.hariLes === "Hari Jum'at dan Ahad") {
+    if (student.hariLes === "Hari Jumat dan Ahad") {
       return day === 5 || day === 0;
     }
     if (student.hariLes === "Sabtu dan Ahad") {
@@ -504,6 +504,9 @@ export function AttendanceTracker({
                               </div>
                               <div className="flex items-center gap-2 flex-wrap mt-0.5">
                                 <h4 className={`font-bold text-sm truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</h4>
+                                <span className="text-[9px] font-mono font-bold px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15">
+                                  #{getStudentUniqueCode(student)}
+                                </span>
                                 {student.hariLes && (
                                   <span className="text-[9px] px-1.5 py-0.5 rounded font-medium bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/15">
                                     📅 {student.hariLes}
@@ -565,6 +568,9 @@ export function AttendanceTracker({
                               </div>
                               <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
                                 <h3 className={`font-bold text-base ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</h3>
+                                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15">
+                                  #{getStudentUniqueCode(student)}
+                                </span>
                                 {student.hariLes && (
                                   <span className="text-[10px] px-2 py-0.5 rounded font-medium bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/15">
                                     📅 {student.hariLes}
@@ -862,8 +868,13 @@ export function AttendanceTracker({
                         filteredStudentRecap.map(({ student, total, present, permission, absent, rate, lastFive }) => (
                           <tr key={student.id} className={`transition ${isLight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/10'}`}>
                             <td className="p-3">
-                              <span className={`font-bold block ${isLight ? 'text-slate-850' : 'text-white'}`}>{student.name}</span>
-                              <span className="text-[10px] text-slate-400 font-medium">Wali: {student.parentName}</span>
+                              <div className="flex items-center gap-2">
+                                <span className={`font-bold block ${isLight ? 'text-slate-850' : 'text-white'}`}>{student.name}</span>
+                                <span className="text-[9px] font-mono font-bold px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15">
+                                  #{getStudentUniqueCode(student)}
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-slate-400 font-medium block">Wali: {student.parentName}</span>
                             </td>
                             <td className="p-3 text-center font-bold font-mono text-slate-400">{total}x</td>
                             <td className="p-3 text-center font-semibold font-mono">

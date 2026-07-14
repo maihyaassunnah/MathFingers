@@ -99,8 +99,8 @@ export function DashboardOverview({
 
     const getAssignedBranch = (recordBranch: string | undefined | null) => {
       const b = recordBranch || 'Pusat';
-      if (b === 'Pusat' && !actualBranchNames.includes('Pusat') && branches.length > 0) {
-        return branches[0].name;
+      if (isPusatMissing && (b === 'Pusat' || !actualBranchNames.includes(b))) {
+        return branches[0]?.name || 'Pusat';
       }
       return b;
     };

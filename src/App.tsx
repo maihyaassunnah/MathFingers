@@ -83,7 +83,7 @@ export default function App() {
       
       // Ensure activeTab is always one of the valid tabs for the role
       const validTabIds = currentUser.role === 'super_admin'
-        ? ['overview', 'branches_mgmt', 'settings', 'supabase_sql']
+        ? ['overview', 'branches_mgmt', 'students', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'grades', 'simulator', 'report', 'supabase_sql', 'settings']
         : ['overview', 'students', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'grades', 'report', 'settings', 'simulator'];
       if (!validTabIds.includes(activeTab)) {
         setActiveTab('overview');
@@ -137,35 +137,48 @@ export default function App() {
     importBackupData
   } = useMathFinggersDb();
 
+  // Safe branch resolver that maps legacy or unspecified branches ('Pusat' or null) 
+  // to the first active branch if there's no branch named 'Pusat' in the database.
+  const getAssignedBranch = (recordBranch: string | undefined | null) => {
+    const b = recordBranch || 'Pusat';
+    const actualBranchNames = branches.map(br => br.name);
+    // Only map if the branch is 'Pusat' and 'Pusat' is not in the list of branches
+    if (b === 'Pusat' && !actualBranchNames.includes('Pusat') && branches.length > 0) {
+      return branches[0].name;
+    }
+    return b;
+  };
+
   // Active branch automatic filtering for all data types
   const filteredStudents = students.filter(s => {
-    const b = s.branch || 'Pusat';
+    const b = getAssignedBranch(s.branch);
     return activeBranch === 'all' || b === activeBranch;
   });
 
   const filteredAttendance = attendance.filter(a => {
-    const b = a.branch || 'Pusat';
+    const b = getAssignedBranch(a.branch);
     return activeBranch === 'all' || b === activeBranch;
   });
 
   const filteredNotes = notes.filter(n => {
-    const b = n.branch || 'Pusat';
+    const b = getAssignedBranch(n.branch);
     return activeBranch === 'all' || b === activeBranch;
   });
 
   const filteredInvoices = invoices.filter(i => {
-    const b = i.branch || 'Pusat';
+    const b = getAssignedBranch(i.branch);
     return activeBranch === 'all' || b === activeBranch;
   });
 
   const filteredGrades = grades.filter(g => {
-    const b = g.branch || 'Pusat';
+    const b = getAssignedBranch(g.branch);
     return activeBranch === 'all' || b === activeBranch;
   });
 
   // Multi-branch aware writers
   const handleAddStudent = async (studentData: any) => {
-    const branchToSet = studentData.branch || (currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : 'Pusat'));
+    const defaultBranchName = branches[0]?.name || 'Pusat';
+    const branchToSet = studentData.branch || (currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName));
     await addStudent({
       ...studentData,
       branch: branchToSet
@@ -173,7 +186,8 @@ export default function App() {
   };
 
   const handleAddAttendanceBatch = async (records: any[]) => {
-    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : 'Pusat');
+    const defaultBranchName = branches[0]?.name || 'Pusat';
+    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
     const updatedRecords = records.map(r => ({
       ...r,
       branch: branchToSet
@@ -182,7 +196,8 @@ export default function App() {
   };
 
   const handleAddTeacherNote = async (noteData: any) => {
-    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : 'Pusat');
+    const defaultBranchName = branches[0]?.name || 'Pusat';
+    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
     await addTeacherNote({
       ...noteData,
       branch: branchToSet
@@ -190,7 +205,8 @@ export default function App() {
   };
 
   const handleAddTeacherNotesBatch = async (notesData: any[]) => {
-    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : 'Pusat');
+    const defaultBranchName = branches[0]?.name || 'Pusat';
+    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
     const updatedNotes = notesData.map(n => ({
       ...n,
       branch: branchToSet
@@ -199,7 +215,8 @@ export default function App() {
   };
 
   const handleCreateInvoice = async (invoiceData: any) => {
-    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : 'Pusat');
+    const defaultBranchName = branches[0]?.name || 'Pusat';
+    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
     await createInvoice({
       ...invoiceData,
       branch: branchToSet
@@ -207,7 +224,8 @@ export default function App() {
   };
 
   const handleAddGrade = async (gradeData: any) => {
-    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : 'Pusat');
+    const defaultBranchName = branches[0]?.name || 'Pusat';
+    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
     await addGrade({
       ...gradeData,
       branch: branchToSet
@@ -218,10 +236,20 @@ export default function App() {
 
   const navigationItems = isSuperAdmin
     ? [
-        { id: 'overview', name: 'Statistik', icon: Home },
+        { id: 'overview', name: 'Statistik & Dashboard', icon: Home },
         { id: 'branches_mgmt', name: 'Data Cabang & Admin', icon: Building },
-        { id: 'settings', name: 'Pengaturan & Backup', icon: Settings },
+        { id: 'students', name: 'Siswa', icon: Users },
+        { id: 'alumni', name: 'Alumni / Lulus', icon: GraduationCap },
+        { id: 'attendance', name: 'Absensi', icon: CheckSquare },
+        { id: 'notes', name: 'Jurnal Guru', icon: FileText },
+        { id: 'journal_history', name: 'Riwayat Jurnal', icon: History },
+        { id: 'spp', name: 'Pembayaran SPP', icon: Receipt },
+        { id: 'spp_history', name: 'Riwayat Pembayaran', icon: History },
+        { id: 'grades', name: 'Input Nilai', icon: Award },
+        { id: 'simulator', name: 'Kurikulum', icon: BookOpen },
+        { id: 'report', name: 'Rapor Perkembangan', icon: TrendingUp },
         { id: 'supabase_sql', name: 'SQL Editor Supabase', icon: Database },
+        { id: 'settings', name: 'Pengaturan & Backup', icon: Settings },
       ]
     : [
         { id: 'overview', name: 'Dashboard Cabang', icon: Home },
@@ -577,28 +605,7 @@ export default function App() {
           )}
         </div>
 
-        {/* Branch Switcher (Desktop - Super Admin Only) */}
-        {currentUser?.role === 'super_admin' && (
-          <div className={`px-6 py-3 border-b flex flex-col gap-1.5 text-xs ${
-            theme === 'dark' ? 'bg-slate-950/20 border-slate-800/60' : 'bg-slate-50/50 border-slate-200'
-          }`}>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cabang Aktif</span>
-            <select
-              value={activeBranch}
-              onChange={(e) => setActiveBranch(e.target.value)}
-              className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-bold focus:outline-none border transition ${
-                theme === 'dark' 
-                  ? 'bg-slate-900 border-slate-800 text-slate-200 focus:border-slate-700' 
-                  : 'bg-white border-slate-200 text-slate-700 focus:border-slate-300'
-              }`}
-            >
-              <option value="all">Semua Cabang (Super)</option>
-              {branches.map(b => (
-                <option key={b.id} value={b.name}>{b.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
+
 
         {/* Desktop Navigation Links */}
         <nav className="flex-1 p-4 space-y-1">
@@ -796,6 +803,19 @@ export default function App() {
               >
                 <Home size={20} className={activeTab === 'overview' ? 'scale-110 transition-transform' : 'transition-transform'} />
                 <span className="text-[10px] font-bold tracking-tight">Statistik</span>
+              </button>
+
+              {/* Siswa Shortcut */}
+              <button
+                onClick={() => setActiveTab('students')}
+                className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
+                  activeTab === 'students' 
+                    ? getAccentTextClass() 
+                    : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
+                }`}
+              >
+                <Users size={20} className={activeTab === 'students' ? 'scale-110 transition-transform' : 'transition-transform'} />
+                <span className="text-[10px] font-bold tracking-tight">Siswa</span>
               </button>
 
               {/* Data Cabang Shortcut */}

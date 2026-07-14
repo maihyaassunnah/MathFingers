@@ -54,7 +54,7 @@ export function StudentManager({
   const [alamat, setAlamat] = useState('');
   const [activeMaterialId, setActiveMaterialId] = useState('');
   const [hariLes, setHariLes] = useState('Hari Jumat dan Ahad');
-  const [branch, setBranch] = useState('Pusat');
+  const [branch, setBranch] = useState(() => branches[0]?.name || 'Pusat');
 
   // Curriculum overlay modal states
   const [selectedCurriculumMat, setSelectedCurriculumMat] = useState<LearningMaterial | null>(null);
@@ -87,7 +87,7 @@ export function StudentManager({
     setAlamat('');
     setActiveMaterialId('');
     setHariLes('Hari Jumat dan Ahad');
-    setBranch('Pusat');
+    setBranch(branches[0]?.name || 'Pusat');
     setIsFormOpen(true);
   };
 

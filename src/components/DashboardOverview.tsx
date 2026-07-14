@@ -94,21 +94,32 @@ export function DashboardOverview({
     const attendanceSource = allAttendance.length > 0 ? allAttendance : attendance;
     const invoicesSource = allInvoices.length > 0 ? allInvoices : invoices;
 
-    const branchStudents = studentsSource.filter(s => (s.branch || 'Pusat') === branch.name);
+    const actualBranchNames = branches.map(br => br.name);
+    const isPusatMissing = !actualBranchNames.includes('Pusat');
+
+    const getAssignedBranch = (recordBranch: string | undefined | null) => {
+      const b = recordBranch || 'Pusat';
+      if (b === 'Pusat' && !actualBranchNames.includes('Pusat') && branches.length > 0) {
+        return branches[0].name;
+      }
+      return b;
+    };
+
+    const branchStudents = studentsSource.filter(s => getAssignedBranch(s.branch) === branch.name);
     const activeCount = branchStudents.filter(s => s.status === 'active').length;
     const alumniCount = branchStudents.filter(s => s.status === 'alumni').length;
 
-    const branchGrades = gradesSource.filter(g => (g.branch || 'Pusat') === branch.name);
+    const branchGrades = gradesSource.filter(g => getAssignedBranch(g.branch) === branch.name);
     const avgScore = branchGrades.length > 0
       ? Math.round(branchGrades.reduce((sum, g) => sum + g.score, 0) / branchGrades.length)
       : 0;
 
-    const todayAttendance = attendanceSource.filter(a => a.date === todayStr && (a.branch || 'Pusat') === branch.name);
+    const todayAttendance = attendanceSource.filter(a => a.date === todayStr && getAssignedBranch(a.branch) === branch.name);
     const attendanceRate = todayAttendance.length > 0
       ? Math.round((todayAttendance.filter(a => a.status === 'present').length / todayAttendance.length) * 100)
       : null;
 
-    const branchInvoices = invoicesSource.filter(i => (i.branch || 'Pusat') === branch.name && i.status === 'unpaid');
+    const branchInvoices = invoicesSource.filter(i => getAssignedBranch(i.branch) === branch.name && i.status === 'unpaid');
     const unpaidAmount = branchInvoices.reduce((sum, inv) => sum + inv.amount, 0);
 
     return {

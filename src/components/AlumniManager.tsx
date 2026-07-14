@@ -235,6 +235,9 @@ export function AlumniManager({
                     <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15">
                       #{getStudentUniqueCode(student)}
                     </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 border border-fuchsia-500/15" title="Cabang Bimbingan">
+                      🏢 {student.branch || 'Pusat'}
+                    </span>
                   </div>
                   <p className="text-xs text-slate-400 font-semibold mt-0.5 flex items-center gap-1">
                     <span>Wali:</span>

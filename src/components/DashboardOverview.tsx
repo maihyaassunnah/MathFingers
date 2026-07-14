@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Student, Attendance, Invoice, Grade, AppSettings, DashboardTask } from '../types';
+import { Student, Attendance, Invoice, Grade, AppSettings, DashboardTask, Branch } from '../types';
 import { formatRupiah, getWhatsAppLink, getStudentUniqueCode } from '../utils';
 import { MathFingerLogo } from './MathFingerLogo';
 import { 
@@ -16,7 +16,10 @@ import {
   Trash2, 
   CheckCircle, 
   Send,
-  CalendarDays
+  CalendarDays,
+  Building,
+  TrendingUp,
+  FileText
 } from 'lucide-react';
 
 interface DashboardOverviewProps {
@@ -31,6 +34,12 @@ interface DashboardOverviewProps {
   onDeleteDashboardTask: (id: string) => void;
   onNavigate: (tab: string) => void;
   theme?: string;
+  isSuperAdmin?: boolean;
+  branches?: Branch[];
+  allStudents?: Student[];
+  allAttendance?: Attendance[];
+  allInvoices?: Invoice[];
+  allGrades?: Grade[];
 }
 
 export function DashboardOverview({ 
@@ -44,7 +53,13 @@ export function DashboardOverview({
   onToggleDashboardTask,
   onDeleteDashboardTask,
   onNavigate, 
-  theme = 'dark' 
+  theme = 'dark',
+  isSuperAdmin = false,
+  branches = [],
+  allStudents = [],
+  allAttendance = [],
+  allInvoices = [],
+  allGrades = []
 }: DashboardOverviewProps) {
   const [newTaskText, setNewTaskText] = useState('');
 
@@ -71,6 +86,42 @@ export function DashboardOverview({
   const recentGrades = grades.slice(0, 3);
 
   const isLight = theme === 'light';
+
+  // Calculate per-branch statistics for super admins
+  const branchStats = branches.map(branch => {
+    const studentsSource = allStudents.length > 0 ? allStudents : students;
+    const gradesSource = allGrades.length > 0 ? allGrades : grades;
+    const attendanceSource = allAttendance.length > 0 ? allAttendance : attendance;
+    const invoicesSource = allInvoices.length > 0 ? allInvoices : invoices;
+
+    const branchStudents = studentsSource.filter(s => (s.branch || 'Pusat') === branch.name);
+    const activeCount = branchStudents.filter(s => s.status === 'active').length;
+    const alumniCount = branchStudents.filter(s => s.status === 'alumni').length;
+
+    const branchGrades = gradesSource.filter(g => (g.branch || 'Pusat') === branch.name);
+    const avgScore = branchGrades.length > 0
+      ? Math.round(branchGrades.reduce((sum, g) => sum + g.score, 0) / branchGrades.length)
+      : 0;
+
+    const todayAttendance = attendanceSource.filter(a => a.date === todayStr && (a.branch || 'Pusat') === branch.name);
+    const attendanceRate = todayAttendance.length > 0
+      ? Math.round((todayAttendance.filter(a => a.status === 'present').length / todayAttendance.length) * 100)
+      : null;
+
+    const branchInvoices = invoicesSource.filter(i => (i.branch || 'Pusat') === branch.name && i.status === 'unpaid');
+    const unpaidAmount = branchInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+
+    return {
+      name: branch.name,
+      totalStudents: branchStudents.length,
+      activeCount,
+      alumniCount,
+      avgScore,
+      attendanceRate,
+      unpaidCount: branchInvoices.length,
+      unpaidAmount
+    };
+  });
 
   // Sesi Belajar Hari Ini (Attendance status of active students)
   const learningSessions = activeStudents.map(student => {
@@ -184,6 +235,125 @@ export function DashboardOverview({
           </svg>
         </div>
       </div>
+
+      {/* Super Admin: Statistik Keseluruhan Cabang */}
+      {isSuperAdmin && (
+        <div className={`p-5 sm:p-6 rounded-3xl border shadow-sm space-y-4 ${
+          isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+        }`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-4 mb-2 gap-2">
+            <div className="flex items-center gap-2">
+              <Building className={getAccentTextClass()} size={22} />
+              <div>
+                <h3 className={`text-lg font-bold font-sans ${isLight ? 'text-slate-800' : 'text-white'}`}>
+                  Statistik Keseluruhan per Cabang
+                </h3>
+                <p className="text-xs text-slate-550 dark:text-slate-400 font-medium">Data real-time agregat untuk setiap cabang bimbingan Math Fingers</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-550/10 text-emerald-600 dark:text-emerald-400 border border-emerald-550/15 text-xs font-semibold self-start sm:self-center">
+              <Sparkles size={12} className="animate-pulse text-emerald-500" />
+              <span>Multi-Cabang Aktif</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {branchStats.map((b) => (
+              <div 
+                key={b.name} 
+                className={`p-4 rounded-2xl border transition hover:shadow-md ${
+                  isLight ? 'bg-slate-50/50 border-slate-200' : 'bg-[#0f172a] border-slate-800'
+                }`}
+              >
+                <div className="flex items-center justify-between border-b pb-2.5 mb-3 border-slate-150 dark:border-slate-800/80">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                    <h4 className={`font-extrabold text-sm ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>{b.name}</h4>
+                  </div>
+                  <span className="text-[10px] uppercase font-bold text-slate-500">Cabang</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3.5 text-xs">
+                  <div>
+                    <span className="text-slate-500 text-[10px] font-semibold block">Siswa Aktif / Alumni</span>
+                    <span className={`font-extrabold text-base ${isLight ? 'text-slate-800' : 'text-white'}`}>
+                      {b.activeCount} <span className="text-xs text-slate-500 font-normal">/ {b.alumniCount}</span>
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-[10px] font-semibold block">Rata-rata Skor</span>
+                    <span className="font-extrabold text-base text-sky-500 dark:text-sky-400">
+                      {b.avgScore} <span className="text-[10px] font-normal text-slate-500">/ 100</span>
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-[10px] font-semibold block">Presensi Hari Ini</span>
+                    <span className={`font-extrabold text-sm ${b.attendanceRate !== null ? 'text-emerald-500' : 'text-slate-400'}`}>
+                      {b.attendanceRate !== null ? `${b.attendanceRate}%` : 'Belum absen'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-[10px] font-semibold block">Tunggakan SPP</span>
+                    <span className={`font-bold text-xs block truncate ${b.unpaidAmount > 0 ? 'text-rose-500 font-extrabold' : 'text-emerald-500'}`}>
+                      {b.unpaidAmount > 0 ? formatRupiah(b.unpaidAmount) : 'Lunas'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Detailed summary comparison table */}
+          <div className="overflow-x-auto rounded-2xl border border-slate-150 dark:border-slate-800/80 mt-4">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className={`${isLight ? 'bg-slate-50 text-slate-600' : 'bg-[#0f172a] text-slate-450'} border-b border-slate-150 dark:border-slate-800/80 font-bold`}>
+                  <th className="p-3">Nama Cabang</th>
+                  <th className="p-3 text-center">Siswa Aktif</th>
+                  <th className="p-3 text-center">Alumni / Lulus</th>
+                  <th className="p-3 text-center">Rata-rata Kuis</th>
+                  <th className="p-3 text-center">Presensi Hari Ini</th>
+                  <th className="p-3 text-right">Tunggakan SPP</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-150 dark:divide-slate-800/60">
+                {branchStats.map((b) => (
+                  <tr key={b.name} className={`transition ${isLight ? 'hover:bg-slate-50/50' : 'hover:bg-slate-800/10'}`}>
+                    <td className="p-3 font-bold flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                      <span className={isLight ? 'text-slate-800' : 'text-slate-200'}>{b.name}</span>
+                    </td>
+                    <td className="p-3 text-center font-semibold">{b.activeCount} siswa</td>
+                    <td className="p-3 text-center text-slate-400">{b.alumniCount} lulus</td>
+                    <td className="p-3 text-center font-mono font-bold text-sky-500">{b.avgScore}/100</td>
+                    <td className="p-3 text-center font-bold">
+                      {b.attendanceRate !== null ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/10">
+                          {b.attendanceRate}%
+                        </span>
+                      ) : (
+                        <span className="text-slate-500 italic text-[11px]">Belum absen</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-right font-mono font-bold">
+                      {b.unpaidAmount > 0 ? (
+                        <span className="text-rose-500 bg-rose-500/5 px-2 py-0.5 rounded border border-rose-500/10 inline-block text-[11px]">
+                          {formatRupiah(b.unpaidAmount)} ({b.unpaidCount} tagihan)
+                        </span>
+                      ) : (
+                        <span className="text-emerald-500 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10 inline-block text-[11px]">
+                          Lunas
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
  
       {/* Metrics bento-grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">

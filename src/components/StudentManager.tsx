@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Student, LearningMaterial, Attendance, TeacherNote, Grade } from '../types';
+import { Student, LearningMaterial, Attendance, TeacherNote, Grade, Branch } from '../types';
 import { formatWhatsAppPhone, getWhatsAppLink, getStudentUniqueCode } from '../utils';
 import { generateStudentPDFReport } from '../utils/pdfGenerator';
 import { Search, Plus, UserPlus, Phone, Calendar, BookOpen, Trash2, Edit2, CheckCircle, XCircle, AlertCircle, Download, Award, Video, ExternalLink, Eye, X, Image as ImageIcon, Check } from 'lucide-react';
@@ -14,6 +14,8 @@ interface StudentManagerProps {
   onUpdateStudent: (id: string, data: Partial<Student>) => Promise<void>;
   onDeleteStudent: (id: string) => Promise<void>;
   theme?: string;
+  isSuperAdmin?: boolean;
+  branches?: Branch[];
 }
 
 export function StudentManager({ 
@@ -25,7 +27,9 @@ export function StudentManager({
   onAddStudent, 
   onUpdateStudent, 
   onDeleteStudent,
-  theme = 'dark'
+  theme = 'dark',
+  isSuperAdmin = false,
+  branches = []
 }: StudentManagerProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [levelFilter, setLevelFilter] = useState('All');
@@ -50,6 +54,7 @@ export function StudentManager({
   const [alamat, setAlamat] = useState('');
   const [activeMaterialId, setActiveMaterialId] = useState('');
   const [hariLes, setHariLes] = useState('Hari Jumat dan Ahad');
+  const [branch, setBranch] = useState('Pusat');
 
   // Curriculum overlay modal states
   const [selectedCurriculumMat, setSelectedCurriculumMat] = useState<LearningMaterial | null>(null);
@@ -82,6 +87,7 @@ export function StudentManager({
     setAlamat('');
     setActiveMaterialId('');
     setHariLes('Hari Jumat dan Ahad');
+    setBranch('Pusat');
     setIsFormOpen(true);
   };
 
@@ -101,6 +107,7 @@ export function StudentManager({
     setAlamat(student.alamat || '');
     setActiveMaterialId(student.activeMaterialId || '');
     setHariLes(student.hariLes || 'Hari Jumat dan Ahad');
+    setBranch(student.branch || 'Pusat');
     setIsFormOpen(true);
   };
 
@@ -125,7 +132,8 @@ export function StudentManager({
       jenisKelamin,
       alamat,
       activeMaterialId: activeMaterialId || '',
-      hariLes
+      hariLes,
+      branch
     };
 
     if (editingStudent) {
@@ -449,6 +457,29 @@ export function StudentManager({
                 </select>
               </div>
 
+              {(isSuperAdmin || branches.length > 0) && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Cabang Bimbingan *</label>
+                  <select
+                    value={branch}
+                    onChange={(e) => setBranch(e.target.value)}
+                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                      isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
+                    }`}
+                  >
+                    {branches.length > 0 ? (
+                      branches.map((b) => (
+                        <option key={b.id} value={b.name} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>
+                          {b.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="Pusat" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Pusat</option>
+                    )}
+                  </select>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Alamat Rumah</label>
                 <textarea
@@ -553,6 +584,9 @@ export function StudentManager({
                               📅 {student.hariLes}
                             </span>
                           )}
+                          <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 border border-fuchsia-500/15" title="Cabang Bimbingan">
+                            🏢 {student.branch || 'Pusat'}
+                          </span>
                         </div>
 
                         {/* Lahir & Alamat Sejajar */}

@@ -79,7 +79,8 @@ export function SupabaseSqlEditor({
       const updatedTables = await Promise.all(
         tables.map(async (tableName) => {
           try {
-            const { error } = await supabase.from(tableName).select('id').limit(1);
+            // Using generic select() without column constraint is safe for all tables (e.g. admin_users has primary key 'username', not 'id')
+            const { error } = await supabase.from(tableName).select().limit(1);
             if (error) {
               return { name: tableName, status: 'error' as const, errorMsg: error.message };
             }

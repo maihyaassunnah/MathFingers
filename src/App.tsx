@@ -218,7 +218,7 @@ export default function App() {
 
   const navigationItems = isSuperAdmin
     ? [
-        { id: 'overview', name: 'Statistik & Ringkasan', icon: Home },
+        { id: 'overview', name: 'Statistik', icon: Home },
         { id: 'branches_mgmt', name: 'Data Cabang & Admin', icon: Building },
         { id: 'settings', name: 'Pengaturan & Backup', icon: Settings },
         { id: 'supabase_sql', name: 'SQL Editor Supabase', icon: Database },
@@ -301,6 +301,12 @@ export default function App() {
             onDeleteDashboardTask={deleteDashboardTask}
             onNavigate={(tab) => setActiveTab(tab)} 
             theme={theme}
+            isSuperAdmin={isSuperAdmin}
+            branches={branches}
+            allStudents={students}
+            allAttendance={attendance}
+            allInvoices={invoices}
+            allGrades={grades}
           />
         );
       case 'students':
@@ -315,6 +321,8 @@ export default function App() {
             onUpdateStudent={updateStudent} 
             onDeleteStudent={deleteStudent} 
             theme={theme}
+            isSuperAdmin={isSuperAdmin}
+            branches={branches}
           />
         );
       case 'alumni':
@@ -464,6 +472,12 @@ export default function App() {
             onDeleteDashboardTask={deleteDashboardTask}
             onNavigate={(tab) => setActiveTab(tab)} 
             theme={theme} 
+            isSuperAdmin={isSuperAdmin}
+            branches={branches}
+            allStudents={students}
+            allAttendance={attendance}
+            allInvoices={invoices}
+            allGrades={grades}
           />
         );
     }

@@ -212,20 +212,149 @@ export function useMathFinggersDb() {
   };
 
   const loadAllFromLocalStorage = () => {
-    setStudents(getLocalData<Student[]>('students', []));
-    setAttendance(getLocalData<Attendance[]>('attendance', []));
-    setNotes(getLocalData<TeacherNote[]>('notes', []));
-    setInvoices(getLocalData<Invoice[]>('invoices', []));
-    setGrades(getLocalData<Grade[]>('grades', []));
-    setBranches(getLocalData<Branch[]>('branches', [
+    const defaultBranches = [
       { id: 'br-1', name: 'Pusat', address: 'Kantor Pusat Math Fingers', phone: '08123456789', createdAt: 1719600000 },
       { id: 'br-2', name: 'Bandung', address: 'Cabang Kota Bandung', phone: '08123456780', createdAt: 1719600000 }
-    ]));
-    setAdminUsers(getLocalData<AdminUser[]>('admin_users', [
+    ];
+    setBranches(getLocalData<Branch[]>('branches', defaultBranches));
+
+    const defaultAdminUsers: AdminUser[] = [
       { username: 'febrianti', name: 'Febrianti Dewi', role: 'super_admin', branch: 'Pusat', avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200' },
       { username: 'dewi', name: 'Dewi Safitri', role: 'branch_admin', branch: 'Pusat', avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200' },
       { username: 'les_bandung', name: 'Les Privat Bandung', role: 'branch_admin', branch: 'Bandung', avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200' }
-    ]));
+    ];
+    setAdminUsers(getLocalData<AdminUser[]>('admin_users', defaultAdminUsers));
+
+    const localStudents = getLocalData<Student[]>('students', []);
+    if (localStudents.length === 0) {
+      const seedStudents: Student[] = [
+        {
+          id: 'std-1',
+          name: 'Budi Santoso',
+          parentName: 'Hermawan Santoso',
+          parentPhone: '6281234567891',
+          joinDate: '2026-03-01',
+          level: 'Level 1 : Penjumlahan & Pengurangan Angka Satuan',
+          status: 'active',
+          keterangan: 'Anak sangat antusias belajar menggunakan jari.',
+          tempatLahir: 'Jakarta',
+          tanggalLahir: '2018-05-12',
+          jenisPaket: '4P',
+          jenisKelamin: 'Laki-laki',
+          alamat: 'Jl. Merdeka No. 12, Jakarta Pusat',
+          createdAt: Date.now() - 90 * 24 * 3600 * 1000,
+          branch: 'Pusat'
+        },
+        {
+          id: 'std-2',
+          name: 'Siti Aminah',
+          parentName: 'Rahmat Amin',
+          parentPhone: '6281234567892',
+          joinDate: '2026-04-15',
+          level: 'Level 2 : Penjumlahan & Pengurangan Angka Puluhan',
+          status: 'active',
+          keterangan: 'Sudah menguasai simbol jari 1-10.',
+          tempatLahir: 'Jakarta',
+          tanggalLahir: '2017-09-20',
+          jenisPaket: '8P',
+          jenisKelamin: 'Perempuan',
+          alamat: 'Komp. Harapan Indah Blok C3/5',
+          createdAt: Date.now() - 45 * 24 * 3600 * 1000,
+          branch: 'Pusat'
+        },
+        {
+          id: 'std-3',
+          name: 'Robert Chen',
+          parentName: 'Chen Kok Liang',
+          parentPhone: '6281234567893',
+          joinDate: '2026-05-10',
+          level: 'Level 3 : Penjumlahan & Pengurangan Angka Ratusan',
+          status: 'active',
+          keterangan: 'Sangat cepat dalam kuis perkalian dasar.',
+          tempatLahir: 'Bandung',
+          tanggalLahir: '2016-01-15',
+          jenisPaket: '4P',
+          jenisKelamin: 'Laki-laki',
+          alamat: 'Dago Elok Blok B2 No. 8, Bandung',
+          createdAt: Date.now() - 30 * 24 * 3600 * 1000,
+          branch: 'Bandung'
+        },
+        {
+          id: 'std-4',
+          name: 'Amanda Putri',
+          parentName: 'Sri Amanda',
+          parentPhone: '6281234567894',
+          joinDate: '2025-01-10',
+          level: 'Level 7 : Perkalian Angka Puluhan & Puluhan',
+          status: 'alumni',
+          keterangan: 'Lulus dengan predikat Sangat Baik.',
+          tempatLahir: 'Jakarta',
+          tanggalLahir: '2015-11-12',
+          jenisPaket: '8P',
+          jenisKelamin: 'Perempuan',
+          alamat: 'Jl. Kemang Raya No. 42',
+          createdAt: Date.now() - 500 * 24 * 3600 * 1000,
+          branch: 'Pusat'
+        },
+        {
+          id: 'std-5',
+          name: 'Kevin Wijaya',
+          parentName: 'Hendra Wijaya',
+          parentPhone: '6281234567895',
+          joinDate: '2026-06-01',
+          level: 'Level Dasar: Pengenalan Simbol Jari',
+          status: 'active',
+          keterangan: 'Baru mendaftar les privat.',
+          tempatLahir: 'Bandung',
+          tanggalLahir: '2019-12-05',
+          jenisPaket: '4P',
+          jenisKelamin: 'Laki-laki',
+          alamat: 'Pasteur Residence No. 10B, Bandung',
+          createdAt: Date.now() - 10 * 24 * 3600 * 1000,
+          branch: 'Bandung'
+        }
+      ];
+      saveLocalData('students', seedStudents);
+      setStudents(seedStudents);
+
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const seedAttendance: Attendance[] = [
+        { id: 'att-1', studentId: 'std-1', studentName: 'Budi Santoso', date: todayStr, status: 'present', notes: 'Hadir belajar penjumlahan 1 digit', branch: 'Pusat' },
+        { id: 'att-2', studentId: 'std-2', studentName: 'Siti Aminah', date: todayStr, status: 'present', notes: 'Hadir sangat tepat waktu', branch: 'Pusat' },
+        { id: 'att-3', studentId: 'std-3', studentName: 'Robert Chen', date: todayStr, status: 'permission', notes: 'Izin karena acara keluarga', branch: 'Bandung' }
+      ];
+      saveLocalData('attendance', seedAttendance);
+      setAttendance(seedAttendance);
+
+      const seedNotes: TeacherNote[] = [
+        { id: 'note-1', studentId: 'std-1', studentName: 'Budi Santoso', date: todayStr, topic: 'Penjumlahan Jari', content: 'Budi sudah mampu menjumlahkan angka satuan 1-9 dengan kalkulasi jari cepat.', teacherName: 'Febrianti Dewi', branch: 'Pusat' },
+        { id: 'note-2', studentId: 'std-2', studentName: 'Siti Aminah', date: todayStr, topic: 'Angka Puluhan', content: 'Siti belajar kalkulasi puluhan menggunakan dua tangan lengkap.', teacherName: 'Dewi Safitri', branch: 'Pusat' }
+      ];
+      saveLocalData('notes', seedNotes);
+      setNotes(seedNotes);
+
+      const seedInvoices: Invoice[] = [
+        { id: 'inv-1', invoiceNo: 'INV/MF/202607/001', studentId: 'std-1', studentName: 'Budi Santoso', amount: 250000, month: 'Juli 2026', dueDate: todayStr, status: 'paid', paidAt: todayStr, paymentMethod: 'Transfer', createdAt: Date.now() - 5 * 24 * 3600 * 1000, amountPaid: 250000, installments: [], category: 'spp', branch: 'Pusat' },
+        { id: 'inv-2', invoiceNo: 'INV/MF/202607/002', studentId: 'std-2', studentName: 'Siti Aminah', amount: 250000, month: 'Juli 2026', dueDate: todayStr, status: 'unpaid', createdAt: Date.now() - 5 * 24 * 3600 * 1000, amountPaid: 0, installments: [], category: 'spp', branch: 'Pusat' },
+        { id: 'inv-3', invoiceNo: 'INV/MF/202607/003', studentId: 'std-3', studentName: 'Robert Chen', amount: 300000, month: 'Juli 2026', dueDate: todayStr, status: 'unpaid', createdAt: Date.now() - 5 * 24 * 3600 * 1000, amountPaid: 0, installments: [], category: 'spp', branch: 'Bandung' }
+      ];
+      saveLocalData('invoices', seedInvoices);
+      setInvoices(seedInvoices);
+
+      const seedGrades: Grade[] = [
+        { id: 'grd-1', studentId: 'std-1', studentName: 'Budi Santoso', date: todayStr, topic: 'Kuis Satuan Cepat', score: 95, speedSeconds: 12, notes: 'Sangat akurat dan sigap!', branch: 'Pusat' },
+        { id: 'grd-2', studentId: 'std-2', studentName: 'Siti Aminah', date: todayStr, topic: 'Kuis Puluhan Dasar', score: 88, speedSeconds: 18, notes: 'Fokus perlu ditingkatkan sedikit lagi.', branch: 'Pusat' },
+        { id: 'grd-3', studentId: 'std-3', studentName: 'Robert Chen', date: todayStr, topic: 'Kuis Kelulusan Level 2', score: 92, speedSeconds: 14, notes: 'Lulus dengan predikat istimewa.', branch: 'Bandung' }
+      ];
+      saveLocalData('grades', seedGrades);
+      setGrades(seedGrades);
+    } else {
+      setStudents(localStudents);
+      setAttendance(getLocalData<Attendance[]>('attendance', []));
+      setNotes(getLocalData<TeacherNote[]>('notes', []));
+      setInvoices(getLocalData<Invoice[]>('invoices', []));
+      setGrades(getLocalData<Grade[]>('grades', []));
+    }
     
     const localMats = getLocalData<LearningMaterial[]>('materials', []);
     const hasOldLocal = (SEED_MATERIALS.length > 0 && localMats.length === 0) || localMats.some(m => !m.capaianPembelajaran);

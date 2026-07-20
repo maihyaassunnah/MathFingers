@@ -83,7 +83,7 @@ export default function App() {
       
       // Ensure activeTab is always one of the valid tabs for the role
       const validTabIds = currentUser.role === 'super_admin'
-        ? ['overview', 'branches_mgmt', 'settings', 'supabase_sql']
+        ? ['overview', 'students', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'grades', 'report', 'branches_mgmt', 'supabase_sql', 'settings', 'simulator']
         : ['overview', 'students', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'grades', 'report', 'settings', 'simulator'];
       if (!validTabIds.includes(activeTab)) {
         setActiveTab('overview');
@@ -237,9 +237,19 @@ export default function App() {
   const navigationItems = isSuperAdmin
     ? [
         { id: 'overview', name: 'Statistik', icon: Home },
+        { id: 'students', name: 'Siswa', icon: Users },
+        { id: 'alumni', name: 'Alumni / Lulus', icon: GraduationCap },
+        { id: 'attendance', name: 'Absensi', icon: CheckSquare },
+        { id: 'notes', name: 'Jurnal Guru', icon: FileText },
+        { id: 'journal_history', name: 'Riwayat Jurnal', icon: History },
+        { id: 'spp', name: 'Pembayaran SPP', icon: Receipt },
+        { id: 'spp_history', name: 'Riwayat Pembayaran', icon: History },
+        { id: 'grades', name: 'Input Nilai', icon: Award },
+        { id: 'simulator', name: 'Kurikulum', icon: BookOpen },
+        { id: 'report', name: 'Rapor Perkembangan', icon: TrendingUp },
         { id: 'branches_mgmt', name: 'Data Cabang & Admin', icon: Building },
-        { id: 'settings', name: 'Pengaturan & Backup', icon: Settings },
         { id: 'supabase_sql', name: 'SQL Editor Supabase', icon: Database },
+        { id: 'settings', name: 'Pengaturan & Backup', icon: Settings },
       ]
     : [
         { id: 'overview', name: 'Dashboard Cabang', icon: Home },

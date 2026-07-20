@@ -647,89 +647,93 @@ export function DashboardOverview({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Left column: Action shortcuts */}
-        <div className={`hidden md:block p-5 rounded-2xl border shadow-sm space-y-4 lg:col-span-1 ${
-          isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-        }`}>
-          <h3 className={`font-bold text-base ${isLight ? 'text-slate-850' : 'text-white'}`}>Menu Navigasi Pintar</h3>
-          <div className="grid grid-cols-1 gap-2">
-            
-            <button
-              onClick={() => onNavigate('students')}
-              className={`flex items-center justify-between p-3 rounded-xl border transition text-left group ${
-                isLight ? 'border-slate-100 bg-slate-50 hover:bg-slate-100/70' : 'border-slate-800/80 bg-slate-950/30 hover:bg-slate-800/40'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <div className={`w-8 h-8 border text-emerald-500 rounded-lg flex items-center justify-center font-bold text-xs ${
-                  isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-                }`}>1</div>
-                <div>
-                  <div className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Kelola Data Siswa</div>
-                  <div className="text-[10px] text-slate-400">Pendaftaran & info wali murid</div>
+        {!isSuperAdmin && (
+          <div className={`hidden md:block p-5 rounded-2xl border shadow-sm space-y-4 lg:col-span-1 ${
+            isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+          }`}>
+            <h3 className={`font-bold text-base ${isLight ? 'text-slate-850' : 'text-white'}`}>Menu Navigasi Pintar</h3>
+            <div className="grid grid-cols-1 gap-2">
+              
+              <button
+                onClick={() => onNavigate('students')}
+                className={`flex items-center justify-between p-3 rounded-xl border transition text-left group ${
+                  isLight ? 'border-slate-100 bg-slate-50 hover:bg-slate-100/70' : 'border-slate-800/80 bg-slate-950/30 hover:bg-slate-800/40'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-8 h-8 border text-emerald-500 rounded-lg flex items-center justify-center font-bold text-xs ${
+                    isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+                  }`}>1</div>
+                  <div>
+                    <div className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Kelola Data Siswa</div>
+                    <div className="text-[10px] text-slate-400">Pendaftaran & info wali murid</div>
+                  </div>
                 </div>
-              </div>
-              <Play size={12} className="text-slate-550 group-hover:text-emerald-550" />
-            </button>
+                <Play size={12} className="text-slate-550 group-hover:text-emerald-550" />
+              </button>
 
-            <button
-              onClick={() => onNavigate('attendance')}
-              className={`flex items-center justify-between p-3 rounded-xl border transition text-left group ${
-                isLight ? 'border-slate-100 bg-slate-50 hover:bg-slate-100/70' : 'border-slate-800/80 bg-slate-950/30 hover:bg-slate-800/40'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <div className={`w-8 h-8 border text-emerald-500 rounded-lg flex items-center justify-center font-bold text-xs ${
-                  isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-                }`}>2</div>
-                <div>
-                  <div className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Cetak Presensi Hari Ini</div>
-                  <div className="text-[10px] text-slate-400">Absen & kirim report harian</div>
+              <button
+                onClick={() => onNavigate('attendance')}
+                className={`flex items-center justify-between p-3 rounded-xl border transition text-left group ${
+                  isLight ? 'border-slate-100 bg-slate-50 hover:bg-slate-100/70' : 'border-slate-800/80 bg-slate-950/30 hover:bg-slate-800/40'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-8 h-8 border text-emerald-500 rounded-lg flex items-center justify-center font-bold text-xs ${
+                    isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+                  }`}>2</div>
+                  <div>
+                    <div className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Cetak Presensi Hari Ini</div>
+                    <div className="text-[10px] text-slate-400">Absen & kirim report harian</div>
+                  </div>
                 </div>
-              </div>
-              <Play size={12} className="text-slate-550 group-hover:text-emerald-550" />
-            </button>
+                <Play size={12} className="text-slate-550 group-hover:text-emerald-550" />
+              </button>
 
-            <button
-              onClick={() => onNavigate('spp')}
-              className={`flex items-center justify-between p-3 rounded-xl border transition text-left group ${
-                isLight ? 'border-slate-100 bg-slate-50 hover:bg-slate-100/70' : 'border-slate-800/80 bg-slate-950/30 hover:bg-slate-800/40'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <div className={`w-8 h-8 border text-emerald-500 rounded-lg flex items-center justify-center font-bold text-xs ${
-                  isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-                }`}>3</div>
-                <div>
-                  <div className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Keuangan & Tagihan SPP</div>
-                  <div className="text-[10px] text-slate-400">Lunas/Belum bayar & kuitansi</div>
+              <button
+                onClick={() => onNavigate('spp')}
+                className={`flex items-center justify-between p-3 rounded-xl border transition text-left group ${
+                  isLight ? 'border-slate-100 bg-slate-50 hover:bg-slate-100/70' : 'border-slate-800/80 bg-slate-950/30 hover:bg-slate-800/40'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-8 h-8 border text-emerald-500 rounded-lg flex items-center justify-center font-bold text-xs ${
+                    isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+                  }`}>3</div>
+                  <div>
+                    <div className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Keuangan & Tagihan SPP</div>
+                    <div className="text-[10px] text-slate-400">Lunas/Belum bayar & kuitansi</div>
+                  </div>
                 </div>
-              </div>
-              <Play size={12} className="text-slate-550 group-hover:text-emerald-550" />
-            </button>
+                <Play size={12} className="text-slate-550 group-hover:text-emerald-550" />
+              </button>
 
-            <button
-              onClick={() => onNavigate('grades')}
-              className={`flex items-center justify-between p-3 rounded-xl border transition text-left group ${
-                isLight ? 'border-slate-100 bg-slate-50 hover:bg-slate-100/70' : 'border-slate-800/80 bg-slate-950/30 hover:bg-slate-800/40'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <div className={`w-8 h-8 border text-emerald-500 rounded-lg flex items-center justify-center font-bold text-xs ${
-                  isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-                }`}>4</div>
-                <div>
-                  <div className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Input Hasil Evaluasi & Nilai</div>
-                  <div className="text-[10px] text-slate-400">Kecepatan refleks & akurasi uji</div>
+              <button
+                onClick={() => onNavigate('grades')}
+                className={`flex items-center justify-between p-3 rounded-xl border transition text-left group ${
+                  isLight ? 'border-slate-100 bg-slate-50 hover:bg-slate-100/70' : 'border-slate-800/80 bg-slate-950/30 hover:bg-slate-800/40'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-8 h-8 border text-emerald-500 rounded-lg flex items-center justify-center font-bold text-xs ${
+                    isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+                  }`}>4</div>
+                  <div>
+                    <div className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Input Hasil Evaluasi & Nilai</div>
+                    <div className="text-[10px] text-slate-400">Kecepatan refleks & akurasi uji</div>
+                  </div>
                 </div>
-              </div>
-              <Play size={12} className="text-slate-550 group-hover:text-emerald-550" />
-            </button>
+                <Play size={12} className="text-slate-550 group-hover:text-emerald-550" />
+              </button>
 
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Right column: Recent activity feed */}
-        <div className={`p-5 rounded-2xl border shadow-sm lg:col-span-2 flex flex-col justify-between ${
+        <div className={`p-5 rounded-2xl border shadow-sm ${
+          isSuperAdmin ? 'lg:col-span-3' : 'lg:col-span-2'
+        } flex flex-col justify-between ${
           isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
         }`}>
           <div>

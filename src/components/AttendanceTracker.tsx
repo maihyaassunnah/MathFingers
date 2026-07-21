@@ -33,7 +33,7 @@ export function AttendanceTracker({
   const [attendanceMap, setAttendanceMap] = useState<Record<string, { status: 'present' | 'absent' | 'permission'; notes: string }>>({});
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [expandedStudentNotes, setExpandedStudentNotes] = useState<Record<string, boolean>>({});
-  const [filterBySchedule, setFilterBySchedule] = useState(true);
+  const [filterBySchedule, setFilterBySchedule] = useState(false);
 
   const toggleNotes = (studentId: string) => {
     setExpandedStudentNotes(prev => ({
@@ -294,17 +294,7 @@ export function AttendanceTracker({
             <div>
               <h3 className={`font-semibold text-base ${isLight ? 'text-slate-850' : 'text-white'}`}>Pilih Tanggal Sesi Bimbingan</h3>
               <div className="flex flex-col sm:flex-row sm:items-center gap-x-2.5 gap-y-1 mt-0.5">
-                <p className="text-xs text-slate-400">Siswa aktif otomatis disaring sesuai jadwal.</p>
-                <span className="hidden sm:inline text-slate-500 text-xs">•</span>
-                <label className="flex items-center gap-1.5 text-xs font-semibold text-emerald-500 dark:text-emerald-400 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={filterBySchedule}
-                    onChange={(e) => setFilterBySchedule(e.target.checked)}
-                    className="rounded border-emerald-500/30 text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5 bg-emerald-500/5 cursor-pointer"
-                  />
-                  <span>Filter Jadwal Hari Les</span>
-                </label>
+                <p className="text-xs text-slate-400">Siswa aktif terdaftar bimbingan privat.</p>
               </div>
             </div>
             
@@ -507,11 +497,6 @@ export function AttendanceTracker({
                                 <span className="text-[9px] font-mono font-bold px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15">
                                   #{getStudentUniqueCode(student)}
                                 </span>
-                                {student.hariLes && (
-                                  <span className="text-[9px] px-1.5 py-0.5 rounded font-medium bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/15">
-                                    📅 {student.hariLes}
-                                  </span>
-                                )}
                               </div>
                             </div>
 
@@ -571,11 +556,6 @@ export function AttendanceTracker({
                                 <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15">
                                   #{getStudentUniqueCode(student)}
                                 </span>
-                                {student.hariLes && (
-                                  <span className="text-[10px] px-2 py-0.5 rounded font-medium bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/15">
-                                    📅 {student.hariLes}
-                                  </span>
-                                )}
                               </div>
                               <p className="text-slate-400 text-xs mt-0.5">Wali: {student.parentName} ({student.parentPhone})</p>
                             </div>

@@ -443,20 +443,6 @@ export function StudentManager({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Pilihan Hari Les *</label>
-                <select
-                  value={hariLes}
-                  onChange={(e) => setHariLes(e.target.value)}
-                  className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                    isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
-                  }`}
-                >
-                  <option value="Hari Jumat dan Ahad" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Hari Jumat dan Ahad</option>
-                  <option value="Sabtu dan Ahad" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Sabtu dan Ahad</option>
-                </select>
-              </div>
-
               {(isSuperAdmin || branches.length > 0) && (
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Cabang Bimbingan *</label>
@@ -577,11 +563,6 @@ export function StudentManager({
                           {student.jenisPaket && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/15">
                               {student.jenisPaket}
-                            </span>
-                          )}
-                          {student.hariLes && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/15">
-                              📅 {student.hariLes}
                             </span>
                           )}
                           <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 border border-fuchsia-500/15" title="Cabang Bimbingan">

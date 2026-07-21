@@ -472,6 +472,8 @@ export default function App() {
             invoices={filteredInvoices}
             dashboardTasks={dashboardTasks}
             onImportBackup={importBackupData}
+            currentUser={currentUser}
+            activeBranch={activeBranch}
           />
         );
       case 'supabase_sql':

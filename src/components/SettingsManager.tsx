@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { AppSettings } from '../types';
+import { jsPDF } from 'jspdf';
+import { AppSettings, AdminUser } from '../types';
 import { 
   Settings, 
   Receipt, 
@@ -17,7 +18,15 @@ import {
   Trash2,
   Database,
   FileJson,
-  AlertCircle
+  AlertCircle,
+  FileText,
+  Users,
+  GraduationCap,
+  CheckSquare,
+  Award,
+  History,
+  FileSpreadsheet,
+  FileDown
 } from 'lucide-react';
 
 interface SettingsManagerProps {
@@ -31,6 +40,8 @@ interface SettingsManagerProps {
   invoices?: any[];
   dashboardTasks?: any[];
   onImportBackup?: (backupPayload: any) => Promise<{ success: boolean; error?: string }>;
+  currentUser?: AdminUser | null;
+  activeBranch?: string;
 }
 
 const ACCENT_COLORS = [
@@ -52,7 +63,9 @@ export function SettingsManager({
   notes = [],
   invoices = [],
   dashboardTasks = [],
-  onImportBackup
+  onImportBackup,
+  currentUser = null,
+  activeBranch = 'all'
 }: SettingsManagerProps) {
   const [bankName, setBankName] = useState(settings.bankName);
   const [bankAccountNo, setBankAccountNo] = useState(settings.bankAccountNo);
@@ -228,6 +241,327 @@ export function SettingsManager({
       case 'sky': return 'focus:ring-sky-500 focus:border-sky-500';
       case 'emerald':
       default: return 'focus:ring-emerald-500 focus:border-emerald-500';
+    }
+  };
+
+  // HELPER FUNCTIONS FOR EXPORT SYSTEM
+  const truncate = (str: any, len: number) => {
+    if (str === null || str === undefined) return '';
+    const stringified = String(str);
+    return stringified.length > len ? stringified.substring(0, len) + '...' : stringified;
+  };
+
+  const formatRupiahValue = (amount: number) => {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount);
+  };
+
+  const getBranchText = () => {
+    if (currentUser?.role === 'branch_admin') {
+      return currentUser.branch;
+    }
+    return activeBranch === 'all' ? 'Semua Cabang' : activeBranch;
+  };
+
+  const downloadCSV = (filename: string, headers: string[], rows: string[][]) => {
+    const content = [
+      headers.map(h => `"${h.replace(/"/g, '""')}"`).join(','),
+      ...rows.map(row => row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+    
+    const blob = new Blob(['\uFEFF' + content], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const drawPdfHeader = (doc: any, title: string, branchName: string) => {
+    doc.setFillColor(16, 185, 129); // Emerald Green
+    doc.rect(0, 0, 210, 30, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("MATH FINGERS SYSTEM", 15, 12);
+    
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text("Sistem Manajemen Jaritmatika Indonesia • Berhitung Cepat & Akurat Tanpa Alat", 15, 18);
+    doc.text(`Laporan: ${title} | Cabang: ${branchName} | Tanggal: ${new Date().toLocaleDateString('id-ID')}`, 15, 23);
+  };
+
+  const exportToPDFTable = (
+    title: string,
+    headers: string[],
+    widths: number[],
+    rows: string[][],
+    branchName: string
+  ) => {
+    const doc = new jsPDF();
+    let y = 42;
+    const pageHeight = 297;
+    const margin = 15;
+    const rowHeight = 8;
+    const fontSize = 8;
+    
+    drawPdfHeader(doc, title, branchName);
+    
+    doc.setFillColor(241, 245, 249);
+    doc.rect(margin, y - 5, 180, rowHeight, 'F');
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(fontSize);
+    doc.setTextColor(51, 65, 85);
+    
+    headers.forEach((h, i) => {
+      doc.text(h, widths[i], y);
+    });
+    doc.line(margin, y + 2, 195, y + 2);
+    
+    y += rowHeight;
+    
+    doc.setFont("Helvetica", "normal");
+    doc.setTextColor(71, 85, 105);
+    
+    rows.forEach((row) => {
+      if (y > pageHeight - 20) {
+        doc.addPage();
+        y = 42;
+        drawPdfHeader(doc, title, branchName);
+        
+        doc.setFillColor(241, 245, 249);
+        doc.rect(margin, y - 5, 180, rowHeight, 'F');
+        doc.setFont("Helvetica", "bold");
+        headers.forEach((h, i) => {
+          doc.text(h, widths[i], y);
+        });
+        doc.line(margin, y + 2, 195, y + 2);
+        y += rowHeight;
+        doc.setFont("Helvetica", "normal");
+        doc.setTextColor(71, 85, 105);
+      }
+      
+      row.forEach((cell, i) => {
+        let maxChar = 18;
+        if (i === 1 || i === 2) maxChar = 22;
+        if (i === 4) maxChar = 26;
+        const text = truncate(cell || '', maxChar);
+        doc.text(text, widths[i], y);
+      });
+      
+      doc.setDrawColor(241, 245, 249);
+      doc.line(margin, y + 2, 195, y + 2);
+      
+      y += rowHeight;
+    });
+    
+    doc.save(`${title.toLowerCase().replace(/\s+/g, '_')}_${branchName.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+  };
+
+  const handleExportSiswa = (format: 'pdf' | 'excel') => {
+    const branchName = getBranchText();
+    const activeStudents = students.filter(s => s.status !== 'alumni');
+    
+    if (format === 'excel') {
+      const headers = ["No", "Kode Siswa", "Nama Siswa", "Orang Tua/Wali", "No. WhatsApp", "Paket", "Level Bimbingan", "Jenis Kelamin", "Alamat", "Cabang"];
+      const rows = activeStudents.map((s, idx) => [
+        (idx + 1).toString(),
+        s.uniqueCode || s.id.substring(0, 5).toUpperCase(),
+        s.name || '',
+        s.parentName || '',
+        s.parentPhone || '',
+        s.jenisPaket || 'Reguler',
+        s.level || '',
+        s.jenisKelamin || '',
+        s.alamat || '',
+        s.branch || 'Pusat'
+      ]);
+      downloadCSV(`data_siswa_aktif_${branchName.toLowerCase().replace(/\s+/g, '_')}.csv`, headers, rows);
+    } else {
+      const headers = ["No", "Kode", "Nama Siswa", "Orang Tua/Wali", "No. WhatsApp", "Paket", "Level Bimbingan"];
+      const widths = [15, 23, 40, 80, 115, 145, 160];
+      const rows = activeStudents.map((s, idx) => [
+        (idx + 1).toString(),
+        s.uniqueCode || s.id.substring(0, 5).toUpperCase(),
+        s.name || '',
+        s.parentName || '',
+        s.parentPhone || '',
+        s.jenisPaket || 'Reguler',
+        s.level || ''
+      ]);
+      exportToPDFTable("Data Siswa Aktif", headers, widths, rows, branchName);
+    }
+  };
+
+  const handleExportAlumni = (format: 'pdf' | 'excel') => {
+    const branchName = getBranchText();
+    const alumniList = students.filter(s => s.status === 'alumni');
+    
+    if (format === 'excel') {
+      const headers = ["No", "Kode Siswa", "Nama Alumni", "Orang Tua/Wali", "No. WhatsApp", "Paket", "Level Terakhir", "Jenis Kelamin", "Alamat", "Cabang"];
+      const rows = alumniList.map((s, idx) => [
+        (idx + 1).toString(),
+        s.uniqueCode || s.id.substring(0, 5).toUpperCase(),
+        s.name || '',
+        s.parentName || '',
+        s.parentPhone || '',
+        s.jenisPaket || 'Reguler',
+        s.level || '',
+        s.jenisKelamin || '',
+        s.alamat || '',
+        s.branch || 'Pusat'
+      ]);
+      downloadCSV(`data_alumni_${branchName.toLowerCase().replace(/\s+/g, '_')}.csv`, headers, rows);
+    } else {
+      const headers = ["No", "Kode", "Nama Alumni", "Orang Tua/Wali", "No. WhatsApp", "Paket", "Level Terakhir"];
+      const widths = [15, 23, 40, 80, 115, 145, 160];
+      const rows = alumniList.map((s, idx) => [
+        (idx + 1).toString(),
+        s.uniqueCode || s.id.substring(0, 5).toUpperCase(),
+        s.name || '',
+        s.parentName || '',
+        s.parentPhone || '',
+        s.jenisPaket || 'Reguler',
+        s.level || ''
+      ]);
+      exportToPDFTable("Data Alumni Lulus", headers, widths, rows, branchName);
+    }
+  };
+
+  const handleExportAbsensi = (format: 'pdf' | 'excel') => {
+    const branchName = getBranchText();
+    
+    if (format === 'excel') {
+      const headers = ["No", "Tanggal", "Nama Siswa", "Status Kehadiran", "Catatan Presensi", "Cabang"];
+      const rows = attendance.map((a, idx) => [
+        (idx + 1).toString(),
+        a.date || '',
+        a.studentName || '',
+        a.status === 'present' ? 'Hadir' : a.status === 'absent' ? 'Alpa' : 'Izin',
+        a.notes || '',
+        a.branch || 'Pusat'
+      ]);
+      downloadCSV(`rekap_absensi_${branchName.toLowerCase().replace(/\s+/g, '_')}.csv`, headers, rows);
+    } else {
+      const headers = ["No", "Tanggal", "Nama Siswa", "Status", "Catatan Presensi", "Cabang"];
+      const widths = [15, 25, 52, 95, 120, 175];
+      const rows = attendance.map((a, idx) => [
+        (idx + 1).toString(),
+        a.date || '',
+        a.studentName || '',
+        a.status === 'present' ? 'Hadir' : a.status === 'absent' ? 'Alpa' : 'Izin',
+        a.notes || '',
+        a.branch || 'Pusat'
+      ]);
+      exportToPDFTable("Rekapitulasi Absensi Siswa", headers, widths, rows, branchName);
+    }
+  };
+
+  const handleExportJurnalGuru = (format: 'pdf' | 'excel') => {
+    const branchName = getBranchText();
+    
+    if (format === 'excel') {
+      const headers = ["No", "Tanggal", "Nama Siswa", "Topik Belajar", "Catatan / Jurnal Guru", "Nama Guru", "Cabang"];
+      const rows = notes.map((n, idx) => [
+        (idx + 1).toString(),
+        n.date || '',
+        n.studentName || '',
+        n.topic || '',
+        n.content || '',
+        n.teacherName || '',
+        n.branch || 'Pusat'
+      ]);
+      downloadCSV(`jurnal_guru_${branchName.toLowerCase().replace(/\s+/g, '_')}.csv`, headers, rows);
+    } else {
+      const headers = ["No", "Tanggal", "Nama Siswa", "Topik Belajar", "Jurnal Perkembangan", "Guru"];
+      const widths = [15, 25, 48, 85, 120, 172];
+      const rows = notes.map((n, idx) => [
+        (idx + 1).toString(),
+        n.date || '',
+        n.studentName || '',
+        n.topic || '',
+        n.content || '',
+        n.teacherName || ''
+      ]);
+      exportToPDFTable("Riwayat Jurnal Mengajar Guru", headers, widths, rows, branchName);
+    }
+  };
+
+  const handleExportRiwayatPembayaran = (format: 'pdf' | 'excel') => {
+    const branchName = getBranchText();
+    
+    if (format === 'excel') {
+      const headers = ["No", "No. Invoice", "Nama Siswa", "Bulan Tagihan", "Jumlah Tagihan", "Jumlah Dibayar", "Metode Pembayaran", "Status SPP", "Cabang"];
+      const rows = invoices.map((inv, idx) => [
+        (idx + 1).toString(),
+        inv.invoiceNo || '',
+        inv.studentName || '',
+        inv.month || '',
+        inv.amount.toString(),
+        (inv.amountPaid || (inv.status === 'paid' ? inv.amount : 0)).toString(),
+        inv.paymentMethod || 'Transfer',
+        inv.status === 'paid' ? 'Lunas' : inv.status === 'partially_paid' ? 'Sisa Tagihan' : 'Belum Bayar',
+        inv.branch || 'Pusat'
+      ]);
+      downloadCSV(`riwayat_pembayaran_spp_${branchName.toLowerCase().replace(/\s+/g, '_')}.csv`, headers, rows);
+    } else {
+      const headers = ["No", "No. Invoice", "Nama Siswa", "Bulan", "Tagihan", "Dibayar", "Status", "Metode"];
+      const widths = [15, 23, 60, 95, 115, 135, 155, 175];
+      const rows = invoices.map((inv, idx) => [
+        (idx + 1).toString(),
+        inv.invoiceNo || '',
+        inv.studentName || '',
+        inv.month || '',
+        formatRupiahValue(inv.amount),
+        formatRupiahValue(inv.amountPaid || (inv.status === 'paid' ? inv.amount : 0)),
+        inv.status === 'paid' ? 'Lunas' : inv.status === 'partially_paid' ? 'Sebagian' : 'Belum Bayar',
+        inv.paymentMethod || 'Transfer'
+      ]);
+      exportToPDFTable("Laporan Riwayat Pembayaran SPP", headers, widths, rows, branchName);
+    }
+  };
+
+  const handleExportNilai = (format: 'pdf' | 'excel') => {
+    const branchName = getBranchText();
+    
+    const getSpeedCategory = (score: number, seconds: number) => {
+      if (score < 80) return 'Perlu Latihan';
+      if (seconds <= 5) return 'Refleks Kilat';
+      if (seconds <= 10) return 'Sangat Tangkas';
+      if (seconds <= 18) return 'Tangkas Baik';
+      return 'Cukup Refleks';
+    };
+
+    if (format === 'excel') {
+      const headers = ["No", "Tanggal", "Nama Siswa", "Materi / Topik Uji", "Skor Akurasi", "Kecepatan (Detik)", "Ket. Refleks Jari", "Catatan Guru", "Cabang"];
+      const rows = grades.map((g, idx) => [
+        (idx + 1).toString(),
+        g.date || '',
+        g.studentName || '',
+        g.topic || '',
+        g.score.toString(),
+        g.speedSeconds.toString(),
+        getSpeedCategory(g.score, g.speedSeconds),
+        g.notes || '',
+        g.branch || 'Pusat'
+      ]);
+      downloadCSV(`riwayat_nilai_evaluasi_${branchName.toLowerCase().replace(/\s+/g, '_')}.csv`, headers, rows);
+    } else {
+      const headers = ["No", "Tanggal", "Nama Siswa", "Materi Uji", "Skor", "Waktu", "Ket. Refleks", "Catatan"];
+      const widths = [15, 23, 45, 83, 123, 135, 150, 175];
+      const rows = grades.map((g, idx) => [
+        (idx + 1).toString(),
+        g.date || '',
+        g.studentName || '',
+        g.topic || '',
+        g.score.toString(),
+        `${g.speedSeconds}s`,
+        getSpeedCategory(g.score, g.speedSeconds),
+        g.notes || ''
+      ]);
+      exportToPDFTable("Laporan Nilai Evaluasi Siswa", headers, widths, rows, branchName);
     }
   };
 
@@ -687,6 +1021,268 @@ export function SettingsManager({
         </div>
 
       </form>
+
+      {/* SECTION: EKSPOR DATA ADMINISTRATIF CABANG */}
+      <div className={`p-6 rounded-2xl border shadow-sm space-y-6 ${
+        isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+      }`}>
+        <h3 className={`text-sm font-bold uppercase tracking-wider ${isLight ? 'text-slate-500' : 'text-slate-400'} flex items-center gap-2 border-b pb-3 ${isLight ? 'border-slate-100' : 'border-slate-800/80'}`}>
+          <FileDown size={16} className={getAccentTextClass()} />
+          <span>Ekspor Data Administratif ({getBranchText()})</span>
+        </h3>
+        
+        <p className="text-xs text-slate-500 leading-relaxed">
+          Pilih dan unduh data administratif Math Fingers untuk keperluan dokumentasi, pencetakan fisik, atau analisis data eksternal. Semua data terikat pada cabang saat ini.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Card 1: Data Siswa Aktif */}
+          <div className={`p-4 rounded-xl border flex flex-col justify-between ${
+            isLight ? 'bg-slate-50/50 border-slate-200/60' : 'bg-slate-950/20 border-slate-800/50'
+          }`}>
+            <div className="mb-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Users size={16} className="text-emerald-500" />
+                <h4 className="text-xs font-bold uppercase tracking-wider">Data Siswa Aktif</h4>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Data lengkap seluruh siswa bimbingan yang saat ini berstatus aktif ({students.filter(s => s.status !== 'alumni').length} siswa).
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => handleExportSiswa('pdf')}
+                className={`py-2 px-3 rounded-lg font-bold text-[10px] uppercase tracking-wide transition flex items-center justify-center gap-1.5 border ${
+                  isLight 
+                    ? 'bg-red-50 hover:bg-red-100 text-red-600 border-red-200' 
+                    : 'bg-red-950/20 hover:bg-red-950/30 text-red-400 border-red-500/20'
+                }`}
+              >
+                <FileText size={12} />
+                <span>Unduh PDF</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExportSiswa('excel')}
+                className={`py-2 px-3 rounded-lg font-bold text-[10px] uppercase tracking-wide transition flex items-center justify-center gap-1.5 border ${
+                  isLight 
+                    ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-emerald-200' 
+                    : 'bg-emerald-950/20 hover:bg-emerald-950/30 text-emerald-400 border-emerald-500/20'
+                }`}
+              >
+                <FileSpreadsheet size={12} />
+                <span>Unduh Excel</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Card 2: Data Alumni */}
+          <div className={`p-4 rounded-xl border flex flex-col justify-between ${
+            isLight ? 'bg-slate-50/50 border-slate-200/60' : 'bg-slate-950/20 border-slate-800/50'
+          }`}>
+            <div className="mb-3">
+              <div className="flex items-center gap-2 mb-1">
+                <GraduationCap size={16} className="text-indigo-500" />
+                <h4 className="text-xs font-bold uppercase tracking-wider">Data Alumni / Lulus</h4>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Daftar alumni atau siswa yang telah menyelesaikan bimbingan jaritmatika ({students.filter(s => s.status === 'alumni').length} alumni).
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => handleExportAlumni('pdf')}
+                className={`py-2 px-3 rounded-lg font-bold text-[10px] uppercase tracking-wide transition flex items-center justify-center gap-1.5 border ${
+                  isLight 
+                    ? 'bg-red-50 hover:bg-red-100 text-red-600 border-red-200' 
+                    : 'bg-red-950/20 hover:bg-red-950/30 text-red-400 border-red-500/20'
+                }`}
+              >
+                <FileText size={12} />
+                <span>Unduh PDF</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExportAlumni('excel')}
+                className={`py-2 px-3 rounded-lg font-bold text-[10px] uppercase tracking-wide transition flex items-center justify-center gap-1.5 border ${
+                  isLight 
+                    ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-emerald-200' 
+                    : 'bg-emerald-950/20 hover:bg-emerald-950/30 text-emerald-400 border-emerald-500/20'
+                }`}
+              >
+                <FileSpreadsheet size={12} />
+                <span>Unduh Excel</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Card 3: Absensi / Kehadiran */}
+          <div className={`p-4 rounded-xl border flex flex-col justify-between ${
+            isLight ? 'bg-slate-50/50 border-slate-200/60' : 'bg-slate-950/20 border-slate-800/50'
+          }`}>
+            <div className="mb-3">
+              <div className="flex items-center gap-2 mb-1">
+                <CheckSquare size={16} className="text-sky-500" />
+                <h4 className="text-xs font-bold uppercase tracking-wider">Absensi Kehadiran</h4>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Riwayat catatan kehadiran dan keterlambatan siswa harian dalam sesi bimbingan ({attendance.length} catatan).
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => handleExportAbsensi('pdf')}
+                className={`py-2 px-3 rounded-lg font-bold text-[10px] uppercase tracking-wide transition flex items-center justify-center gap-1.5 border ${
+                  isLight 
+                    ? 'bg-red-50 hover:bg-red-100 text-red-600 border-red-200' 
+                    : 'bg-red-950/20 hover:bg-red-950/30 text-red-400 border-red-500/20'
+                }`}
+              >
+                <FileText size={12} />
+                <span>Unduh PDF</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExportAbsensi('excel')}
+                className={`py-2 px-3 rounded-lg font-bold text-[10px] uppercase tracking-wide transition flex items-center justify-center gap-1.5 border ${
+                  isLight 
+                    ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-emerald-200' 
+                    : 'bg-emerald-950/20 hover:bg-emerald-950/30 text-emerald-400 border-emerald-500/20'
+                }`}
+              >
+                <FileSpreadsheet size={12} />
+                <span>Unduh Excel</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Card 4: Jurnal Guru */}
+          <div className={`p-4 rounded-xl border flex flex-col justify-between ${
+            isLight ? 'bg-slate-50/50 border-slate-200/60' : 'bg-slate-950/20 border-slate-800/50'
+          }`}>
+            <div className="mb-3">
+              <div className="flex items-center gap-2 mb-1">
+                <History size={16} className="text-amber-500" />
+                <h4 className="text-xs font-bold uppercase tracking-wider">Jurnal Harian Guru</h4>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Catatan materi belajar, progres keterampilan gerak jari, dan jurnal kemajuan harian dari guru ({notes.length} jurnal).
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => handleExportJurnalGuru('pdf')}
+                className={`py-2 px-3 rounded-lg font-bold text-[10px] uppercase tracking-wide transition flex items-center justify-center gap-1.5 border ${
+                  isLight 
+                    ? 'bg-red-50 hover:bg-red-100 text-red-600 border-red-200' 
+                    : 'bg-red-950/20 hover:bg-red-950/30 text-red-400 border-red-500/20'
+                }`}
+              >
+                <FileText size={12} />
+                <span>Unduh PDF</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExportJurnalGuru('excel')}
+                className={`py-2 px-3 rounded-lg font-bold text-[10px] uppercase tracking-wide transition flex items-center justify-center gap-1.5 border ${
+                  isLight 
+                    ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-emerald-200' 
+                    : 'bg-emerald-950/20 hover:bg-emerald-950/30 text-emerald-400 border-emerald-500/20'
+                }`}
+              >
+                <FileSpreadsheet size={12} />
+                <span>Unduh Excel</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Card 5: Riwayat Pembayaran */}
+          <div className={`p-4 rounded-xl border flex flex-col justify-between ${
+            isLight ? 'bg-slate-50/50 border-slate-200/60' : 'bg-slate-950/20 border-slate-800/50'
+          }`}>
+            <div className="mb-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Receipt size={16} className="text-rose-500" />
+                <h4 className="text-xs font-bold uppercase tracking-wider">Riwayat Pembayaran SPP</h4>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Rekap kuitansi pembayaran, status lunas, uang pendaftaran, tagihan buku, dan spp ({invoices.length} transaksi).
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => handleExportRiwayatPembayaran('pdf')}
+                className={`py-2 px-3 rounded-lg font-bold text-[10px] uppercase tracking-wide transition flex items-center justify-center gap-1.5 border ${
+                  isLight 
+                    ? 'bg-red-50 hover:bg-red-100 text-red-600 border-red-200' 
+                    : 'bg-red-950/20 hover:bg-red-950/30 text-red-400 border-red-500/20'
+                }`}
+              >
+                <FileText size={12} />
+                <span>Unduh PDF</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExportRiwayatPembayaran('excel')}
+                className={`py-2 px-3 rounded-lg font-bold text-[10px] uppercase tracking-wide transition flex items-center justify-center gap-1.5 border ${
+                  isLight 
+                    ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-emerald-200' 
+                    : 'bg-emerald-950/20 hover:bg-emerald-950/30 text-emerald-400 border-emerald-500/20'
+                }`}
+              >
+                <FileSpreadsheet size={12} />
+                <span>Unduh Excel</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Card 6: Nilai Evaluasi */}
+          <div className={`p-4 rounded-xl border flex flex-col justify-between ${
+            isLight ? 'bg-slate-50/50 border-slate-200/60' : 'bg-slate-950/20 border-slate-800/50'
+          }`}>
+            <div className="mb-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Award size={16} className="text-violet-500" />
+                <h4 className="text-xs font-bold uppercase tracking-wider">Nilai Kuis & Evaluasi</h4>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Skor akurasi dan catatan kecepatan refleks berhitung jari (jaritmatika) siswa saat ujian ({grades.length} uji kuis).
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => handleExportNilai('pdf')}
+                className={`py-2 px-3 rounded-lg font-bold text-[10px] uppercase tracking-wide transition flex items-center justify-center gap-1.5 border ${
+                  isLight 
+                    ? 'bg-red-50 hover:bg-red-100 text-red-600 border-red-200' 
+                    : 'bg-red-950/20 hover:bg-red-950/30 text-red-400 border-red-500/20'
+                }`}
+              >
+                <FileText size={12} />
+                <span>Unduh PDF</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExportNilai('excel')}
+                className={`py-2 px-3 rounded-lg font-bold text-[10px] uppercase tracking-wide transition flex items-center justify-center gap-1.5 border ${
+                  isLight 
+                    ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-emerald-200' 
+                    : 'bg-emerald-950/20 hover:bg-emerald-950/30 text-emerald-400 border-emerald-500/20'
+                }`}
+              >
+                <FileSpreadsheet size={12} />
+                <span>Unduh Excel</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* PWA / Install App Guide */}
       <div className={`mt-8 p-6 rounded-2xl border shadow-sm space-y-6 ${

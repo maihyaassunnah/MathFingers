@@ -608,7 +608,7 @@ export function StudentManager({
 
                         {/* Lahir & Alamat Sejajar */}
                         {((student.tempatLahir || student.tanggalLahir) || student.alamat) && (
-                          <div className="text-slate-400 text-xs mt-1 flex flex-wrap gap-x-2 items-center leading-relaxed">
+                          <div className={`text-xs mt-1 flex flex-wrap gap-x-2 items-center leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
                             {(student.tempatLahir || student.tanggalLahir) && (
                               <span>
                                 <span className="opacity-70">Lahir:</span> {student.tempatLahir || '-'}{student.tanggalLahir ? `, ${student.tanggalLahir}` : ''}
@@ -681,7 +681,7 @@ export function StudentManager({
                           );
                         })()}
                       </td>
-                      <td className="p-4 text-xs text-slate-400">
+                      <td className={`p-4 text-xs ${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>
                         <div className="flex items-center gap-1">
                           <Calendar size={12} />
                           <span>{student.joinDate}</span>

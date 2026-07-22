@@ -194,8 +194,8 @@ export function ClassManager({
             <Layers size={20} />
           </div>
           <div>
-            <span className="text-xs font-semibold text-slate-400 block">Total Kelas</span>
-            <span className="text-xl font-black">{totalClasses} <span className="text-xs font-normal text-slate-500">Kelompok</span></span>
+            <span className={`text-xs font-semibold block ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Total Kelas</span>
+            <span className={`text-xl font-black ${isLight ? 'text-slate-900' : 'text-white'}`}>{totalClasses} <span className={`text-xs font-normal ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Kelompok</span></span>
           </div>
         </div>
 
@@ -206,8 +206,8 @@ export function ClassManager({
             <Users size={20} />
           </div>
           <div>
-            <span className="text-xs font-semibold text-slate-400 block">Siswa Terdaftar di Kelas</span>
-            <span className="text-xl font-black">{totalEnrolled} <span className="text-xs font-normal text-slate-500">Siswa</span></span>
+            <span className={`text-xs font-semibold block ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Siswa Terdaftar di Kelas</span>
+            <span className={`text-xl font-black ${isLight ? 'text-slate-900' : 'text-white'}`}>{totalEnrolled} <span className={`text-xs font-normal ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Siswa</span></span>
           </div>
         </div>
 
@@ -218,8 +218,8 @@ export function ClassManager({
             <Sparkles size={20} />
           </div>
           <div>
-            <span className="text-xs font-semibold text-slate-400 block">Kapasitas Kuota Bangku</span>
-            <span className="text-xl font-black">{totalQuota} <span className="text-xs font-normal text-slate-500">Tempat</span></span>
+            <span className={`text-xs font-semibold block ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Kapasitas Kuota Bangku</span>
+            <span className={`text-xl font-black ${isLight ? 'text-slate-900' : 'text-white'}`}>{totalQuota} <span className={`text-xs font-normal ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Tempat</span></span>
           </div>
         </div>
       </div>
@@ -305,7 +305,7 @@ export function ClassManager({
                       }`}>
                         Cabang {cls.branch || 'Pusat'}
                       </span>
-                      <h3 className="text-base font-extrabold text-slate-100 dark:text-slate-100 leading-snug">
+                      <h3 className={`text-base font-extrabold leading-snug ${isLight ? 'text-slate-800' : 'text-slate-100'}`}>
                         {cls.name}
                       </h3>
                     </div>
@@ -333,37 +333,37 @@ export function ClassManager({
                   </div>
 
                   {/* Class Info Details */}
-                  <div className="space-y-2 text-xs text-slate-400 mb-4">
+                  <div className={`space-y-2 text-xs mb-4 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
                     <div className="flex items-center gap-2">
-                      <Calendar size={13} className="text-indigo-400 shrink-0" />
-                      <span className="font-medium text-slate-300">{cls.scheduleDays || 'Belum diatur'}</span>
+                      <Calendar size={13} className="text-indigo-500 shrink-0" />
+                      <span className={`font-medium ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>{cls.scheduleDays || 'Belum diatur'}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Clock size={13} className="text-sky-400 shrink-0" />
+                      <Clock size={13} className="text-sky-500 shrink-0" />
                       <span>{cls.scheduleTime || 'Belum diatur'}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <User size={13} className="text-emerald-400 shrink-0" />
-                      <span>Pengajar: <strong className="text-slate-200">{cls.teacherName || 'Pengajar Utama'}</strong></span>
+                      <User size={13} className="text-emerald-500 shrink-0" />
+                      <span>Pengajar: <strong className={isLight ? 'text-slate-800' : 'text-slate-200'}>{cls.teacherName || 'Pengajar Utama'}</strong></span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <DoorClosed size={13} className="text-amber-400 shrink-0" />
-                      <span>Ruangan: <span className="text-slate-300">{cls.room || 'Ruang A1'}</span></span>
+                      <DoorClosed size={13} className="text-amber-500 shrink-0" />
+                      <span>Ruangan: <span className={isLight ? 'text-slate-700' : 'text-slate-300'}>{cls.room || 'Ruang A1'}</span></span>
                     </div>
                     {cls.level && (
-                      <div className="flex items-center gap-2 pt-1 border-t border-slate-800/50">
-                        <BookOpen size={13} className="text-violet-400 shrink-0" />
-                        <span className="truncate text-[11px]">{cls.level}</span>
+                      <div className={`flex items-center gap-2 pt-1 border-t ${isLight ? 'border-slate-200' : 'border-slate-800/50'}`}>
+                        <BookOpen size={13} className="text-violet-500 shrink-0" />
+                        <span className={`truncate text-[11px] ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>{cls.level}</span>
                       </div>
                     )}
                   </div>
                 </div>
 
                 {/* Quota Progress Bar & Actions */}
-                <div className="pt-3 border-t border-slate-800/60 space-y-3">
+                <div className={`pt-3 border-t space-y-3 ${isLight ? 'border-slate-200' : 'border-slate-800/60'}`}>
                   <div>
                     <div className="flex items-center justify-between text-[11px] mb-1">
-                      <span className="text-slate-400 font-medium">Terisi:</span>
+                      <span className={`font-medium ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Terisi:</span>
                       <span className={`font-bold ${
                         percentage >= 100 ? 'text-red-400' : percentage >= 80 ? 'text-amber-400' : 'text-emerald-400'
                       }`}>

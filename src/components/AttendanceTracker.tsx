@@ -621,7 +621,7 @@ export function AttendanceTracker({
                                     Tanpa Kelas
                                   </span>
                                 )}
-                                <span className="text-[10px] text-slate-400 truncate">Wali: {student.parentName}</span>
+                                <span className={`text-[10px] truncate ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Wali: {student.parentName}</span>
                               </div>
                               <div className="flex items-center gap-2 flex-wrap mt-1">
                                 <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 shrink-0">
@@ -704,7 +704,7 @@ export function AttendanceTracker({
                                   #{getStudentUniqueCode(student)}
                                 </span>
                               </div>
-                              <p className="text-slate-400 text-xs mt-0.5">Wali: {student.parentName} ({student.parentPhone})</p>
+                              <p className={`text-xs mt-0.5 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Wali: {student.parentName} ({student.parentPhone})</p>
                             </div>
 
                             {/* Desktop Controls */}

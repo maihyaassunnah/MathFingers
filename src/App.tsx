@@ -16,6 +16,7 @@ import { SppHistory } from './components/SppHistory';
 import { SupabaseSqlEditor } from './components/SupabaseSqlEditor';
 import { AlumniManager } from './components/AlumniManager';
 import { BranchesManager } from './components/BranchesManager';
+import { ClassManager } from './components/ClassManager';
 import { AdminUser, Branch } from './types';
 import { getAdminAvatar } from './utils';
 
@@ -41,7 +42,8 @@ import {
   History,
   Database,
   GraduationCap,
-  Building
+  Building,
+  Layers
 } from 'lucide-react';
 
 export default function App() {
@@ -83,8 +85,8 @@ export default function App() {
       
       // Ensure activeTab is always one of the valid tabs for the role
       const validTabIds = currentUser.role === 'super_admin'
-        ? ['overview', 'students', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'grades', 'report', 'branches_mgmt', 'supabase_sql', 'settings', 'simulator']
-        : ['overview', 'students', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'grades', 'report', 'settings', 'simulator'];
+        ? ['overview', 'students', 'classes', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'grades', 'report', 'branches_mgmt', 'supabase_sql', 'settings', 'simulator']
+        : ['overview', 'students', 'classes', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'grades', 'report', 'settings', 'simulator'];
       if (!validTabIds.includes(activeTab)) {
         setActiveTab('overview');
       }
@@ -100,6 +102,7 @@ export default function App() {
     materials,
     branches,
     adminUsers,
+    classes,
     settings,
     dashboardTasks,
     loading,
@@ -134,6 +137,9 @@ export default function App() {
     addAdminUser,
     updateAdminUser,
     deleteAdminUser,
+    addClassGroup,
+    updateClassGroup,
+    deleteClassGroup,
     importBackupData
   } = useMathFinggersDb();
 
@@ -175,12 +181,26 @@ export default function App() {
     return activeBranch === 'all' || b === activeBranch;
   });
 
+  const filteredClasses = classes.filter(c => {
+    const b = getAssignedBranch(c.branch);
+    return activeBranch === 'all' || b === activeBranch;
+  });
+
   // Multi-branch aware writers
   const handleAddStudent = async (studentData: any) => {
     const defaultBranchName = branches[0]?.name || 'Pusat';
     const branchToSet = studentData.branch || (currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName));
     await addStudent({
       ...studentData,
+      branch: branchToSet
+    });
+  };
+
+  const handleAddClass = async (classData: any) => {
+    const defaultBranchName = branches[0]?.name || 'Pusat';
+    const branchToSet = classData.branch || (currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName));
+    await addClassGroup({
+      ...classData,
       branch: branchToSet
     });
   };
@@ -238,6 +258,7 @@ export default function App() {
     ? [
         { id: 'overview', name: 'Statistik', icon: Home },
         { id: 'students', name: 'Siswa', icon: Users },
+        { id: 'classes', name: 'Kelas', icon: Layers },
         { id: 'alumni', name: 'Alumni / Lulus', icon: GraduationCap },
         { id: 'attendance', name: 'Absensi', icon: CheckSquare },
         { id: 'notes', name: 'Jurnal Guru', icon: FileText },
@@ -254,6 +275,7 @@ export default function App() {
     : [
         { id: 'overview', name: 'Dashboard Cabang', icon: Home },
         { id: 'students', name: 'Siswa', icon: Users },
+        { id: 'classes', name: 'Kelas', icon: Layers },
         { id: 'alumni', name: 'Alumni / Lulus', icon: GraduationCap },
         { id: 'attendance', name: 'Absensi', icon: CheckSquare },
         { id: 'notes', name: 'Jurnal Guru', icon: FileText },
@@ -345,12 +367,27 @@ export default function App() {
             attendance={filteredAttendance}
             notes={filteredNotes}
             grades={filteredGrades}
+            classes={filteredClasses}
             onAddStudent={handleAddStudent} 
             onUpdateStudent={updateStudent} 
             onDeleteStudent={deleteStudent} 
             theme={theme}
             isSuperAdmin={isSuperAdmin}
             branches={branches}
+          />
+        );
+      case 'classes':
+        return (
+          <ClassManager
+            classes={filteredClasses}
+            students={filteredStudents}
+            branches={branches}
+            onAddClass={handleAddClass}
+            onUpdateClass={updateClassGroup}
+            onDeleteClass={deleteClassGroup}
+            theme={theme}
+            isSuperAdmin={isSuperAdmin}
+            activeBranch={activeBranch}
           />
         );
       case 'alumni':
@@ -367,6 +404,7 @@ export default function App() {
           <AttendanceTracker 
             students={filteredStudents} 
             attendance={filteredAttendance} 
+            classes={filteredClasses}
             onAddAttendanceBatch={handleAddAttendanceBatch} 
             onDeleteAttendanceByDate={deleteAttendanceByDate}
             onDeleteSingleAttendance={deleteSingleAttendance}

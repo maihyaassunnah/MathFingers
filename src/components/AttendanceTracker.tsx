@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Student, Attendance } from '../types';
+import { Student, Attendance, ClassGroup } from '../types';
 import { getWhatsAppLink, getStudentUniqueCode } from '../utils';
-import { Calendar, Check, X, ShieldAlert, Send, Save, CheckSquare, Clock, Search, Users, TrendingUp, ChevronDown, MessageSquare, Trash2 } from 'lucide-react';
+import { Calendar, Check, X, ShieldAlert, Send, Save, CheckSquare, Clock, Search, Users, TrendingUp, ChevronDown, MessageSquare, Trash2, Layers, DoorClosed, User } from 'lucide-react';
 
 interface AttendanceTrackerProps {
   students: Student[];
   attendance: Attendance[];
+  classes?: ClassGroup[];
   onAddAttendanceBatch: (records: Omit<Attendance, 'id'>[]) => Promise<void>;
   onDeleteAttendanceByDate?: (date: string) => Promise<void>;
   onDeleteSingleAttendance?: (id: string) => Promise<void>;
@@ -16,6 +17,7 @@ interface AttendanceTrackerProps {
 export function AttendanceTracker({ 
   students, 
   attendance, 
+  classes = [],
   onAddAttendanceBatch,
   onDeleteAttendanceByDate,
   onDeleteSingleAttendance,
@@ -25,10 +27,12 @@ export function AttendanceTracker({
   const [activeSubTab, setActiveSubTab] = useState<'record' | 'history'>('record');
   const [historySearchQuery, setHistorySearchQuery] = useState('');
   const [recordSearchQuery, setRecordSearchQuery] = useState('');
-  const [selectedLetter, setSelectedLetter] = useState<string>('ALL');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [viewingDetailDate, setViewingDetailDate] = useState<string | null>(null);
   
+  const [selectedClassFilter, setSelectedClassFilter] = useState<string>('ALL');
+  const [historyClassFilter, setHistoryClassFilter] = useState<string>('ALL');
+
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const [attendanceMap, setAttendanceMap] = useState<Record<string, { status: 'present' | 'absent' | 'permission'; notes: string }>>({});
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -42,7 +46,7 @@ export function AttendanceTracker({
     }));
   };
 
-  // Filter only active students for attendance & sort alphabetically based on sortOrder
+  // Filter active students sorted alphabetically
   const activeStudents = [...students]
     .filter(s => s.status === 'active')
     .sort((a, b) => {
@@ -50,10 +54,20 @@ export function AttendanceTracker({
       return sortOrder === 'asc' ? cmp : -cmp;
     });
 
+  // Filter active students by class selection
+  const classFilteredActiveStudents = activeStudents.filter(student => {
+    if (selectedClassFilter === 'ALL') return true;
+    if (selectedClassFilter === 'UNASSIGNED') return !student.kelas;
+    return student.kelas === selectedClassFilter;
+  });
+
+  // Selected class object if a specific class filter is selected
+  const selectedClassObj = classes.find(c => c.name === selectedClassFilter);
+
   // Check if student is scheduled for the day
   const isScheduledForDay = (student: Student) => {
     if (!filterBySchedule) return true;
-    if (!student.hariLes) return true; // Show by default if no schedule specified (backward compatibility)
+    if (!student.hariLes) return true; // Show by default if no schedule specified
     
     const dateObj = new Date(selectedDate);
     const day = dateObj.getDay(); // 0 = Sunday (Ahad), 5 = Friday (Jumat), 6 = Saturday (Sabtu)
@@ -68,21 +82,10 @@ export function AttendanceTracker({
     return true;
   };
 
-  const scheduledActiveStudents = activeStudents.filter(isScheduledForDay);
-
-  // Extract initial letters of active students to render as quick filter buttons
-  const availableLetters = Array.from(
-    new Set(
-      scheduledActiveStudents
-        .map(s => s.name.trim().charAt(0).toUpperCase())
-        .filter(char => /[A-Z]/.test(char))
-    )
-  ).sort();
+  const scheduledActiveStudents = classFilteredActiveStudents.filter(isScheduledForDay);
 
   const filteredActiveStudents = scheduledActiveStudents.filter(s => {
-    const matchesSearch = s.name.toLowerCase().includes(recordSearchQuery.toLowerCase());
-    const matchesLetter = selectedLetter === 'ALL' || s.name.trim().toUpperCase().startsWith(selectedLetter);
-    return matchesSearch && matchesLetter;
+    return s.name.toLowerCase().includes(recordSearchQuery.toLowerCase());
   });
 
   // Load existing attendance for selectedDate
@@ -242,8 +245,11 @@ export function AttendanceTracker({
   });
 
   const filteredStudentRecap = studentRecapList.filter(item => {
-    return item.student.name.toLowerCase().includes(historySearchQuery.toLowerCase()) ||
+    const matchesClass = historyClassFilter === 'ALL' || 
+      (historyClassFilter === 'UNASSIGNED' ? !item.student.kelas : item.student.kelas === historyClassFilter);
+    const matchesSearch = item.student.name.toLowerCase().includes(historySearchQuery.toLowerCase()) ||
            item.student.parentName.toLowerCase().includes(historySearchQuery.toLowerCase());
+    return matchesClass && matchesSearch;
   });
 
   const isLight = theme === 'light';
@@ -327,6 +333,159 @@ export function AttendanceTracker({
             </div>
           </div>
 
+          {/* Class Filter Bar & Banner */}
+          <div className={`p-4 rounded-2xl border shadow-sm space-y-3.5 ${
+            isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+          }`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2">
+                <Layers className="text-emerald-500" size={18} />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Pilih Kelas Bimbingan untuk Mengabsen:
+                </span>
+              </div>
+
+              <div className="relative">
+                <select
+                  value={selectedClassFilter}
+                  onChange={(e) => setSelectedClassFilter(e.target.value)}
+                  className={`w-full sm:w-auto px-3.5 py-1.5 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                    isLight 
+                      ? 'bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100' 
+                      : 'bg-slate-950 border-slate-800 text-emerald-400 hover:bg-slate-900'
+                  }`}
+                >
+                  <option value="ALL">Semua Kelas ({activeStudents.length} Siswa)</option>
+                  {classes.map(c => {
+                    const count = activeStudents.filter(s => s.kelas === c.name).length;
+                    return (
+                      <option key={c.id} value={c.name}>
+                        {c.name} ({count} Siswa)
+                      </option>
+                    );
+                  })}
+                  {activeStudents.some(s => !s.kelas) && (
+                    <option value="UNASSIGNED">
+                      Tanpa Kelas ({activeStudents.filter(s => !s.kelas).length} Siswa)
+                    </option>
+                  )}
+                </select>
+              </div>
+            </div>
+
+            {/* Quick Class Selector Pills */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+              <button
+                type="button"
+                onClick={() => setSelectedClassFilter('ALL')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 border ${
+                  selectedClassFilter === 'ALL'
+                    ? 'bg-emerald-600 border-emerald-500 text-white shadow-md'
+                    : isLight
+                      ? 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                      : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <Users size={13} />
+                <span>Semua Kelas ({activeStudents.length})</span>
+              </button>
+
+              {classes.map(cls => {
+                const classCount = activeStudents.filter(s => s.kelas === cls.name).length;
+                const isSelected = selectedClassFilter === cls.name;
+                return (
+                  <button
+                    key={cls.id}
+                    type="button"
+                    onClick={() => setSelectedClassFilter(cls.name)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 border ${
+                      isSelected
+                        ? 'bg-emerald-600 border-emerald-500 text-white shadow-md'
+                        : isLight
+                          ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                          : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    <Layers size={13} className={isSelected ? 'text-white' : 'text-emerald-400'} />
+                    <span>{cls.name}</span>
+                    <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-extrabold ${
+                      isSelected 
+                        ? 'bg-white/20 text-white' 
+                        : 'bg-emerald-500/10 text-emerald-400'
+                    }`}>
+                      {classCount}
+                    </span>
+                  </button>
+                );
+              })}
+
+              {activeStudents.some(s => !s.kelas) && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedClassFilter('UNASSIGNED')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 border ${
+                    selectedClassFilter === 'UNASSIGNED'
+                      ? 'bg-amber-600 border-amber-500 text-white shadow-md'
+                      : isLight
+                        ? 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:bg-slate-800'
+                  }`}
+                >
+                  <span>Tanpa Kelas ({activeStudents.filter(s => !s.kelas).length})</span>
+                </button>
+              )}
+            </div>
+
+            {/* Active Class Info Banner */}
+            {selectedClassObj && (
+              <div className={`p-4 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-4 mt-2 ${
+                isLight ? 'bg-emerald-50/70 border-emerald-200 text-slate-800' : 'bg-emerald-950/30 border-emerald-500/20 text-emerald-100'
+              }`}>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-emerald-600 text-white">
+                      Cabang {selectedClassObj.branch || 'Pusat'}
+                    </span>
+                    <h4 className={`font-extrabold text-base ${isLight ? 'text-emerald-900' : 'text-emerald-300'}`}>
+                      {selectedClassObj.name}
+                    </h4>
+                  </div>
+                  <div className="flex items-center gap-x-4 gap-y-1 text-xs text-slate-400 flex-wrap pt-0.5">
+                    <span className="flex items-center gap-1">
+                      <User size={13} className="text-emerald-500" />
+                      Tentor: <strong className={isLight ? 'text-slate-700' : 'text-slate-200'}>{selectedClassObj.teacherName || 'Pengajar Utama'}</strong>
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Calendar size={13} className="text-emerald-500" />
+                      {selectedClassObj.scheduleDays || 'Jadwal'} ({selectedClassObj.scheduleTime || '-'})
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <DoorClosed size={13} className="text-amber-500" />
+                      {selectedClassObj.room || 'Ruangan'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 self-end md:self-auto shrink-0">
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-400 block font-medium">Siswa Terdaftar</span>
+                    <span className="text-sm font-black text-emerald-500">
+                      {activeStudents.filter(s => s.kelas === selectedClassObj.name).length} / {selectedClassObj.quota || 12} Siswa
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleMarkAllPresent}
+                    className="py-2 px-3.5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 text-white shadow transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <CheckSquare size={14} />
+                    <span>Hadir Semua Kelas Ini</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Student Name Filter for Attendance */}
           {activeStudents.length > 0 && (
             <div className={`p-4 rounded-2xl shadow-sm border flex flex-col gap-3.5 ${
@@ -368,12 +527,11 @@ export function AttendanceTracker({
                   </div>
                 </div>
 
-                {(recordSearchQuery || selectedLetter !== 'ALL' || sortOrder !== 'asc') && (
+                {(recordSearchQuery || sortOrder !== 'asc') && (
                   <button
                     type="button"
                     onClick={() => {
                       setRecordSearchQuery('');
-                      setSelectedLetter('ALL');
                       setSortOrder('asc');
                     }}
                     className={`px-4 py-2 text-xs font-bold rounded-xl border transition shrink-0 ${
@@ -386,42 +544,6 @@ export function AttendanceTracker({
                   </button>
                 )}
               </div>
-
-              {/* Alphabet Quick Filter Bar */}
-              {availableLetters.length > 0 && (
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
-                  <span className="text-xs font-bold text-slate-400 mr-1 shrink-0">Inisial Abjad:</span>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedLetter('ALL')}
-                    className={`px-3 py-1 text-xs font-bold rounded-lg transition shrink-0 ${
-                      selectedLetter === 'ALL'
-                        ? 'bg-emerald-600 text-white'
-                        : isLight
-                          ? 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                          : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
-                    }`}
-                  >
-                    Semua
-                  </button>
-                  {availableLetters.map((letter) => (
-                    <button
-                      key={letter}
-                      type="button"
-                      onClick={() => setSelectedLetter(letter)}
-                      className={`w-8 h-8 flex items-center justify-center text-xs font-bold rounded-lg transition shrink-0 ${
-                        selectedLetter === letter
-                          ? 'bg-emerald-600 text-white'
-                          : isLight
-                            ? 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
-                      }`}
-                    >
-                      {letter}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           )}
 
@@ -473,7 +595,7 @@ export function AttendanceTracker({
                       )}
                     </div>
                   ) : (
-                    filteredActiveStudents.map((student) => {
+                    filteredActiveStudents.map((student, index) => {
                       const state = attendanceMap[student.id] || { status: 'present', notes: '' };
                       const isExpanded = !!expandedStudentNotes[student.id];
                     
@@ -490,9 +612,21 @@ export function AttendanceTracker({
                                     ? 'L. DASAR' 
                                     : `LEVEL ${student.level.match(/\d+/)?.[0] || '1'}`}
                                 </span>
+                                {student.kelas ? (
+                                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/15">
+                                    🏫 {student.kelas}
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] font-semibold px-1 rounded bg-slate-500/10 text-slate-400">
+                                    Tanpa Kelas
+                                  </span>
+                                )}
                                 <span className="text-[10px] text-slate-400 truncate">Wali: {student.parentName}</span>
                               </div>
-                              <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                              <div className="flex items-center gap-2 flex-wrap mt-1">
+                                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 shrink-0">
+                                  #{index + 1}
+                                </span>
                                 <h4 className={`font-bold text-sm truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</h4>
                                 <span className="text-[9px] font-mono font-bold px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15">
                                   #{getStudentUniqueCode(student)}
@@ -549,9 +683,22 @@ export function AttendanceTracker({
                                       ? 'LEVEL DASAR' 
                                       : `LEVEL ${student.level.match(/\d+/)?.[0] || '1'}`}
                                   </span>
+                                  {student.kelas ? (
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/15 flex items-center gap-1">
+                                      <Layers size={11} />
+                                      <span>{student.kelas}</span>
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-500/10 text-slate-400 border border-slate-500/15">
+                                      Tanpa Kelas
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                               <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
+                                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 shrink-0">
+                                  #{index + 1}
+                                </span>
                                 <h3 className={`font-bold text-base ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</h3>
                                 <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15">
                                   #{getStudentUniqueCode(student)}
@@ -806,20 +953,39 @@ export function AttendanceTracker({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <h3 className={`font-bold text-base ${isLight ? 'text-slate-800' : 'text-white'}`}>Rekap Kehadiran Siswa</h3>
                 
-                {/* Search Bar */}
-                <div className="relative w-full sm:w-64">
-                  <Search className="absolute left-3 top-2.5 text-slate-500" size={14} />
-                  <input
-                    type="text"
-                    placeholder="Cari siswa..."
-                    value={historySearchQuery}
-                    onChange={(e) => setHistorySearchQuery(e.target.value)}
-                    className={`w-full pl-8 pr-3 py-1.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs ${
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                  {/* Class Filter Dropdown for History */}
+                  <select
+                    value={historyClassFilter}
+                    onChange={(e) => setHistoryClassFilter(e.target.value)}
+                    className={`px-3 py-1.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs font-medium cursor-pointer ${
                       isLight 
                         ? 'bg-white border-slate-200 text-slate-800' 
-                        : 'bg-slate-950/40 border-slate-800 text-white'
+                        : 'bg-slate-950/40 border-slate-800 text-slate-200'
                     }`}
-                  />
+                  >
+                    <option value="ALL">Semua Kelas</option>
+                    {classes.map(c => (
+                      <option key={c.id} value={c.name}>{c.name}</option>
+                    ))}
+                    <option value="UNASSIGNED">Tanpa Kelas</option>
+                  </select>
+
+                  {/* Search Bar */}
+                  <div className="relative w-full sm:w-48">
+                    <Search className="absolute left-3 top-2.5 text-slate-500" size={14} />
+                    <input
+                      type="text"
+                      placeholder="Cari siswa..."
+                      value={historySearchQuery}
+                      onChange={(e) => setHistorySearchQuery(e.target.value)}
+                      className={`w-full pl-8 pr-3 py-1.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs ${
+                        isLight 
+                          ? 'bg-white border-slate-200 text-slate-800' 
+                          : 'bg-slate-950/40 border-slate-800 text-white'
+                      }`}
+                    />
+                  </div>
                 </div>
               </div>
 

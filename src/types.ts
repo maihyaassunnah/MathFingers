@@ -17,6 +17,7 @@ export interface Student {
   branch?: string; // e.g. "Pusat", "Bandung"
   hariLes?: string; // e.g. "Hari Jumat dan Ahad", "Sabtu dan Ahad"
   uniqueCode?: string; // 5-digit random/unique code
+  kelas?: string; // e.g. "Kelas Reguler A (Senin & Rabu)"
 }
 
 export interface Attendance {
@@ -123,5 +124,18 @@ export interface AdminUser {
   branch: string; // nama cabang (misal "Pusat", "Bandung")
   password?: string;
   avatarUrl?: string;
+}
+
+export interface ClassGroup {
+  id: string;
+  name: string;
+  scheduleDays?: string;
+  scheduleTime?: string;
+  teacherName?: string;
+  quota?: number;
+  room?: string;
+  level?: string;
+  branch?: string;
+  createdAt: number;
 }
 

@@ -48,7 +48,7 @@ export function SupabaseSqlEditor({
     tables: { name: string; status: 'ok' | 'error' | 'unchecked'; errorMsg?: string }[];
   } | null>(null);
 
-  const tables = ['students', 'attendance', 'notes', 'invoices', 'grades', 'materials', 'branches', 'admin_users', 'hari_les'];
+  const tables = ['students', 'classes', 'attendance', 'notes', 'invoices', 'grades', 'materials', 'branches', 'admin_users', 'hari_les'];
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -133,7 +133,8 @@ CREATE TABLE IF NOT EXISTS students (
   "activeMaterialId" TEXT,
   branch TEXT DEFAULT 'Pusat',
   "hariLes" TEXT DEFAULT 'Hari Jumat dan Ahad',
-  "uniqueCode" TEXT
+  "uniqueCode" TEXT,
+  kelas TEXT
 );
 
 -- Enable RLS & Bypass for simple usage
@@ -142,7 +143,26 @@ DROP POLICY IF EXISTS "Allow public read-write for demo" ON students;
 CREATE POLICY "Allow public read-write for demo" ON students FOR ALL USING (true) WITH CHECK (true);
 
 
--- 2. TABEL MATERIALS (Daftar Materi & Kurikulum)
+-- 2. TABEL CLASSES (Daftar Kelompok / Kelas Bimbingan)
+CREATE TABLE IF NOT EXISTS classes (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  "scheduleDays" TEXT,
+  "scheduleTime" TEXT,
+  "teacherName" TEXT,
+  quota INTEGER DEFAULT 12,
+  room TEXT,
+  level TEXT,
+  branch TEXT DEFAULT 'Pusat',
+  "createdAt" BIGINT NOT NULL
+);
+
+ALTER TABLE classes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON classes;
+CREATE POLICY "Allow public read-write for demo" ON classes FOR ALL USING (true) WITH CHECK (true);
+
+
+-- 3. TABEL MATERIALS (Daftar Materi & Kurikulum)
 CREATE TABLE IF NOT EXISTS materials (
   id TEXT PRIMARY KEY,
   level TEXT NOT NULL,
@@ -318,8 +338,25 @@ ON CONFLICT (id) DO NOTHING;`,
   "createdAt" BIGINT NOT NULL,
   branch TEXT DEFAULT 'Pusat',
   "hariLes" TEXT DEFAULT 'Hari Jumat dan Ahad',
-  "uniqueCode" TEXT
+  "uniqueCode" TEXT,
+  kelas TEXT
 );`,
+    classes: `CREATE TABLE IF NOT EXISTS classes (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  "scheduleDays" TEXT,
+  "scheduleTime" TEXT,
+  "teacherName" TEXT,
+  quota INTEGER DEFAULT 12,
+  room TEXT,
+  level TEXT,
+  branch TEXT DEFAULT 'Pusat',
+  "createdAt" BIGINT NOT NULL
+);
+
+ALTER TABLE classes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON classes;
+CREATE POLICY "Allow public read-write for demo" ON classes FOR ALL USING (true) WITH CHECK (true);`,
 
     attendance: `CREATE TABLE IF NOT EXISTS attendance (
   id TEXT PRIMARY KEY,
@@ -466,6 +503,7 @@ ALTER TABLE students ADD COLUMN IF NOT EXISTS alamat TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "activeMaterialId" TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "hariLes" TEXT DEFAULT 'Hari Jumat dan Ahad';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "uniqueCode" TEXT;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS kelas TEXT;
 ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS "avatarUrl" TEXT;
 
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "amountPaid" NUMERIC DEFAULT 0;
@@ -513,7 +551,25 @@ VALUES
   ('hl-2', 'Sabtu dan Ahad', 'Jadwal les akhir pekan (Weekend)', 1719600000, 'Pusat'),
   ('hl-3', 'Senin dan Kamis', 'Jadwal les tengah pekan (Weekday)', 1719600000, 'Pusat'),
   ('hl-4', 'Selasa dan Jumat', 'Jadwal les alternatif tengah pekan', 1719600000, 'Pusat')
-ON CONFLICT (id) DO NOTHING;`,
+ON CONFLICT (id) DO NOTHING;
+
+-- 8. Tambah Tabel Classes / Kelompok Bimbingan
+CREATE TABLE IF NOT EXISTS classes (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  "scheduleDays" TEXT,
+  "scheduleTime" TEXT,
+  "teacherName" TEXT,
+  quota INTEGER DEFAULT 12,
+  room TEXT,
+  level TEXT,
+  branch TEXT DEFAULT 'Pusat',
+  "createdAt" BIGINT NOT NULL
+);
+
+ALTER TABLE classes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON classes;
+CREATE POLICY "Allow public read-write for demo" ON classes FOR ALL USING (true) WITH CHECK (true);`,
 
     students: `-- Melengkapi kolom students tanpa merubah data lama
 ALTER TABLE students ADD COLUMN IF NOT EXISTS keterangan TEXT;
@@ -524,7 +580,8 @@ ALTER TABLE students ADD COLUMN IF NOT EXISTS "jenisKelamin" TEXT DEFAULT 'Laki-
 ALTER TABLE students ADD COLUMN IF NOT EXISTS alamat TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Pusat';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "hariLes" TEXT DEFAULT 'Hari Jumat dan Ahad';
-ALTER TABLE students ADD COLUMN IF NOT EXISTS "uniqueCode" TEXT;`,
+ALTER TABLE students ADD COLUMN IF NOT EXISTS "uniqueCode" TEXT;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS kelas TEXT;`,
 
     invoices: `-- Melengkapi kolom invoice untuk Cicilan & Riwayat Pembayaran & Kategori Pembayaran
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "amountPaid" NUMERIC DEFAULT 0;
@@ -574,7 +631,25 @@ VALUES
   ('hl-2', 'Sabtu dan Ahad', 'Jadwal les akhir pekan (Weekend)', 1719600000, 'Pusat'),
   ('hl-3', 'Senin dan Kamis', 'Jadwal les tengah pekan (Weekday)', 1719600000, 'Pusat'),
   ('hl-4', 'Selasa dan Jumat', 'Jadwal les alternatif tengah pekan', 1719600000, 'Pusat')
-ON CONFLICT (id) DO NOTHING;`
+ON CONFLICT (id) DO NOTHING;`,
+
+    classes: `-- Pembuatan Tabel Classes / Kelompok Bimbingan (Migrasi Mandiri)
+CREATE TABLE IF NOT EXISTS classes (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  "scheduleDays" TEXT,
+  "scheduleTime" TEXT,
+  "teacherName" TEXT,
+  quota INTEGER DEFAULT 12,
+  room TEXT,
+  level TEXT,
+  branch TEXT DEFAULT 'Pusat',
+  "createdAt" BIGINT NOT NULL
+);
+
+ALTER TABLE classes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON classes;
+CREATE POLICY "Allow public read-write for demo" ON classes FOR ALL USING (true) WITH CHECK (true);`
   };
 
   return (
@@ -791,6 +866,16 @@ ON CONFLICT (id) DO NOTHING;`
                   }`}
                 >
                   Kolom Kurikulum & Video
+                </button>
+                <button
+                  onClick={() => setSelectedTable('classes')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                    selectedTable === 'classes'
+                      ? 'bg-slate-800 text-emerald-400 border border-emerald-500/20'
+                      : 'bg-slate-950/40 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Tabel Kelas Bimbingan
                 </button>
                 <button
                   onClick={() => setSelectedTable('constraints')}

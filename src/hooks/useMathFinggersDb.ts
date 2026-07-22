@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
-import { Student, Attendance, TeacherNote, Invoice, Installment, Grade, LearningMaterial, AppSettings, DashboardTask, Branch, AdminUser } from '../types';
+import { Student, Attendance, TeacherNote, Invoice, Installment, Grade, LearningMaterial, AppSettings, DashboardTask, Branch, AdminUser, ClassGroup } from '../types';
 import { SEED_MATERIALS, generateInvoiceNo } from '../utils';
 
 // Helper to load localStorage fallbacks
@@ -31,6 +31,7 @@ export function useMathFinggersDb() {
   const [materials, setMaterials] = useState<LearningMaterial[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+  const [classes, setClasses] = useState<ClassGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOfflineFallback, setIsOfflineFallback] = useState(false);
 
@@ -130,6 +131,15 @@ export function useMathFinggersDb() {
         console.warn('Failed to fetch admin users from Supabase:', e);
       }
 
+      // Fetch Classes
+      let classesData = null;
+      try {
+        const { data, error } = await supabase.from('classes').select('*');
+        if (!error) classesData = data;
+      } catch (e) {
+        console.warn('Failed to fetch classes from Supabase:', e);
+      }
+
       // Set state and save locally for offline capabilities
       const loadedStudents = studentsData || [];
       const loadedAttendance = (attendanceData || []).sort((a, b) => b.date.localeCompare(a.date));
@@ -151,6 +161,15 @@ export function useMathFinggersDb() {
       ]);
       setAdminUsers(loadedAdminUsers);
       saveLocalData('admin_users', loadedAdminUsers);
+
+      const defaultClassesList: ClassGroup[] = [
+        { id: 'cls-1', name: 'Kelas Reguler A (Senin & Rabu)', scheduleDays: 'Senin & Rabu', scheduleTime: '14:00 - 15:30', teacherName: 'Febrianti Dewi', quota: 12, room: 'Ruang A1', level: 'Level 1 : Penjumlahan & Pengurangan Angka Satuan', branch: 'Pusat', createdAt: 1719600000 },
+        { id: 'cls-2', name: 'Kelas Reguler B (Selasa & Kamis)', scheduleDays: 'Selasa & Kamis', scheduleTime: '15:30 - 17:00', teacherName: 'Dewi Safitri', quota: 10, room: 'Ruang A2', level: 'Level 2 : Penjumlahan & Pengurangan Angka Puluhan', branch: 'Pusat', createdAt: 1719600000 },
+        { id: 'cls-3', name: 'Kelas Weekend Bandung', scheduleDays: 'Sabtu & Ahad', scheduleTime: '09:00 - 10:30', teacherName: 'Les Privat Bandung', quota: 15, room: 'Ruang Utama', level: 'Level 1 : Penjumlahan & Pengurangan Angka Satuan', branch: 'Bandung', createdAt: 1719600000 }
+      ];
+      const loadedClasses = classesData || getLocalData<ClassGroup[]>('classes', defaultClassesList);
+      setClasses(loadedClasses);
+      saveLocalData('classes', loadedClasses);
 
       setStudents(loadedStudents);
       saveLocalData('students', loadedStudents);
@@ -224,6 +243,13 @@ export function useMathFinggersDb() {
       { username: 'les_bandung', name: 'Les Privat Bandung', role: 'branch_admin', branch: 'Bandung', avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200' }
     ];
     setAdminUsers(getLocalData<AdminUser[]>('admin_users', defaultAdminUsers));
+
+    const defaultClassesList: ClassGroup[] = [
+      { id: 'cls-1', name: 'Kelas Reguler A (Senin & Rabu)', scheduleDays: 'Senin & Rabu', scheduleTime: '14:00 - 15:30', teacherName: 'Febrianti Dewi', quota: 12, room: 'Ruang A1', level: 'Level 1 : Penjumlahan & Pengurangan Angka Satuan', branch: 'Pusat', createdAt: 1719600000 },
+      { id: 'cls-2', name: 'Kelas Reguler B (Selasa & Kamis)', scheduleDays: 'Selasa & Kamis', scheduleTime: '15:30 - 17:00', teacherName: 'Dewi Safitri', quota: 10, room: 'Ruang A2', level: 'Level 2 : Penjumlahan & Pengurangan Angka Puluhan', branch: 'Pusat', createdAt: 1719600000 },
+      { id: 'cls-3', name: 'Kelas Weekend Bandung', scheduleDays: 'Sabtu & Ahad', scheduleTime: '09:00 - 10:30', teacherName: 'Les Privat Bandung', quota: 15, room: 'Ruang Utama', level: 'Level 1 : Penjumlahan & Pengurangan Angka Satuan', branch: 'Bandung', createdAt: 1719600000 }
+    ];
+    setClasses(getLocalData<ClassGroup[]>('classes', defaultClassesList));
 
     const localStudents = getLocalData<Student[]>('students', []);
     if (localStudents.length === 0) {
@@ -1014,6 +1040,54 @@ export function useMathFinggersDb() {
     }
   };
 
+  // --- CLASSES WRITERS ---
+  const addClassGroup = async (classData: Omit<ClassGroup, 'id' | 'createdAt'>) => {
+    const newClass: ClassGroup = {
+      ...classData,
+      id: `cls-${generateId()}`,
+      createdAt: Date.now()
+    };
+    const updated = [newClass, ...classes];
+    setClasses(updated);
+    saveLocalData('classes', updated);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        await supabase.from('classes').insert([newClass]);
+      } catch (e) {
+        console.error('Failed to save class to Supabase:', e);
+      }
+    }
+  };
+
+  const updateClassGroup = async (id: string, updatedFields: Partial<ClassGroup>) => {
+    const updated = classes.map(c => c.id === id ? { ...c, ...updatedFields } : c);
+    setClasses(updated);
+    saveLocalData('classes', updated);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        await supabase.from('classes').update(updatedFields).eq('id', id);
+      } catch (e) {
+        console.error('Failed to update class in Supabase:', e);
+      }
+    }
+  };
+
+  const deleteClassGroup = async (id: string) => {
+    const updated = classes.filter(c => c.id !== id);
+    setClasses(updated);
+    saveLocalData('classes', updated);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        await supabase.from('classes').delete().eq('id', id);
+      } catch (e) {
+        console.error('Failed to delete class in Supabase:', e);
+      }
+    }
+  };
+
   // --- MANUAL BACKUP IMPORT WRITER ---
   const importBackupData = async (backupPayload: any) => {
     try {
@@ -1028,6 +1102,7 @@ export function useMathFinggersDb() {
       const importedTasks = Array.isArray(data.dashboardTasks) ? data.dashboardTasks : null;
       const importedBranches = Array.isArray(data.branches) ? data.branches : null;
       const importedAdminUsers = Array.isArray(data.adminUsers || data.admin_users) ? (data.adminUsers || data.admin_users) : null;
+      const importedClasses = Array.isArray(data.classes) ? data.classes : null;
       const importedSettings = data.settings;
 
       if (!importedStudents && !importedGrades && !importedAttendance && !importedNotes && !importedInvoices) {
@@ -1137,6 +1212,19 @@ export function useMathFinggersDb() {
         }
       }
 
+      // 10. Classes
+      if (importedClasses) {
+        setClasses(importedClasses);
+        saveLocalData('classes', importedClasses);
+        if (supabase && !isOfflineFallback) {
+          try {
+            await supabase.from('classes').upsert(importedClasses);
+          } catch (e) {
+            console.warn('Failed to sync classes to Supabase during backup restore:', e);
+          }
+        }
+      }
+
       return { success: true };
     } catch (err: any) {
       console.error('Failed to import backup:', err);
@@ -1153,6 +1241,7 @@ export function useMathFinggersDb() {
     materials,
     branches,
     adminUsers,
+    classes,
     settings,
     dashboardTasks,
     loading,
@@ -1187,6 +1276,9 @@ export function useMathFinggersDb() {
     addAdminUser,
     updateAdminUser,
     deleteAdminUser,
+    addClassGroup,
+    updateClassGroup,
+    deleteClassGroup,
     importBackupData
   };
 }

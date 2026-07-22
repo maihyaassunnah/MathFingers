@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Student, LearningMaterial, Attendance, TeacherNote, Grade, Branch } from '../types';
+import { Student, LearningMaterial, Attendance, TeacherNote, Grade, Branch, ClassGroup } from '../types';
 import { formatWhatsAppPhone, getWhatsAppLink, getStudentUniqueCode } from '../utils';
 import { generateStudentPDFReport } from '../utils/pdfGenerator';
-import { Search, Plus, UserPlus, Phone, Calendar, BookOpen, Trash2, Edit2, CheckCircle, XCircle, AlertCircle, Download, Award, Video, ExternalLink, Eye, X, Image as ImageIcon, Check } from 'lucide-react';
+import { Search, Plus, UserPlus, Phone, Calendar, BookOpen, Trash2, Edit2, CheckCircle, XCircle, AlertCircle, Download, Award, Video, ExternalLink, Eye, X, Image as ImageIcon, Check, Layers } from 'lucide-react';
 
 interface StudentManagerProps {
   students: Student[];
@@ -10,6 +10,7 @@ interface StudentManagerProps {
   attendance: Attendance[];
   notes: TeacherNote[];
   grades: Grade[];
+  classes?: ClassGroup[];
   onAddStudent: (data: Omit<Student, 'id' | 'createdAt'>) => Promise<void>;
   onUpdateStudent: (id: string, data: Partial<Student>) => Promise<void>;
   onDeleteStudent: (id: string) => Promise<void>;
@@ -24,6 +25,7 @@ export function StudentManager({
   attendance = [],
   notes = [],
   grades = [],
+  classes = [],
   onAddStudent, 
   onUpdateStudent, 
   onDeleteStudent,
@@ -55,6 +57,7 @@ export function StudentManager({
   const [activeMaterialId, setActiveMaterialId] = useState('');
   const [hariLes, setHariLes] = useState('Hari Jumat dan Ahad');
   const [branch, setBranch] = useState(() => branches[0]?.name || 'Pusat');
+  const [kelas, setKelas] = useState('');
 
   // Curriculum overlay modal states
   const [selectedCurriculumMat, setSelectedCurriculumMat] = useState<LearningMaterial | null>(null);
@@ -88,6 +91,7 @@ export function StudentManager({
     setActiveMaterialId('');
     setHariLes('Hari Jumat dan Ahad');
     setBranch(branches[0]?.name || 'Pusat');
+    setKelas('');
     setIsFormOpen(true);
   };
 
@@ -108,6 +112,7 @@ export function StudentManager({
     setActiveMaterialId(student.activeMaterialId || '');
     setHariLes(student.hariLes || 'Hari Jumat dan Ahad');
     setBranch(student.branch || 'Pusat');
+    setKelas(student.kelas || '');
     setIsFormOpen(true);
   };
 
@@ -133,7 +138,8 @@ export function StudentManager({
       alamat,
       activeMaterialId: activeMaterialId || '',
       hariLes,
-      branch
+      branch,
+      kelas
     };
 
     if (editingStudent) {
@@ -467,6 +473,31 @@ export function StudentManager({
               )}
 
               <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                  <span>Pilih Kelas Bimbingan</span>
+                  <span className="text-[10px] text-indigo-400 font-normal">Opsional</span>
+                </label>
+                <select
+                  value={kelas}
+                  onChange={(e) => setKelas(e.target.value)}
+                  className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                    isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
+                  }`}
+                >
+                  <option value="" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>
+                    -- Belum Ditentukan / Tanpa Kelas --
+                  </option>
+                  {classes
+                    .filter(c => !branch || c.branch === branch || branch === 'all')
+                    .map((c) => (
+                      <option key={c.id} value={c.name} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>
+                        {c.name} ({c.scheduleDays || 'Jadwal'} • {c.teacherName || 'Pengajar'})
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Alamat Rumah</label>
                 <textarea
                   placeholder="Masukkan alamat lengkap rumah"
@@ -568,6 +599,11 @@ export function StudentManager({
                           <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 border border-fuchsia-500/15" title="Cabang Bimbingan">
                             🏢 {student.branch || 'Pusat'}
                           </span>
+                          {student.kelas && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/15" title="Kelas Bimbingan">
+                              🏫 {student.kelas}
+                            </span>
+                          )}
                         </div>
 
                         {/* Lahir & Alamat Sejajar */}

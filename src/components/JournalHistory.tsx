@@ -81,11 +81,11 @@ export function JournalHistory({ students, notes, theme = 'dark' }: JournalHisto
       {/* Header and Title */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black tracking-tight flex items-center gap-2">
+          <h2 className={`text-2xl font-black tracking-tight flex items-center gap-2 ${isLight ? 'text-slate-800' : 'text-white'}`}>
             <History className="text-emerald-500" />
             <span>Riwayat Jurnal Mengajar</span>
           </h2>
-          <p className="text-slate-400 text-sm mt-1">Daftar arsip lengkap aktivitas belajar-mengajar guru dan catatan kemajuan siswa.</p>
+          <p className={`text-sm mt-1 ${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>Daftar arsip lengkap aktivitas belajar-mengajar guru dan catatan kemajuan siswa.</p>
         </div>
       </div>
 
@@ -98,9 +98,9 @@ export function JournalHistory({ students, notes, theme = 'dark' }: JournalHisto
             <BookOpen size={24} />
           </div>
           <div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Sesi Mengajar</div>
+            <div className={`text-[11px] font-bold uppercase tracking-wider ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>Total Sesi Mengajar</div>
             <div className="text-2xl font-black font-mono mt-0.5">{totalLessons}</div>
-            <div className="text-[10px] text-slate-500">Jurnal tersimpan</div>
+            <div className={`text-[10px] ${isLight ? 'text-slate-600 font-medium' : 'text-slate-500'}`}>Jurnal tersimpan</div>
           </div>
         </div>
 
@@ -111,9 +111,9 @@ export function JournalHistory({ students, notes, theme = 'dark' }: JournalHisto
             <User size={24} />
           </div>
           <div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Siswa Terjangkau</div>
+            <div className={`text-[11px] font-bold uppercase tracking-wider ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>Siswa Terjangkau</div>
             <div className="text-2xl font-black font-mono mt-0.5">{uniqueStudents}</div>
-            <div className="text-[10px] text-slate-500">Dari total {students.length} siswa aktif</div>
+            <div className={`text-[10px] ${isLight ? 'text-slate-600 font-medium' : 'text-slate-500'}`}>Dari total {students.length} siswa aktif</div>
           </div>
         </div>
 
@@ -124,9 +124,9 @@ export function JournalHistory({ students, notes, theme = 'dark' }: JournalHisto
             <Clock size={24} />
           </div>
           <div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Estimasi Jam Belajar</div>
+            <div className={`text-[11px] font-bold uppercase tracking-wider ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>Estimasi Jam Belajar</div>
             <div className="text-2xl font-black font-mono mt-0.5">{Math.round(totalDuration / 60)} Jam</div>
-            <div className="text-[10px] text-slate-500">Akumulasi durasi belajar</div>
+            <div className={`text-[10px] ${isLight ? 'text-slate-600 font-medium' : 'text-slate-500'}`}>Akumulasi durasi belajar</div>
           </div>
         </div>
       </div>
@@ -216,7 +216,7 @@ export function JournalHistory({ students, notes, theme = 'dark' }: JournalHisto
                           <Sparkles size={14} />
                           <span>{note.studentName}</span>
                         </div>
-                        <div className="text-xs text-slate-400 flex items-center gap-1 mt-0.5 font-medium">
+                        <div className={`text-xs flex items-center gap-1 mt-0.5 font-medium ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
                           <Calendar size={11} />
                           <span>{note.date}</span>
                         </div>
@@ -234,20 +234,20 @@ export function JournalHistory({ students, notes, theme = 'dark' }: JournalHisto
 
                     {/* Class Topic Focus */}
                     <div className={`p-3 rounded-xl border text-xs font-semibold ${
-                      isLight ? 'bg-slate-50 border-slate-100 text-slate-700' : 'bg-slate-950/40 border-slate-850 text-emerald-400'
+                      isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-850 text-emerald-400'
                     }`}>
-                      <span className="text-slate-400 mr-1.5 font-bold uppercase tracking-wider text-[9px]">Fokus Kelas:</span>
+                      <span className={`mr-1.5 font-bold uppercase tracking-wider text-[9px] ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Fokus Kelas:</span>
                       {note.topic}
                     </div>
 
                     {/* Teacher Notes Content */}
-                    <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                    <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-700 font-medium' : 'text-slate-300'}`}>
                       {note.content}
                     </p>
                   </div>
 
                   {/* Footer details like materials or levels */}
-                  <div className="border-t pt-3 flex items-center justify-between text-[10px] text-slate-500 font-medium">
+                  <div className={`border-t pt-3 flex items-center justify-between text-[10px] font-semibold ${isLight ? 'border-slate-150 text-slate-600' : 'border-slate-800 text-slate-500'}`}>
                     <div>
                       <span>Pengajar: {note.teacherName}</span>
                     </div>

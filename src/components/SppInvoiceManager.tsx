@@ -592,7 +592,7 @@ function angkaKeTerbilang(nominal: number): string {
           className={`px-5 py-3 text-sm font-bold border-b-2 transition duration-150 flex items-center gap-2 ${
             activeCategory === 'pendaftaran'
               ? 'border-emerald-500 text-emerald-500 font-extrabold'
-              : 'border-transparent text-slate-400 hover:text-slate-350'
+              : isLight ? 'border-transparent text-slate-700 hover:text-slate-900 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-350'
           }`}
         >
           <UserPlus size={16} />
@@ -604,7 +604,7 @@ function angkaKeTerbilang(nominal: number): string {
           className={`px-5 py-3 text-sm font-bold border-b-2 transition duration-150 flex items-center gap-2 ${
             activeCategory === 'spp'
               ? 'border-emerald-500 text-emerald-500 font-extrabold'
-              : 'border-transparent text-slate-400 hover:text-slate-350'
+              : isLight ? 'border-transparent text-slate-700 hover:text-slate-900 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-350'
           }`}
         >
           <Receipt size={16} />
@@ -616,7 +616,7 @@ function angkaKeTerbilang(nominal: number): string {
           className={`px-5 py-3 text-sm font-bold border-b-2 transition duration-150 flex items-center gap-2 ${
             activeCategory === 'buku'
               ? 'border-emerald-500 text-emerald-500 font-extrabold'
-              : 'border-transparent text-slate-400 hover:text-slate-350'
+              : isLight ? 'border-transparent text-slate-700 hover:text-slate-900 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-350'
           }`}
         >
           <BookOpen size={16} />
@@ -630,7 +630,7 @@ function angkaKeTerbilang(nominal: number): string {
           <h2 className={`text-2xl font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>
             {activeCategory === 'pendaftaran' ? 'Pembayaran Pendaftaran' : activeCategory === 'spp' ? 'SPP & Invoice Manajemen' : 'Pembayaran Buku'}
           </h2>
-          <p className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-sm`}>
+          <p className={`${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'} text-sm`}>
             {activeCategory === 'pendaftaran' 
               ? 'Kelola pembayaran pendaftaran siswa baru, terbitkan invoice pendaftaran, dan cetak kuitansi resmi.'
               : activeCategory === 'spp'

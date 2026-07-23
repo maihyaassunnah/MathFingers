@@ -295,7 +295,7 @@ export function GradeManager({
           className={`px-5 py-3 text-sm font-bold border-b-2 transition duration-150 flex items-center gap-2 ${
             viewMode === 'input'
               ? 'border-emerald-500 text-emerald-500'
-              : 'border-transparent text-slate-400 hover:text-slate-350'
+              : isLight ? 'border-transparent text-slate-700 hover:text-slate-900 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-350'
           }`}
         >
           <Award size={16} />
@@ -307,7 +307,7 @@ export function GradeManager({
           className={`px-5 py-3 text-sm font-bold border-b-2 transition duration-150 flex items-center gap-2 ${
             viewMode === 'leger'
               ? 'border-emerald-500 text-emerald-500'
-              : 'border-transparent text-slate-400 hover:text-slate-350'
+              : isLight ? 'border-transparent text-slate-700 hover:text-slate-900 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-350'
           }`}
         >
           <FileSpreadsheet size={16} />
@@ -326,14 +326,14 @@ export function GradeManager({
             <Award size={20} className="text-emerald-500" />
             <span>Panel Input Nilai Kelas (Langsung)</span>
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">Isi materi/bab, tanggal, dan nilai siswa aktif di bawah, lalu klik Simpan Nilai.</p>
+          <p className={`text-xs mt-0.5 ${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>Isi materi/bab, tanggal, dan nilai siswa aktif di bawah, lalu klik Simpan Nilai.</p>
         </div>
 
         <form onSubmit={handleBulkSubmit} className="space-y-4">
           {/* Topic and Date Row */}
           <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-slate-200 dark:border-slate-800/60">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Materi / Bab Uji Kompetensi *</label>
+              <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>Materi / Bab Uji Kompetensi *</label>
               <input
                 type="text"
                 required
@@ -346,7 +346,7 @@ export function GradeManager({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Tanggal Ujian *</label>
+              <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>Tanggal Ujian *</label>
               <input
                 type="date"
                 required
@@ -363,7 +363,7 @@ export function GradeManager({
           {activeStudents.length > 0 && (
             <div className="px-5 pb-4 flex flex-col gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Saring Berdasarkan Nama / Abjad</label>
+                <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>Saring Berdasarkan Nama / Abjad</label>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                   <div className="relative flex-1">
                     <Search className="absolute left-3.5 top-2.5 text-slate-500" size={16} />
@@ -422,7 +422,7 @@ export function GradeManager({
               {/* Alphabet Quick Filter Bar for Grades */}
               {availableBulkLetters.length > 0 && (
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
-                  <span className="text-xs font-bold text-slate-400 mr-1 shrink-0">Inisial Abjad:</span>
+                  <span className={`text-xs font-bold mr-1 shrink-0 ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>Inisial Abjad:</span>
                   <button
                     type="button"
                     onClick={() => setBulkSelectedLetter('ALL')}
@@ -430,7 +430,7 @@ export function GradeManager({
                       bulkSelectedLetter === 'ALL'
                         ? 'bg-emerald-600 text-white'
                         : isLight
-                          ? 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                          ? 'bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold'
                           : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
                     }`}
                   >
@@ -445,7 +445,7 @@ export function GradeManager({
                         bulkSelectedLetter === letter
                           ? 'bg-emerald-600 text-white'
                           : isLight
-                            ? 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                            ? 'bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold'
                             : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
                       }`}
                     >
@@ -467,11 +467,11 @@ export function GradeManager({
             ) : (
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-200 dark:border-slate-800/60 text-xs font-semibold uppercase tracking-wider text-slate-450 pb-2">
-                    <th className="py-2 w-16 text-center">Ikut</th>
-                    <th className="py-2">Nama Siswa</th>
-                    <th className="py-2 w-32 text-center">Skor (0-100)</th>
-                    <th className="py-2">Catatan Tambahan</th>
+                  <tr className={`border-b text-xs font-bold uppercase tracking-wider pb-2 ${isLight ? 'border-slate-200 text-slate-800 bg-slate-100/70' : 'border-slate-800/60 text-slate-400'}`}>
+                    <th className="py-2.5 px-2 w-16 text-center">Ikut</th>
+                    <th className="py-2.5 px-2">Nama Siswa</th>
+                    <th className="py-2.5 px-2 w-32 text-center">Skor (0-100)</th>
+                    <th className="py-2.5 px-2">Catatan Tambahan</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/40">

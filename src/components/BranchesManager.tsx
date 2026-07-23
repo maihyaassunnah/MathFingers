@@ -138,7 +138,7 @@ export function BranchesManager({
             <Building className="text-emerald-500" />
             <span>Manajemen Multi-Cabang & Admin</span>
           </h2>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className={`${isLight ? 'text-slate-600' : 'text-slate-400'} text-sm mt-1`}>
             Pantau dan kelola cabang privat les Math Fingers serta hak akses akun administrator cabang Anda secara aman.
           </p>
         </div>
@@ -186,7 +186,7 @@ export function BranchesManager({
           className={`px-4 py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 transition ${
             activeSubTab === 'branches'
               ? 'border-emerald-500 text-emerald-500'
-              : 'border-transparent text-slate-400 hover:text-slate-300'
+              : isLight ? 'border-transparent text-slate-700 hover:text-slate-900 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-300'
           }`}
         >
           Daftar Cabang ({branches.length})
@@ -196,7 +196,7 @@ export function BranchesManager({
           className={`px-4 py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 transition ${
             activeSubTab === 'admins'
               ? 'border-emerald-500 text-emerald-500'
-              : 'border-transparent text-slate-400 hover:text-slate-300'
+              : isLight ? 'border-transparent text-slate-700 hover:text-slate-900 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-300'
           }`}
         >
           Akun Admin ({adminUsers.length})
@@ -214,7 +214,7 @@ export function BranchesManager({
               <div
                 key={branch.id}
                 className={`p-6 rounded-2xl border transition-all ${
-                  isLight ? 'bg-white border-slate-150' : 'bg-slate-900 border-slate-800'
+                  isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
                 }`}
                 id={`branch-card-${branch.id}`}
               >
@@ -225,7 +225,7 @@ export function BranchesManager({
                   <div className="flex gap-2">
                     <button
                       onClick={() => startEditBranch(branch)}
-                      className="text-slate-400 hover:text-emerald-500 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                      className={`${isLight ? 'text-slate-600' : 'text-slate-400'} hover:text-emerald-500 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition`}
                       title="Edit Cabang"
                     >
                       <Edit2 size={14} />
@@ -237,7 +237,7 @@ export function BranchesManager({
                             onDeleteBranch(branch.id);
                           }
                         }}
-                        className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                        className={`${isLight ? 'text-slate-600' : 'text-slate-400'} hover:text-red-500 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition`}
                         title="Hapus Cabang"
                       >
                         <Trash2 size={14} />
@@ -246,19 +246,19 @@ export function BranchesManager({
                   </div>
                 </div>
 
-                <h3 className="text-base font-bold mt-4 text-slate-850 dark:text-white">{branch.name}</h3>
+                <h3 className={`text-base font-bold mt-4 ${isLight ? 'text-slate-900' : 'text-white'}`}>{branch.name}</h3>
                 
-                <div className="space-y-2 mt-4 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                <div className={`space-y-2 mt-4 text-xs font-semibold ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
                   <div className="flex items-start gap-2">
-                    <MapPin size={13} className="text-slate-400 mt-0.5 shrink-0" />
+                    <MapPin size={13} className={`${isLight ? 'text-slate-600' : 'text-slate-400'} mt-0.5 shrink-0`} />
                     <span>{branch.address || 'Alamat belum disetel'}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Phone size={13} className="text-slate-400 shrink-0" />
+                    <Phone size={13} className={`${isLight ? 'text-slate-600' : 'text-slate-400'} shrink-0`} />
                     <span>{branch.phone || 'Telepon belum disetel'}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Users size={13} className="text-slate-400 shrink-0" />
+                    <Users size={13} className={`${isLight ? 'text-slate-600' : 'text-slate-400'} shrink-0`} />
                     <span>{adminCount} Akun Admin Terdaftar</span>
                   </div>
                 </div>
@@ -270,7 +270,7 @@ export function BranchesManager({
         <div className="overflow-x-auto rounded-2xl border border-slate-150 dark:border-slate-800">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className={isLight ? 'bg-slate-50 border-b border-slate-150 text-slate-500' : 'bg-slate-950 border-b border-slate-800 text-slate-400'}>
+              <tr className={isLight ? 'bg-slate-100 border-b border-slate-200 text-slate-800' : 'bg-slate-950 border-b border-slate-800 text-slate-400'}>
                 <th className="p-4 font-bold uppercase tracking-wider">Nama Admin</th>
                 <th className="p-4 font-bold uppercase tracking-wider">Username</th>
                 <th className="p-4 font-bold uppercase tracking-wider">Cabang Tugas</th>
@@ -286,7 +286,7 @@ export function BranchesManager({
                   <tr
                     key={admin.username}
                     className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors ${
-                      isLight ? 'text-slate-700' : 'text-slate-300'
+                      isLight ? 'text-slate-800' : 'text-slate-300'
                     }`}
                   >
                     <td className="p-4 font-bold">
@@ -302,7 +302,7 @@ export function BranchesManager({
                     </td>
                     <td className="p-4 font-mono">{admin.username}</td>
                     <td className="p-4">
-                      <span className="font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">
+                      <span className={`font-semibold px-2 py-1 rounded-md ${isLight ? 'text-slate-800 bg-slate-200/80' : 'text-slate-400 bg-slate-800'}`}>
                         {admin.branch}
                       </span>
                     </td>
@@ -316,7 +316,7 @@ export function BranchesManager({
                         <span>{isSuper ? 'Super Admin' : 'Admin Cabang'}</span>
                       </span>
                     </td>
-                    <td className="p-4 font-mono text-slate-400">{admin.password || '••••••'}</td>
+                    <td className={`p-4 font-mono ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>{admin.password || '••••••'}</td>
                     <td className="p-4 text-right space-x-1.5">
                       <button
                         onClick={() => startEditAdmin(admin)}

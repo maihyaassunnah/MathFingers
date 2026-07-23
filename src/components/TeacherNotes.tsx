@@ -251,35 +251,35 @@ export function TeacherNotes({
             <div className={`p-6 border-b flex items-center justify-between ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
               <div>
                 <h3 className={`text-lg font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Buat Jurnal Harian Kelas</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Input materi kelas untuk semua siswa sekaligus & sesuaikan per anak jika diperlukan.</p>
+                <p className={`text-xs mt-0.5 ${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>Input materi kelas untuk semua siswa sekaligus & sesuaikan per anak jika diperlukan.</p>
               </div>
-              <button type="button" onClick={() => setIsFormOpen(false)} className="text-slate-400 hover:text-white font-medium text-lg">✕</button>
+              <button type="button" onClick={() => setIsFormOpen(false)} className={`${isLight ? 'text-slate-500 hover:text-slate-800' : 'text-slate-400 hover:text-white'} font-medium text-lg`}>✕</button>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
               {/* Row 1: Date & Teacher */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Tanggal Pertemuan *</label>
+                  <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>Tanggal Pertemuan *</label>
                   <input
                     type="date"
                     required
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                     className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm ${
-                      isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+                      isLight ? 'bg-slate-50 border-slate-200 text-slate-800 font-medium' : 'bg-slate-900 border-slate-800 text-white'
                     }`}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Nama Pengajar</label>
+                  <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>Nama Pengajar</label>
                   <input
                     type="text"
                     required
                     value={teacherName}
                     onChange={(e) => setTeacherName(e.target.value)}
                     className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm ${
-                      isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+                      isLight ? 'bg-slate-50 border-slate-200 text-slate-800 font-medium' : 'bg-slate-900 border-slate-800 text-white'
                     }`}
                   />
                 </div>
@@ -287,7 +287,7 @@ export function TeacherNotes({
 
               {/* Row 2: Topic */}
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Materi / Topik Pembahasan *</label>
+                <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>Materi / Topik Pembahasan *</label>
                 <input
                   type="text"
                   required
@@ -295,14 +295,14 @@ export function TeacherNotes({
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                   className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm ${
-                    isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+                    isLight ? 'bg-slate-50 border-slate-200 text-slate-800 font-medium' : 'bg-slate-900 border-slate-800 text-white'
                   }`}
                 />
               </div>
 
               {/* Row 3: General Class Content */}
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
                   Catatan Evaluasi Umum Kelas (Default)
                 </label>
                 <textarea
@@ -311,16 +311,16 @@ export function TeacherNotes({
                   value={generalContent}
                   onChange={(e) => setGeneralContent(e.target.value)}
                   className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs ${
-                    isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+                    isLight ? 'bg-slate-50 border-slate-200 text-slate-800 font-medium' : 'bg-slate-900 border-slate-800 text-white'
                   }`}
                 />
-                <span className="text-[10px] text-slate-400">Catatan ini akan dipakai untuk siswa terpilih yang kolom catatan khususnya dikosongkan.</span>
+                <span className={`text-[10px] ${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>Catatan ini akan dipakai untuk siswa terpilih yang kolom catatan khususnya dikosongkan.</span>
               </div>
 
               {/* Checklist & Customize Per Student */}
               <div className="border-t pt-4 border-slate-200 dark:border-slate-800/80">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  <span className={`text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
                     Siswa Yang Terlibat & Catatan Khusus
                   </span>
                   

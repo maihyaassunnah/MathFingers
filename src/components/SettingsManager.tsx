@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import * as XLSX from 'xlsx';
-import { AppSettings, AdminUser } from '../types';
+import { AppSettings, AdminUser, Branch } from '../types';
+import { compressImageFile } from '../utils';
 import { 
   Settings, 
   Receipt, 
@@ -27,7 +28,8 @@ import {
   Award,
   History,
   FileSpreadsheet,
-  FileDown
+  FileDown,
+  Building
 } from 'lucide-react';
 
 interface SettingsManagerProps {
@@ -43,6 +45,9 @@ interface SettingsManagerProps {
   onImportBackup?: (backupPayload: any) => Promise<{ success: boolean; error?: string }>;
   currentUser?: AdminUser | null;
   activeBranch?: string;
+  branches?: Branch[];
+  allSettingsMap?: Record<string, AppSettings>;
+  getBranchSettings?: (branchName?: string) => AppSettings;
 }
 
 const ACCENT_COLORS = [
@@ -66,8 +71,15 @@ export function SettingsManager({
   dashboardTasks = [],
   onImportBackup,
   currentUser = null,
-  activeBranch = 'all'
+  activeBranch = 'all',
+  branches = [],
+  allSettingsMap = {},
+  getBranchSettings
 }: SettingsManagerProps) {
+  const [targetBranch, setTargetBranch] = useState<string>(
+    currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : 'Semua')
+  );
+
   const [bankName, setBankName] = useState(settings.bankName);
   const [bankAccountNo, setBankAccountNo] = useState(settings.bankAccountNo);
   const [bankAccountHolder, setBankAccountHolder] = useState(settings.bankAccountHolder);
@@ -77,6 +89,21 @@ export function SettingsManager({
   const [invoicePrefix, setInvoicePrefix] = useState(settings.invoicePrefix || 'INV/MF');
   const [invoiceLogo, setInvoiceLogo] = useState<string | undefined>(settings.invoiceLogo);
   const [invoiceSignature, setInvoiceSignature] = useState<string | undefined>(settings.invoiceSignature);
+
+  useEffect(() => {
+    if (getBranchSettings) {
+      const bSetting = getBranchSettings(targetBranch);
+      setBankName(bSetting.bankName);
+      setBankAccountNo(bSetting.bankAccountNo);
+      setBankAccountHolder(bSetting.bankAccountHolder);
+      setDefaultSppAmount(bSetting.defaultSppAmount);
+      setAccentColor(bSetting.accentColor);
+      setDefaultTeacherName(bSetting.defaultTeacherName);
+      setInvoicePrefix(bSetting.invoicePrefix || 'INV/MF');
+      setInvoiceLogo(bSetting.invoiceLogo);
+      setInvoiceSignature(bSetting.invoiceSignature);
+    }
+  }, [targetBranch, allSettingsMap]);
   
   const [isSaved, setIsSaved] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -159,20 +186,22 @@ export function SettingsManager({
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'signature') => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'signature') => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
+      try {
+        const maxWidth = type === 'logo' ? 250 : 300;
+        const compressedDataUrl = await compressImageFile(file, maxWidth, 0.75);
+        if (compressedDataUrl) {
           if (type === 'logo') {
-            setInvoiceLogo(reader.result);
+            setInvoiceLogo(compressedDataUrl);
           } else {
-            setInvoiceSignature(reader.result);
+            setInvoiceSignature(compressedDataUrl);
           }
         }
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        console.warn('Failed to compress image:', err);
+      }
     }
   };
 
@@ -187,7 +216,9 @@ export function SettingsManager({
       defaultTeacherName,
       invoicePrefix,
       invoiceLogo,
-      invoiceSignature
+      invoiceSignature,
+      branch: targetBranch,
+      branches: targetBranch
     });
 
     setIsSaved(true);
@@ -691,6 +722,51 @@ export function SettingsManager({
 
       <form onSubmit={handleSubmit} className="space-y-6">
         
+        {/* Card Target Cabang */}
+        <div className={`p-5 rounded-2xl border ${
+          isLight ? 'bg-indigo-50/70 border-indigo-200' : 'bg-indigo-950/30 border-indigo-800/60'
+        } space-y-3 shadow-xs`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className={`text-sm font-bold ${isLight ? 'text-indigo-900' : 'text-indigo-200'} flex items-center gap-2`}>
+                <Building size={18} className="text-indigo-500" />
+                <span>Target Cabang Pengaturan</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Pilih cabang untuk mengkonfigurasi rekening, invoice, logo, dan TTD secara terpisah tanpa mengganggu cabang lain (misal: Singkut vs Bangko).
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <select
+                value={targetBranch}
+                onChange={(e) => setTargetBranch(e.target.value)}
+                disabled={currentUser?.role === 'branch_admin'}
+                className={`px-3 py-2 rounded-xl text-xs font-bold border focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                  isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-700 text-slate-100'
+                }`}
+              >
+                <option value="Semua">Semua Cabang (Global Default)</option>
+                {(branches || []).map((b) => (
+                  <option key={b.id} value={b.name}>
+                    Cabang {b.name}
+                  </option>
+                ))}
+                {!(branches || []).some(b => b.name.toLowerCase() === 'singkut') && (
+                  <option value="Singkut">Cabang Singkut</option>
+                )}
+                {!(branches || []).some(b => b.name.toLowerCase() === 'bangko') && (
+                  <option value="Bangko">Cabang Bangko</option>
+                )}
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 pt-1 border-t border-indigo-500/10">
+            <span className="text-[11px] font-semibold text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20">
+              Aktif: Mengedit Pengaturan Cabang "{targetBranch}"
+            </span>
+          </div>
+        </div>
+        
         {/* Row 1: Invoice & Bank Settings */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
@@ -1146,9 +1222,9 @@ export function SettingsManager({
 
           <div className="flex items-center gap-3">
             {isSaved && (
-              <span className="text-emerald-500 font-bold text-xs flex items-center gap-1 animate-fade-in">
+              <span className="text-emerald-500 font-bold text-xs flex items-center gap-1.5 animate-fade-in bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20">
                 <Sparkles size={14} />
-                <span>Pengaturan berhasil disimpan!</span>
+                <span>Pengaturan tersimpan ke Database & Penyimpanan Lokal!</span>
               </span>
             )}
             <button

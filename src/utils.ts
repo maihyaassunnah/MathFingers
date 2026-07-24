@@ -122,3 +122,48 @@ export function getStudentUniqueCode(student: Student): string {
   return code.toString();
 }
 
+/**
+ * Resize and compress an image file before converting to Data URL.
+ * Keeps localStorage lightweight (reduces ~5MB photo down to ~15-30KB).
+ */
+export function compressImageFile(file: File, maxWidth: number = 300, quality: number = 0.8): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(event.target?.result as string || '');
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        const mimeType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+        const compressedDataUrl = canvas.toDataURL(mimeType, quality);
+        resolve(compressedDataUrl);
+      };
+      img.onerror = () => {
+        resolve(event.target?.result as string || '');
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.onerror = () => {
+      resolve('');
+    };
+    reader.readAsDataURL(file);
+  });
+}
+

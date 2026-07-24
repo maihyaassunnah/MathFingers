@@ -100,6 +100,8 @@ export interface AppSettings {
   invoicePrefix?: string;
   invoiceLogo?: string;
   invoiceSignature?: string;
+  branch?: string;
+  branches?: string;
 }
 
 export interface DashboardTask {

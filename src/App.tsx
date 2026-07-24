@@ -104,6 +104,8 @@ export default function App() {
     adminUsers,
     classes,
     settings,
+    allSettingsMap,
+    getBranchSettings,
     dashboardTasks,
     loading,
     isOfflineFallback,
@@ -336,6 +338,8 @@ export default function App() {
   };
 
   const renderContent = () => {
+    const currentBranchSettings = getBranchSettings ? getBranchSettings(activeBranch) : settings;
+
     switch (activeTab) {
       case 'overview':
         return (
@@ -344,7 +348,7 @@ export default function App() {
             attendance={filteredAttendance} 
             invoices={filteredInvoices} 
             grades={filteredGrades} 
-            settings={settings}
+            settings={currentBranchSettings}
             dashboardTasks={dashboardTasks}
             onAddDashboardTask={addDashboardTask}
             onToggleDashboardTask={toggleDashboardTask}
@@ -436,7 +440,7 @@ export default function App() {
           <SppInvoiceManager 
             students={filteredStudents} 
             invoices={filteredInvoices} 
-            settings={settings}
+            settings={currentBranchSettings}
             onCreateInvoice={handleCreateInvoice} 
             onUpdateInvoiceStatus={updateInvoiceStatus} 
             onDeleteInvoice={deleteInvoice} 
@@ -500,7 +504,7 @@ export default function App() {
       case 'settings':
         return (
           <SettingsManager 
-            settings={settings} 
+            settings={currentBranchSettings} 
             onUpdateSettings={updateSettings} 
             theme={theme}
             students={filteredStudents}
@@ -512,6 +516,9 @@ export default function App() {
             onImportBackup={importBackupData}
             currentUser={currentUser}
             activeBranch={activeBranch}
+            branches={branches}
+            allSettingsMap={allSettingsMap}
+            getBranchSettings={getBranchSettings}
           />
         );
       case 'supabase_sql':
@@ -533,7 +540,7 @@ export default function App() {
             attendance={filteredAttendance} 
             invoices={filteredInvoices} 
             grades={filteredGrades} 
-            settings={settings}
+            settings={currentBranchSettings}
             dashboardTasks={dashboardTasks}
             onAddDashboardTask={addDashboardTask}
             onToggleDashboardTask={toggleDashboardTask}
@@ -556,8 +563,19 @@ export default function App() {
       <LoginManager 
         onLogin={(adminUser) => {
           setCurrentUser(adminUser);
-          localStorage.setItem('math_finggers_current_user_obj', JSON.stringify(adminUser));
-          localStorage.setItem('math_finggers_current_user', adminUser.name);
+          try {
+            localStorage.setItem('math_finggers_current_user_obj', JSON.stringify(adminUser));
+            localStorage.setItem('math_finggers_current_user', adminUser.name);
+          } catch (err) {
+            console.warn('LocalStorage quota exceeded when storing user session:', err);
+            try {
+              const lightweightUser = { ...adminUser, avatarUrl: adminUser.avatarUrl?.startsWith('data:') ? '' : adminUser.avatarUrl };
+              localStorage.setItem('math_finggers_current_user_obj', JSON.stringify(lightweightUser));
+              localStorage.setItem('math_finggers_current_user', adminUser.name);
+            } catch {
+              // Ignore if localStorage is completely full
+            }
+          }
         }} 
         adminUsers={adminUsers}
         branches={branches}

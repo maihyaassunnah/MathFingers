@@ -48,7 +48,7 @@ export function SupabaseSqlEditor({
     tables: { name: string; status: 'ok' | 'error' | 'unchecked'; errorMsg?: string }[];
   } | null>(null);
 
-  const tables = ['students', 'classes', 'attendance', 'notes', 'invoices', 'grades', 'materials', 'branches', 'admin_users', 'hari_les'];
+  const tables = ['students', 'classes', 'attendance', 'notes', 'invoices', 'grades', 'materials', 'branches', 'admin_users', 'hari_les', 'app_settings'];
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -109,8 +109,7 @@ export function SupabaseSqlEditor({
   }, []);
 
   // SQL Script Templates
-  const createSqlScripts = {
-    all: `-- ====================================================================
+  const fullSqlScript = `-- ====================================================================
 -- SCRIPT FULL SETUP DATABASE MATH FINGERS (MULTI-CABANG & LATEST SCHEMA) --
 -- ====================================================================
 
@@ -301,6 +300,31 @@ DROP POLICY IF EXISTS "Allow public read-write for demo" ON hari_les;
 CREATE POLICY "Allow public read-write for demo" ON hari_les FOR ALL USING (true) WITH CHECK (true);
 
 
+-- 10. TABEL APP_SETTINGS (Pengaturan Aplikasi, Rekening Bank, Invoice, Logo & TTD per Cabang)
+CREATE TABLE IF NOT EXISTS app_settings (
+  id TEXT PRIMARY KEY DEFAULT 'default',
+  branch TEXT DEFAULT 'Semua',
+  branches TEXT DEFAULT 'Semua',
+  "bankName" TEXT,
+  "bankAccountNo" TEXT,
+  "bankAccountHolder" TEXT,
+  "defaultSppAmount" BIGINT DEFAULT 250000,
+  "accentColor" TEXT DEFAULT 'emerald',
+  "defaultTeacherName" TEXT,
+  "invoicePrefix" TEXT DEFAULT 'INV/MF',
+  "invoiceLogo" TEXT,
+  "invoiceSignature" TEXT,
+  "updatedAt" BIGINT DEFAULT 1719600000
+);
+
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON app_settings;
+CREATE POLICY "Allow public read-write for demo" ON app_settings FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Semua';
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branches TEXT DEFAULT 'Semua';
+
+
 -- ====================================================================
 -- SEED DATA AWAL (Jalankan Sekali Saja)
 -- ====================================================================
@@ -320,7 +344,14 @@ VALUES
   ('hl-2', 'Sabtu dan Ahad', 'Jadwal les akhir pekan (Weekend)', 1719600000, 'Pusat'),
   ('hl-3', 'Senin dan Kamis', 'Jadwal les tengah pekan (Weekday)', 1719600000, 'Pusat'),
   ('hl-4', 'Selasa dan Jumat', 'Jadwal les alternatif tengah pekan', 1719600000, 'Pusat')
-ON CONFLICT (id) DO NOTHING;`,
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO app_settings (id, "bankName", "bankAccountNo", "bankAccountHolder", "defaultSppAmount", "accentColor", "defaultTeacherName", "invoicePrefix", "updatedAt")
+VALUES ('default', 'Bank BCA', '1234567890', 'Admin Math Fingers', 250000, 'emerald', 'Admin Math Fingers', 'INV/MF', 1719600000)
+ON CONFLICT (id) DO NOTHING;`;
+
+  const createSqlScripts = {
+    all: fullSqlScript,
     students: `CREATE TABLE IF NOT EXISTS students (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -438,6 +469,33 @@ VALUES
   ('hl-2', 'Sabtu dan Ahad', 'Jadwal les akhir pekan (Weekend)', 1719600000, 'Pusat'),
   ('hl-3', 'Senin dan Kamis', 'Jadwal les tengah pekan (Weekday)', 1719600000, 'Pusat'),
   ('hl-4', 'Selasa dan Jumat', 'Jadwal les alternatif tengah pekan', 1719600000, 'Pusat')
+ON CONFLICT (id) DO NOTHING;`,
+
+    app_settings: `CREATE TABLE IF NOT EXISTS app_settings (
+  id TEXT PRIMARY KEY DEFAULT 'default',
+  branch TEXT DEFAULT 'Semua',
+  branches TEXT DEFAULT 'Semua',
+  "bankName" TEXT,
+  "bankAccountNo" TEXT,
+  "bankAccountHolder" TEXT,
+  "defaultSppAmount" BIGINT DEFAULT 250000,
+  "accentColor" TEXT DEFAULT 'emerald',
+  "defaultTeacherName" TEXT,
+  "invoicePrefix" TEXT DEFAULT 'INV/MF',
+  "invoiceLogo" TEXT,
+  "invoiceSignature" TEXT,
+  "updatedAt" BIGINT DEFAULT 1719600000
+);
+
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON app_settings;
+CREATE POLICY "Allow public read-write for demo" ON app_settings FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Semua';
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branches TEXT DEFAULT 'Semua';
+
+INSERT INTO app_settings (id, branch, branches, "bankName", "bankAccountNo", "bankAccountHolder", "defaultSppAmount", "accentColor", "defaultTeacherName", "invoicePrefix", "updatedAt")
+VALUES ('default', 'Semua', 'Semua', 'Bank BCA', '1234567890', 'Admin Math Fingers', 250000, 'emerald', 'Admin Math Fingers', 'INV/MF', 1719600000)
 ON CONFLICT (id) DO NOTHING;`
   };
 
@@ -569,7 +627,27 @@ CREATE TABLE IF NOT EXISTS classes (
 
 ALTER TABLE classes ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read-write for demo" ON classes;
-CREATE POLICY "Allow public read-write for demo" ON classes FOR ALL USING (true) WITH CHECK (true);`,
+CREATE POLICY "Allow public read-write for demo" ON classes FOR ALL USING (true) WITH CHECK (true);
+
+-- 9. Tambahkan kolom 'branch' dan 'branches' pada tabel 'app_settings'
+CREATE TABLE IF NOT EXISTS app_settings (
+  id TEXT PRIMARY KEY DEFAULT 'default',
+  branch TEXT DEFAULT 'Semua',
+  branches TEXT DEFAULT 'Semua',
+  "bankName" TEXT,
+  "bankAccountNo" TEXT,
+  "bankAccountHolder" TEXT,
+  "defaultSppAmount" BIGINT DEFAULT 250000,
+  "accentColor" TEXT DEFAULT 'emerald',
+  "defaultTeacherName" TEXT,
+  "invoicePrefix" TEXT DEFAULT 'INV/MF',
+  "invoiceLogo" TEXT,
+  "invoiceSignature" TEXT,
+  "updatedAt" BIGINT DEFAULT 1719600000
+);
+
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Semua';
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branches TEXT DEFAULT 'Semua';`,
 
     students: `-- Melengkapi kolom students tanpa merubah data lama
 ALTER TABLE students ADD COLUMN IF NOT EXISTS keterangan TEXT;
@@ -938,7 +1016,7 @@ CREATE POLICY "Allow public read-write for demo" ON classes FOR ALL USING (true)
                       : 'bg-slate-950/40 text-slate-400 hover:text-white'
                   }`}
                 >
-                  Seluruh Skema (6 Tabel)
+                  Seluruh Skema ({tables.length} Tabel)
                 </button>
                 {tables.map(t => (
                   <button

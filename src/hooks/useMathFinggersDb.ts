@@ -16,9 +16,41 @@ const getLocalData = <T>(key: string, defaultVal: T): T => {
 // Helper to save to localStorage fallbacks
 const saveLocalData = <T>(key: string, data: T) => {
   try {
+    if (key === 'all_settings_map' && typeof data === 'object' && data !== null) {
+      // Deduplicate alias keys before writing to localStorage to prevent quota overflow
+      const compactMap: Record<string, any> = {};
+      Object.entries(data as Record<string, any>).forEach(([k, v]) => {
+        if (k === 'Semua' || (!k.startsWith('branch_') && k !== 'default')) {
+          compactMap[k] = v;
+        }
+      });
+      localStorage.setItem(`math_finggers_${key}`, JSON.stringify(compactMap));
+      return;
+    }
     localStorage.setItem(`math_finggers_${key}`, JSON.stringify(data));
-  } catch (e) {
-    console.error('Failed to save to localStorage', e);
+  } catch (e: any) {
+    if (e?.name === 'QuotaExceededError' || e?.code === 22 || e?.code === 1014) {
+      console.warn(`localStorage quota exceeded for key: math_finggers_${key}. Attempting compact save...`);
+      try {
+        if (key === 'all_settings_map' && typeof data === 'object' && data !== null) {
+          // Remove heavy base64 image strings if quota exceeded for localStorage fallback
+          const lightweightMap: Record<string, any> = {};
+          Object.entries(data as Record<string, any>).forEach(([k, v]) => {
+            if (v && typeof v === 'object') {
+              lightweightMap[k] = { ...v, invoiceLogo: undefined, invoiceSignature: undefined };
+            }
+          });
+          localStorage.setItem(`math_finggers_${key}`, JSON.stringify(lightweightMap));
+        } else if (key === 'settings' && typeof data === 'object' && data !== null) {
+          const lightweightSettings = { ...(data as any), invoiceLogo: undefined, invoiceSignature: undefined };
+          localStorage.setItem(`math_finggers_${key}`, JSON.stringify(lightweightSettings));
+        }
+      } catch {
+        // Silently catch secondary storage errors
+      }
+    } else {
+      console.warn('Could not save to localStorage:', e?.message || e);
+    }
   }
 };
 
@@ -35,6 +67,10 @@ export function useMathFinggersDb() {
   const [loading, setLoading] = useState(true);
   const [isOfflineFallback, setIsOfflineFallback] = useState(false);
 
+  const [allSettingsMap, setAllSettingsMap] = useState<Record<string, AppSettings>>(() => {
+    return getLocalData<Record<string, AppSettings>>('all_settings_map', {});
+  });
+
   const [settings, setSettings] = useState<AppSettings>(() => {
     return getLocalData<AppSettings>('settings', {
       bankName: 'Bank BCA',
@@ -43,7 +79,9 @@ export function useMathFinggersDb() {
       defaultSppAmount: 250000,
       accentColor: 'emerald',
       defaultTeacherName: 'Admin Math Fingers',
-      invoicePrefix: 'INV/MF'
+      invoicePrefix: 'INV/MF',
+      branch: 'Semua',
+      branches: 'Semua'
     });
   });
 
@@ -140,6 +178,15 @@ export function useMathFinggersDb() {
         console.warn('Failed to fetch classes from Supabase:', e);
       }
 
+      // Fetch App Settings (All branch settings)
+      let appSettingsRows: any[] = [];
+      try {
+        const { data, error } = await supabase.from('app_settings').select('*');
+        if (!error && data) appSettingsRows = data;
+      } catch (e) {
+        console.warn('Failed to fetch app settings from Supabase:', e);
+      }
+
       // Set state and save locally for offline capabilities
       const loadedStudents = studentsData || [];
       const loadedAttendance = (attendanceData || []).sort((a, b) => b.date.localeCompare(a.date));
@@ -170,6 +217,36 @@ export function useMathFinggersDb() {
       const loadedClasses = classesData || getLocalData<ClassGroup[]>('classes', defaultClassesList);
       setClasses(loadedClasses);
       saveLocalData('classes', loadedClasses);
+
+      if (appSettingsRows && appSettingsRows.length > 0) {
+        const loadedMap: Record<string, AppSettings> = { ...allSettingsMap };
+        appSettingsRows.forEach(row => {
+          const branchKey = row.branch || row.branches || (row.id !== 'default' ? row.id : 'Semua');
+          const remoteSettings: AppSettings = {
+            bankName: row.bankName ?? 'Bank BCA',
+            bankAccountNo: row.bankAccountNo ?? '1234567890',
+            bankAccountHolder: row.bankAccountHolder ?? 'Admin Math Fingers',
+            defaultSppAmount: Number(row.defaultSppAmount) || 250000,
+            accentColor: row.accentColor ?? 'emerald',
+            defaultTeacherName: row.defaultTeacherName ?? 'Admin Math Fingers',
+            invoicePrefix: row.invoicePrefix ?? 'INV/MF',
+            invoiceLogo: row.invoiceLogo || undefined,
+            invoiceSignature: row.invoiceSignature || undefined,
+            branch: branchKey,
+            branches: branchKey
+          };
+          loadedMap[branchKey] = remoteSettings;
+          if (row.id) loadedMap[row.id] = remoteSettings;
+        });
+        setAllSettingsMap(loadedMap);
+        saveLocalData('all_settings_map', loadedMap);
+
+        const defaultOrSelected = loadedMap['Semua'] || loadedMap['default'] || Object.values(loadedMap)[0];
+        if (defaultOrSelected) {
+          setSettings(defaultOrSelected);
+          saveLocalData('settings', defaultOrSelected);
+        }
+      }
 
       setStudents(loadedStudents);
       saveLocalData('students', loadedStudents);
@@ -918,10 +995,88 @@ export function useMathFinggersDb() {
     }
   };
 
-  // --- SETTINGS WRITERS ---
-  const updateSettings = (newSettings: AppSettings) => {
-    setSettings(newSettings);
-    saveLocalData('settings', newSettings);
+  // --- SETTINGS READERS & WRITERS ---
+  const getBranchSettings = (branchName?: string): AppSettings => {
+    if (!branchName || branchName === 'all' || branchName === 'Semua') {
+      return allSettingsMap['Semua'] || allSettingsMap['default'] || settings;
+    }
+    const normalizedKey = branchName.toLowerCase().trim().replace(/\s+/g, '_');
+    const match = allSettingsMap[branchName] || 
+                  allSettingsMap[`branch_${normalizedKey}`] ||
+                  allSettingsMap[normalizedKey];
+    if (match) return match;
+    return allSettingsMap['Semua'] || allSettingsMap['default'] || settings;
+  };
+
+  const updateSettings = async (newSettings: AppSettings, targetBranchName?: string) => {
+    const branchName = newSettings.branch || targetBranchName || 'Semua';
+    const isDefault = branchName === 'Semua' || branchName === 'all' || !branchName;
+    const recordId = isDefault ? 'default' : `branch_${branchName.toLowerCase().trim().replace(/\s+/g, '_')}`;
+
+    const updatedSetting: AppSettings = {
+      ...newSettings,
+      branch: branchName,
+      branches: branchName
+    };
+
+    const updatedMap: Record<string, AppSettings> = {
+      ...allSettingsMap,
+      [branchName]: updatedSetting,
+      [recordId]: updatedSetting
+    };
+    if (isDefault) {
+      updatedMap['default'] = updatedSetting;
+      updatedMap['Semua'] = updatedSetting;
+    }
+
+    setAllSettingsMap(updatedMap);
+    saveLocalData('all_settings_map', updatedMap);
+    setSettings(updatedSetting);
+    saveLocalData('settings', updatedSetting);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        const payload = {
+          id: recordId,
+          branch: branchName,
+          branches: branchName,
+          bankName: updatedSetting.bankName,
+          bankAccountNo: updatedSetting.bankAccountNo,
+          bankAccountHolder: updatedSetting.bankAccountHolder,
+          defaultSppAmount: Number(updatedSetting.defaultSppAmount),
+          accentColor: updatedSetting.accentColor,
+          defaultTeacherName: updatedSetting.defaultTeacherName,
+          invoicePrefix: updatedSetting.invoicePrefix || 'INV/MF',
+          invoiceLogo: updatedSetting.invoiceLogo || null,
+          invoiceSignature: updatedSetting.invoiceSignature || null,
+          updatedAt: Date.now()
+        };
+
+        const { error } = await supabase.from('app_settings').upsert([payload]);
+        if (error) {
+          console.warn('Upsert with branch/branches column failed, trying fallback payload:', error.message);
+          const fallbackPayload = {
+            id: recordId,
+            bankName: updatedSetting.bankName,
+            bankAccountNo: updatedSetting.bankAccountNo,
+            bankAccountHolder: updatedSetting.bankAccountHolder,
+            defaultSppAmount: Number(updatedSetting.defaultSppAmount),
+            accentColor: updatedSetting.accentColor,
+            defaultTeacherName: updatedSetting.defaultTeacherName,
+            invoicePrefix: updatedSetting.invoicePrefix || 'INV/MF',
+            invoiceLogo: updatedSetting.invoiceLogo || null,
+            invoiceSignature: updatedSetting.invoiceSignature || null,
+            updatedAt: Date.now()
+          };
+          const fbRes = await supabase.from('app_settings').upsert([fallbackPayload]);
+          if (fbRes.error) {
+            console.error('Failed to update app_settings in Supabase:', fbRes.error);
+          }
+        }
+      } catch (e) {
+        console.error('Error saving settings to Supabase:', e);
+      }
+    }
   };
 
   // --- DASHBOARD TASKS WRITERS ---
@@ -1113,6 +1268,25 @@ export function useMathFinggersDb() {
       if (importedSettings) {
         setSettings(importedSettings);
         saveLocalData('settings', importedSettings);
+        if (supabase && !isOfflineFallback) {
+          try {
+            await supabase.from('app_settings').upsert([{
+              id: 'default',
+              bankName: importedSettings.bankName,
+              bankAccountNo: importedSettings.bankAccountNo,
+              bankAccountHolder: importedSettings.bankAccountHolder,
+              defaultSppAmount: importedSettings.defaultSppAmount,
+              accentColor: importedSettings.accentColor,
+              defaultTeacherName: importedSettings.defaultTeacherName,
+              invoicePrefix: importedSettings.invoicePrefix || 'INV/MF',
+              invoiceLogo: importedSettings.invoiceLogo || null,
+              invoiceSignature: importedSettings.invoiceSignature || null,
+              updatedAt: Date.now()
+            }]);
+          } catch (e) {
+            console.warn('Failed to sync settings to Supabase during backup restore:', e);
+          }
+        }
       }
 
       // 2. Students
@@ -1243,6 +1417,8 @@ export function useMathFinggersDb() {
     adminUsers,
     classes,
     settings,
+    allSettingsMap,
+    getBranchSettings,
     dashboardTasks,
     loading,
     isOfflineFallback,

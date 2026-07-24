@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Branch, AdminUser } from '../types';
 import { Building, UserPlus, Users, Trash2, Edit2, ShieldAlert, Plus, Shield, Check, Lock, MapPin, Phone, RefreshCw, Upload, Link as LinkIcon, Camera, X, Image as ImageIcon } from 'lucide-react';
-import { getAdminAvatar } from '../utils';
+import { getAdminAvatar, compressImageFile } from '../utils';
 
 interface BranchesManagerProps {
   theme: 'light' | 'dark';
@@ -47,22 +47,18 @@ export function BranchesManager({
 
   const [activeSubTab, setActiveSubTab] = useState<'branches' | 'admins'>('branches');
 
-  const handleAvatarFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 3 * 1024 * 1024) {
-      alert('Ukuran foto terlalu besar. Maksimal 3MB.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setAdminAvatarUrl(event.target.result as string);
+    try {
+      const compressedDataUrl = await compressImageFile(file, 250, 0.8);
+      if (compressedDataUrl) {
+        setAdminAvatarUrl(compressedDataUrl);
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Failed to compress avatar image:', err);
+    }
   };
 
   const handleBranchSubmit = async (e: React.FormEvent) => {

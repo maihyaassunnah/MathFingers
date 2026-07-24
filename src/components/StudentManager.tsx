@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Student, LearningMaterial, Attendance, TeacherNote, Grade, Branch, ClassGroup } from '../types';
 import { formatWhatsAppPhone, getWhatsAppLink, getStudentUniqueCode } from '../utils';
 import { generateStudentPDFReport } from '../utils/pdfGenerator';
-import { Search, Plus, UserPlus, Phone, Calendar, BookOpen, Trash2, Edit2, CheckCircle, XCircle, AlertCircle, Download, Award, Video, ExternalLink, Eye, X, Image as ImageIcon, Check, Layers } from 'lucide-react';
+import { Search, Plus, UserPlus, Phone, Calendar, BookOpen, Trash2, Edit2, CheckCircle, XCircle, AlertCircle, Download, Award, Video, ExternalLink, Eye, X, Image as ImageIcon, Check, Layers, Users } from 'lucide-react';
 
 interface StudentManagerProps {
   students: Student[];
@@ -34,10 +34,11 @@ export function StudentManager({
   branches = []
 }: StudentManagerProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [levelFilter, setLevelFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('active');
   const [sortAlphabetical, setSortAlphabetical] = useState<'asc' | 'desc'>('asc');
   const [genderFilter, setGenderFilter] = useState<string>('All');
+  const [branchFilter, setBranchFilter] = useState<string>('All');
+  const [kelasFilter, setKelasFilter] = useState<string>('All');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
 
@@ -158,6 +159,22 @@ export function StudentManager({
     }
   };
 
+  // Dynamic options for Branch and Class filters
+  const availableBranches = Array.from(
+    new Set([
+      'Pusat',
+      ...branches.map(b => b.name),
+      ...students.map(s => s.branch).filter((b): b is string => Boolean(b && b.trim()))
+    ])
+  ).filter(Boolean);
+
+  const availableClasses = Array.from(
+    new Set([
+      ...classes.map(c => c.name),
+      ...students.map(s => s.kelas).filter((k): k is string => Boolean(k && k.trim()))
+    ])
+  ).filter(Boolean);
+
   // Filter Logic
   const filteredStudents = students.filter(student => {
     // Exclude alumni from the current students directory
@@ -166,10 +183,12 @@ export function StudentManager({
     const matchesSearch = student.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           student.parentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           student.parentPhone.includes(searchQuery);
-    const matchesLevel = levelFilter === 'All' || student.level === levelFilter;
     const matchesStatus = statusFilter === 'All' || student.status === statusFilter;
     const matchesGender = genderFilter === 'All' || student.jenisKelamin === genderFilter;
-    return matchesSearch && matchesLevel && matchesStatus && matchesGender;
+    const matchesBranch = branchFilter === 'All' || (student.branch || 'Pusat') === branchFilter;
+    const matchesClass = kelasFilter === 'All' || (student.kelas || '') === kelasFilter;
+
+    return matchesSearch && matchesStatus && matchesGender && matchesBranch && matchesClass;
   });
 
   // Sort Logic (Alphabetical)
@@ -188,8 +207,14 @@ export function StudentManager({
       {/* Header and Add Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className={`text-2xl font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Database Siswa Math Fingers</h2>
-          <p className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-sm`}>Kelola pendaftaran, level bimbingan, dan data kontak wali siswa.</p>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h2 className={`text-2xl font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Database Siswa Math Fingers</h2>
+            <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-sm flex items-center gap-1.5">
+              <Users size={14} />
+              <span>{sortedStudents.length} Siswa</span>
+            </span>
+          </div>
+          <p className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-sm mt-1`}>Kelola pendaftaran, level bimbingan, dan data kontak wali siswa.</p>
         </div>
         <button
           id="btn-add-student"
@@ -237,20 +262,37 @@ export function StudentManager({
             <option value="desc" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Nama: Z - A</option>
           </select>
 
-          {/* Level Filter */}
+          {/* Cabang Filter */}
           <select
-            id="filter-student-level"
-            value={levelFilter}
-            onChange={(e) => setLevelFilter(e.target.value)}
+            id="filter-student-branch"
+            value={branchFilter}
+            onChange={(e) => setBranchFilter(e.target.value)}
             className={`border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
               isLight 
                 ? 'bg-white border-slate-200 text-slate-700' 
                 : 'bg-slate-950/40 border-slate-800 text-slate-300'
             }`}
           >
-            <option value="All" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Semua Level</option>
-            {levels.map(l => (
-              <option key={l} value={l} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>{l}</option>
+            <option value="All" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Semua Cabang</option>
+            {availableBranches.map(b => (
+              <option key={b} value={b} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Cabang: {b}</option>
+            ))}
+          </select>
+
+          {/* Kelas Filter */}
+          <select
+            id="filter-student-kelas"
+            value={kelasFilter}
+            onChange={(e) => setKelasFilter(e.target.value)}
+            className={`border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+              isLight 
+                ? 'bg-white border-slate-200 text-slate-700' 
+                : 'bg-slate-950/40 border-slate-800 text-slate-300'
+            }`}
+          >
+            <option value="All" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Semua Kelas</option>
+            {availableClasses.map(k => (
+              <option key={k} value={k} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Kelas: {k}</option>
             ))}
           </select>
 
@@ -285,6 +327,25 @@ export function StudentManager({
             <option value="active" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Aktif</option>
             <option value="inactive" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Nonaktif</option>
           </select>
+
+          {/* Reset Filter Button */}
+          {(searchQuery || statusFilter !== 'active' || genderFilter !== 'All' || branchFilter !== 'All' || kelasFilter !== 'All') && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setStatusFilter('active');
+                setGenderFilter('All');
+                setBranchFilter('All');
+                setKelasFilter('All');
+              }}
+              className="px-3 py-2 rounded-xl text-xs font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 transition flex items-center gap-1"
+              title="Reset Semua Filter"
+            >
+              <X size={14} />
+              <span>Reset</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -560,6 +621,7 @@ export function StudentManager({
                 <tr className={`border-b text-xs font-semibold uppercase tracking-wider text-slate-500 ${
                   isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/40 border-slate-800'
                 }`}>
+                  <th className="p-4 w-12 text-center">NO</th>
                   <th className="p-4">Nama Siswa</th>
                   <th className="p-4">Orang Tua / HP</th>
                   <th className="p-4 hidden sm:table-cell">Level</th>
@@ -570,12 +632,15 @@ export function StudentManager({
                 </tr>
               </thead>
               <tbody className={`divide-y text-sm ${isLight ? 'divide-slate-200 text-slate-700' : 'divide-slate-800/80 text-slate-300'}`}>
-                {sortedStudents.map((student) => {
+                {sortedStudents.map((student, index) => {
                   const waText = `Halo Ibu/Bapak ${student.parentName}, salam kenal dari Math Fingers. Ada perkembangan les yang ingin kami infokan terkait ananda ${student.name}.`;
                   const waLink = getWhatsAppLink(student.parentPhone, waText);
 
                   return (
                     <tr key={student.id} className={`transition duration-150 ${isLight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/20'}`}>
+                      <td className="p-4 text-center font-bold text-slate-500 dark:text-slate-400 text-xs sm:text-sm">
+                        {index + 1}
+                      </td>
                       <td className="p-4">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={`font-semibold text-sm sm:text-base ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</span>

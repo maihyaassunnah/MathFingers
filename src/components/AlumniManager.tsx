@@ -1,6 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { Student } from '../types';
-import { Search, GraduationCap, RefreshCw, Trash2, Edit3, Award, Calendar, Phone, MapPin, ShieldAlert } from 'lucide-react';
+import { Search, GraduationCap, RefreshCw, Trash2, Edit3, Award, Calendar, Phone, MapPin, ShieldAlert, X } from 'lucide-react';
 import { getStudentUniqueCode } from '../utils';
 
 interface AlumniManagerProps {
@@ -19,6 +19,8 @@ export function AlumniManager({
   const [searchQuery, setSearchQuery] = useState('');
   const [levelFilter, setLevelFilter] = useState('All');
   const [genderFilter, setGenderFilter] = useState('All');
+  const [branchFilter, setBranchFilter] = useState('All');
+  const [kelasFilter, setKelasFilter] = useState('All');
   const [viewingCertificateStudent, setViewingCertificateStudent] = useState<Student | null>(null);
   
   // Edit Form States
@@ -36,7 +38,11 @@ export function AlumniManager({
   // Filter only students with status 'alumni'
   const alumniList = students.filter(s => s.status === 'alumni');
 
-  // Filter by search query, level, and gender
+  // Dynamic available options
+  const availableBranches = Array.from(new Set(alumniList.map(s => s.branch || 'Pusat'))).filter(Boolean);
+  const availableClasses = Array.from(new Set(alumniList.map(s => s.kelas).filter((k): k is string => Boolean(k && k.trim())))).filter(Boolean);
+
+  // Filter by search query, level, gender, branch, and class
   const filteredAlumni = alumniList.filter(student => {
     const matchesSearch = 
       student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -45,8 +51,10 @@ export function AlumniManager({
     
     const matchesLevel = levelFilter === 'All' || student.level === levelFilter;
     const matchesGender = genderFilter === 'All' || student.jenisKelamin === genderFilter;
+    const matchesBranch = branchFilter === 'All' || (student.branch || 'Pusat') === branchFilter;
+    const matchesClass = kelasFilter === 'All' || (student.kelas || '') === kelasFilter;
 
-    return matchesSearch && matchesLevel && matchesGender;
+    return matchesSearch && matchesLevel && matchesGender && matchesBranch && matchesClass;
   });
 
   // Extract unique levels of alumni
@@ -149,6 +157,38 @@ export function AlumniManager({
 
         {/* Select Dropdowns */}
         <div className="flex flex-wrap gap-2 w-full md:w-auto">
+          {/* Cabang Filter */}
+          <select
+            value={branchFilter}
+            onChange={(e) => setBranchFilter(e.target.value)}
+            className={`border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+              isLight 
+                ? 'bg-white border-slate-200 text-slate-700' 
+                : 'bg-slate-950/40 border-slate-800 text-slate-300'
+            }`}
+          >
+            <option value="All">Semua Cabang</option>
+            {availableBranches.map(b => (
+              <option key={b} value={b}>Cabang: {b}</option>
+            ))}
+          </select>
+
+          {/* Kelas Filter */}
+          <select
+            value={kelasFilter}
+            onChange={(e) => setKelasFilter(e.target.value)}
+            className={`border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+              isLight 
+                ? 'bg-white border-slate-200 text-slate-700' 
+                : 'bg-slate-950/40 border-slate-800 text-slate-300'
+            }`}
+          >
+            <option value="All">Semua Kelas</option>
+            {availableClasses.map(k => (
+              <option key={k} value={k}>Kelas: {k}</option>
+            ))}
+          </select>
+
           {/* Level Filter */}
           <select
             value={levelFilter}
@@ -179,6 +219,25 @@ export function AlumniManager({
             <option value="Laki-laki">Laki-laki</option>
             <option value="Perempuan">Perempuan</option>
           </select>
+
+          {/* Reset Filter Button */}
+          {(searchQuery || levelFilter !== 'All' || genderFilter !== 'All' || branchFilter !== 'All' || kelasFilter !== 'All') && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setLevelFilter('All');
+                setGenderFilter('All');
+                setBranchFilter('All');
+                setKelasFilter('All');
+              }}
+              className="px-3 py-2 rounded-xl text-xs font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 transition flex items-center gap-1"
+              title="Reset Filter"
+            >
+              <X size={14} />
+              <span>Reset</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -197,7 +256,7 @@ export function AlumniManager({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredAlumni.map((student) => (
+          {filteredAlumni.map((student, index) => (
             <div
               key={student.id}
               className={`rounded-2xl border p-5 flex flex-col justify-between transition relative overflow-hidden group shadow-sm ${
@@ -212,8 +271,11 @@ export function AlumniManager({
               </div>
 
               <div className="space-y-3">
-                {/* Level Title */}
+                {/* Level Title & Index Number */}
                 <div className="flex items-center gap-1.5">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-widest bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                    No. {index + 1}
+                  </span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-widest bg-amber-500/15 text-amber-500">
                     {student.level}
                   </span>

@@ -18,7 +18,7 @@ import { AlumniManager } from './components/AlumniManager';
 import { BranchesManager } from './components/BranchesManager';
 import { ClassManager } from './components/ClassManager';
 import { AdminUser, Branch } from './types';
-import { getAdminAvatar } from './utils';
+import { getAdminAvatar, updateDynamicPwaIcon } from './utils';
 
 import { 
   Home, 
@@ -144,6 +144,12 @@ export default function App() {
     deleteClassGroup,
     importBackupData
   } = useMathFinggersDb();
+
+  useEffect(() => {
+    if (settings?.appIcon) {
+      updateDynamicPwaIcon(settings.appIcon);
+    }
+  }, [settings?.appIcon]);
 
   // Safe branch resolver that maps legacy or unspecified branches ('Pusat' or null) 
   // to the first active branch if there's no branch named 'Pusat' in the database.

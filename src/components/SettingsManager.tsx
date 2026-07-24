@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import * as XLSX from 'xlsx';
 import { AppSettings, AdminUser, Branch } from '../types';
-import { compressImageFile } from '../utils';
+import { compressImageFile, updateDynamicPwaIcon } from '../utils';
 import { 
   Settings, 
   Receipt, 
@@ -89,6 +89,7 @@ export function SettingsManager({
   const [invoicePrefix, setInvoicePrefix] = useState(settings.invoicePrefix || 'INV/MF');
   const [invoiceLogo, setInvoiceLogo] = useState<string | undefined>(settings.invoiceLogo);
   const [invoiceSignature, setInvoiceSignature] = useState<string | undefined>(settings.invoiceSignature);
+  const [appIcon, setAppIcon] = useState<string | undefined>(settings.appIcon);
 
   useEffect(() => {
     if (getBranchSettings) {
@@ -102,6 +103,7 @@ export function SettingsManager({
       setInvoicePrefix(bSetting.invoicePrefix || 'INV/MF');
       setInvoiceLogo(bSetting.invoiceLogo);
       setInvoiceSignature(bSetting.invoiceSignature);
+      setAppIcon(bSetting.appIcon);
     }
   }, [targetBranch, allSettingsMap]);
   
@@ -186,17 +188,21 @@ export function SettingsManager({
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'signature') => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'signature' | 'appIcon') => {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        const maxWidth = type === 'logo' ? 250 : 300;
-        const compressedDataUrl = await compressImageFile(file, maxWidth, 0.75);
+        const maxWidth = type === 'logo' ? 250 : type === 'signature' ? 300 : 512;
+        const quality = type === 'appIcon' ? 0.85 : 0.75;
+        const compressedDataUrl = await compressImageFile(file, maxWidth, quality);
         if (compressedDataUrl) {
           if (type === 'logo') {
             setInvoiceLogo(compressedDataUrl);
-          } else {
+          } else if (type === 'signature') {
             setInvoiceSignature(compressedDataUrl);
+          } else if (type === 'appIcon') {
+            setAppIcon(compressedDataUrl);
+            updateDynamicPwaIcon(compressedDataUrl);
           }
         }
       } catch (err) {
@@ -217,9 +223,12 @@ export function SettingsManager({
       invoicePrefix,
       invoiceLogo,
       invoiceSignature,
+      appIcon,
       branch: targetBranch,
       branches: targetBranch
     });
+
+    updateDynamicPwaIcon(appIcon);
 
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
@@ -235,6 +244,8 @@ export function SettingsManager({
     setInvoicePrefix('INV/MF');
     setInvoiceLogo(undefined);
     setInvoiceSignature(undefined);
+    setAppIcon(undefined);
+    updateDynamicPwaIcon(undefined);
   };
 
   const isLight = theme === 'light';
@@ -1047,6 +1058,126 @@ export function SettingsManager({
                   </div>
                 )}
               </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Row 1.7: PWA App Icon Settings for iOS and Android */}
+        <div className={`p-6 rounded-2xl border shadow-sm space-y-5 ${
+          isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+        }`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3 border-slate-100 dark:border-slate-800/80">
+            <h3 className={`text-sm font-bold uppercase tracking-wider ${isLight ? 'text-slate-800' : 'text-slate-200'} flex items-center gap-2`}>
+              <Smartphone size={18} className={getAccentTextClass()} />
+              <span>Ikon PWA & Aplikasi Mobile (iOS / Android Home Screen)</span>
+            </h3>
+            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+              isLight ? 'bg-indigo-100 text-indigo-800' : 'bg-indigo-950/60 text-indigo-400 border border-indigo-500/30'
+            }`}>
+              iOS & Android PWA Compatible
+            </span>
+          </div>
+
+          <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+            Admin dapat mengunggah berkas gambar <b>.png</b> khusus untuk dijadikan ikon aplikasi saat web dipasang di Layar Utama (Home Screen) iPhone / iPad (iOS) dan Android.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+            
+            {/* Preview Box */}
+            <div className="md:col-span-4 flex flex-col items-center justify-center p-5 rounded-xl border bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 space-y-3">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Pratinjau Ikon Layar Utama</span>
+              
+              {/* Squircle App Icon Container */}
+              <div className="relative group">
+                <div className="w-24 h-24 rounded-[22px] overflow-hidden bg-white shadow-md border border-slate-200 dark:border-slate-700/80 flex items-center justify-center p-1.5 transition transform group-hover:scale-105">
+                  <img 
+                    src={appIcon || '/icon.png'} 
+                    alt="PWA App Icon Preview" 
+                    className="w-full h-full object-cover rounded-[16px]"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/icon.png';
+                    }}
+                  />
+                </div>
+                <span className="absolute -bottom-2 -right-2 bg-emerald-600 text-white p-1 rounded-full shadow-sm" title="Ikon Aktif">
+                  <Check size={12} />
+                </span>
+              </div>
+
+              <div className="text-center">
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Math Fingers</p>
+                <p className="text-[10px] text-slate-500 mt-0.5 font-mono">
+                  {appIcon ? 'Format: Custom PNG Base64' : 'Format: System /icon.png'}
+                </p>
+              </div>
+
+              {appIcon && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAppIcon(undefined);
+                    updateDynamicPwaIcon(undefined);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 text-[11px] font-semibold transition flex items-center gap-1.5 border border-red-500/20"
+                >
+                  <Trash2 size={13} />
+                  <span>Kembalikan Ikon Bawaan</span>
+                </button>
+              )}
+            </div>
+
+            {/* Upload & Guide Controls */}
+            <div className="md:col-span-8 space-y-4">
+              
+              {/* Upload Dropzone */}
+              <div className={`border-2 border-dashed rounded-xl p-5 flex flex-col items-center justify-center hover:border-emerald-500 transition cursor-pointer relative group ${
+                isLight ? 'border-slate-300 bg-white' : 'border-slate-800 bg-slate-950/30'
+              }`}>
+                <Upload size={24} className="text-slate-400 group-hover:text-emerald-500 transition mb-1.5" />
+                <span className={`text-xs font-bold group-hover:text-emerald-600 transition ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                  Unggah Berkas Gambar Ikon PNG Baru
+                </span>
+                <span className={`text-[10px] mt-1 font-medium text-center ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                  Disarankan format <b>.PNG Square</b> (Rasio 1:1, Resolusi Ideal 512 × 512 px) untuk tampilan tajam di Retina Display iPhone & OLED Android
+                </span>
+                <input
+                  type="file"
+                  accept="image/png"
+                  onChange={(e) => handleImageUpload(e, 'appIcon')}
+                  className="absolute inset-0 opacity-0 cursor-pointer"
+                />
+              </div>
+
+              {/* Instructions Callout */}
+              <div className={`p-4 rounded-xl border text-xs space-y-2 ${
+                isLight ? 'bg-sky-50/80 border-sky-200 text-sky-950' : 'bg-sky-950/30 border-sky-800/50 text-sky-200'
+              }`}>
+                <div className="flex items-center gap-2 font-bold text-sky-900 dark:text-sky-300">
+                  <Smartphone size={16} />
+                  <span>Petunjuk Pemasangan Ikon di Perangkat Mobile:</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px] pt-1">
+                  <div className="p-2.5 rounded-lg bg-white/70 dark:bg-slate-900/60 border border-sky-200 dark:border-sky-800/60">
+                    <p className="font-bold text-sky-900 dark:text-sky-200 mb-1">📱 iPhone / iPad (iOS Safari):</p>
+                    <ol className="list-decimal list-inside space-y-0.5 text-slate-700 dark:text-slate-300">
+                      <li>Buka aplikasi di browser Safari</li>
+                      <li>Tekan tombol <b>Bagikan (Share)</b> <span className="opacity-75">[↑]</span></li>
+                      <li>Pilih <b>"Tambah ke Layar Utama"</b> (Add to Home Screen)</li>
+                    </ol>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-white/70 dark:bg-slate-900/60 border border-sky-200 dark:border-sky-800/60">
+                    <p className="font-bold text-sky-900 dark:text-sky-200 mb-1">🤖 Android (Google Chrome):</p>
+                    <ol className="list-decimal list-inside space-y-0.5 text-slate-700 dark:text-slate-300">
+                      <li>Buka aplikasi di Google Chrome</li>
+                      <li>Tekan menu titik tiga <b>(⋮)</b> di pojok kanan atas</li>
+                      <li>Pilih <b>"Install Aplikasi"</b> atau <b>"Tambahkan ke Layar Utama"</b></li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+
             </div>
 
           </div>

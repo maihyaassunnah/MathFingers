@@ -100,6 +100,7 @@ export interface AppSettings {
   invoicePrefix?: string;
   invoiceLogo?: string;
   invoiceSignature?: string;
+  appIcon?: string;
   branch?: string;
   branches?: string;
 }

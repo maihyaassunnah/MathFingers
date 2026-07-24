@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { Student, Attendance, TeacherNote, Invoice, Installment, Grade, LearningMaterial, AppSettings, DashboardTask, Branch, AdminUser, ClassGroup } from '../types';
-import { SEED_MATERIALS, generateInvoiceNo } from '../utils';
+import { SEED_MATERIALS, generateInvoiceNo, updateDynamicPwaIcon } from '../utils';
 
 // Helper to load localStorage fallbacks
 const getLocalData = <T>(key: string, defaultVal: T): T => {
@@ -37,12 +37,12 @@ const saveLocalData = <T>(key: string, data: T) => {
           const lightweightMap: Record<string, any> = {};
           Object.entries(data as Record<string, any>).forEach(([k, v]) => {
             if (v && typeof v === 'object') {
-              lightweightMap[k] = { ...v, invoiceLogo: undefined, invoiceSignature: undefined };
+              lightweightMap[k] = { ...v, invoiceLogo: undefined, invoiceSignature: undefined, appIcon: undefined };
             }
           });
           localStorage.setItem(`math_finggers_${key}`, JSON.stringify(lightweightMap));
         } else if (key === 'settings' && typeof data === 'object' && data !== null) {
-          const lightweightSettings = { ...(data as any), invoiceLogo: undefined, invoiceSignature: undefined };
+          const lightweightSettings = { ...(data as any), invoiceLogo: undefined, invoiceSignature: undefined, appIcon: undefined };
           localStorage.setItem(`math_finggers_${key}`, JSON.stringify(lightweightSettings));
         }
       } catch {
@@ -232,6 +232,7 @@ export function useMathFinggersDb() {
             invoicePrefix: row.invoicePrefix ?? 'INV/MF',
             invoiceLogo: row.invoiceLogo || undefined,
             invoiceSignature: row.invoiceSignature || undefined,
+            appIcon: row.appIcon || undefined,
             branch: branchKey,
             branches: branchKey
           };
@@ -245,6 +246,7 @@ export function useMathFinggersDb() {
         if (defaultOrSelected) {
           setSettings(defaultOrSelected);
           saveLocalData('settings', defaultOrSelected);
+          updateDynamicPwaIcon(defaultOrSelected.appIcon);
         }
       }
 
@@ -1033,6 +1035,7 @@ export function useMathFinggersDb() {
     saveLocalData('all_settings_map', updatedMap);
     setSettings(updatedSetting);
     saveLocalData('settings', updatedSetting);
+    updateDynamicPwaIcon(updatedSetting.appIcon);
 
     if (supabase && !isOfflineFallback) {
       try {
@@ -1049,6 +1052,7 @@ export function useMathFinggersDb() {
           invoicePrefix: updatedSetting.invoicePrefix || 'INV/MF',
           invoiceLogo: updatedSetting.invoiceLogo || null,
           invoiceSignature: updatedSetting.invoiceSignature || null,
+          appIcon: updatedSetting.appIcon || null,
           updatedAt: Date.now()
         };
 
@@ -1066,6 +1070,7 @@ export function useMathFinggersDb() {
             invoicePrefix: updatedSetting.invoicePrefix || 'INV/MF',
             invoiceLogo: updatedSetting.invoiceLogo || null,
             invoiceSignature: updatedSetting.invoiceSignature || null,
+            appIcon: updatedSetting.appIcon || null,
             updatedAt: Date.now()
           };
           const fbRes = await supabase.from('app_settings').upsert([fallbackPayload]);

@@ -300,7 +300,7 @@ DROP POLICY IF EXISTS "Allow public read-write for demo" ON hari_les;
 CREATE POLICY "Allow public read-write for demo" ON hari_les FOR ALL USING (true) WITH CHECK (true);
 
 
--- 10. TABEL APP_SETTINGS (Pengaturan Aplikasi, Rekening Bank, Invoice, Logo & TTD per Cabang)
+-- 10. TABEL APP_SETTINGS (Pengaturan Aplikasi, Rekening Bank, Invoice, Logo, TTD & Ikon PWA per Cabang)
 CREATE TABLE IF NOT EXISTS app_settings (
   id TEXT PRIMARY KEY DEFAULT 'default',
   branch TEXT DEFAULT 'Semua',
@@ -314,6 +314,7 @@ CREATE TABLE IF NOT EXISTS app_settings (
   "invoicePrefix" TEXT DEFAULT 'INV/MF',
   "invoiceLogo" TEXT,
   "invoiceSignature" TEXT,
+  "appIcon" TEXT,
   "updatedAt" BIGINT DEFAULT 1719600000
 );
 
@@ -323,6 +324,7 @@ CREATE POLICY "Allow public read-write for demo" ON app_settings FOR ALL USING (
 
 ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Semua';
 ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branches TEXT DEFAULT 'Semua';
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "appIcon" TEXT;
 
 
 -- ====================================================================
@@ -484,6 +486,7 @@ ON CONFLICT (id) DO NOTHING;`,
   "invoicePrefix" TEXT DEFAULT 'INV/MF',
   "invoiceLogo" TEXT,
   "invoiceSignature" TEXT,
+  "appIcon" TEXT,
   "updatedAt" BIGINT DEFAULT 1719600000
 );
 
@@ -493,6 +496,7 @@ CREATE POLICY "Allow public read-write for demo" ON app_settings FOR ALL USING (
 
 ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Semua';
 ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branches TEXT DEFAULT 'Semua';
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "appIcon" TEXT;
 
 INSERT INTO app_settings (id, branch, branches, "bankName", "bankAccountNo", "bankAccountHolder", "defaultSppAmount", "accentColor", "defaultTeacherName", "invoicePrefix", "updatedAt")
 VALUES ('default', 'Semua', 'Semua', 'Bank BCA', '1234567890', 'Admin Math Fingers', 250000, 'emerald', 'Admin Math Fingers', 'INV/MF', 1719600000)
@@ -629,7 +633,7 @@ ALTER TABLE classes ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read-write for demo" ON classes;
 CREATE POLICY "Allow public read-write for demo" ON classes FOR ALL USING (true) WITH CHECK (true);
 
--- 9. Tambahkan kolom 'branch' dan 'branches' pada tabel 'app_settings'
+-- 9. Tambahkan kolom 'branch', 'branches', dan 'appIcon' pada tabel 'app_settings'
 CREATE TABLE IF NOT EXISTS app_settings (
   id TEXT PRIMARY KEY DEFAULT 'default',
   branch TEXT DEFAULT 'Semua',
@@ -643,11 +647,34 @@ CREATE TABLE IF NOT EXISTS app_settings (
   "invoicePrefix" TEXT DEFAULT 'INV/MF',
   "invoiceLogo" TEXT,
   "invoiceSignature" TEXT,
+  "appIcon" TEXT,
   "updatedAt" BIGINT DEFAULT 1719600000
 );
 
 ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Semua';
-ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branches TEXT DEFAULT 'Semua';`,
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branches TEXT DEFAULT 'Semua';
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "appIcon" TEXT;`,
+    app_settings: `-- Melengkapi kolom 'app_settings' untuk Ikon PWA (appIcon), Logo Invoice, dan Multi-Cabang
+CREATE TABLE IF NOT EXISTS app_settings (
+  id TEXT PRIMARY KEY DEFAULT 'default',
+  branch TEXT DEFAULT 'Semua',
+  branches TEXT DEFAULT 'Semua',
+  "bankName" TEXT,
+  "bankAccountNo" TEXT,
+  "bankAccountHolder" TEXT,
+  "defaultSppAmount" BIGINT DEFAULT 250000,
+  "accentColor" TEXT DEFAULT 'emerald',
+  "defaultTeacherName" TEXT,
+  "invoicePrefix" TEXT DEFAULT 'INV/MF',
+  "invoiceLogo" TEXT,
+  "invoiceSignature" TEXT,
+  "appIcon" TEXT,
+  "updatedAt" BIGINT DEFAULT 1719600000
+);
+
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Semua';
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branches TEXT DEFAULT 'Semua';
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "appIcon" TEXT;`,
 
     students: `-- Melengkapi kolom students tanpa merubah data lama
 ALTER TABLE students ADD COLUMN IF NOT EXISTS keterangan TEXT;

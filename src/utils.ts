@@ -167,3 +167,84 @@ export function compressImageFile(file: File, maxWidth: number = 300, quality: n
   });
 }
 
+/**
+ * Dynamically updates the browser <head> icon tags (apple-touch-icon, icon, manifest)
+ * so that both iOS (Safari "Add to Home Screen") and Android (Chrome PWA) reflect custom app icons instantly.
+ */
+export function updateDynamicPwaIcon(iconUrl?: string) {
+  if (typeof window === 'undefined' || !document || !document.head) return;
+
+  const finalIconUrl = iconUrl || '/icon.png';
+
+  // 1. Update standard & iOS link elements
+  const linkRels = [
+    { rel: 'apple-touch-icon', sizes: '180x180' },
+    { rel: 'apple-touch-icon-precomposed', sizes: '180x180' },
+    { rel: 'apple-touch-icon', sizes: undefined },
+    { rel: 'icon', type: 'image/png', sizes: '192x192' },
+    { rel: 'icon', type: 'image/png', sizes: '32x32' },
+    { rel: 'shortcut icon', type: 'image/png', sizes: undefined }
+  ];
+
+  linkRels.forEach(({ rel, type, sizes }) => {
+    let selector = `link[rel="${rel}"]`;
+    if (sizes) selector += `[sizes="${sizes}"]`;
+    
+    let link = document.querySelector<HTMLLinkElement>(selector);
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = rel;
+      if (type) link.type = type;
+      if (sizes) link.setAttribute('sizes', sizes);
+      document.head.appendChild(link);
+    }
+    link.href = finalIconUrl;
+  });
+
+  // 2. Dynamically update or override PWA Manifest link so Android & iOS PWA installers pick up custom icon
+  try {
+    const dynamicManifest = {
+      name: "Math Fingers - Berhitung Cepat Tanpa Alat",
+      short_name: "Math Fingers",
+      description: "Aplikasi Manajemen Bimbingan Belajar Math Fingers",
+      start_url: "/",
+      display: "standalone",
+      background_color: "#ffffff",
+      theme_color: "#10b981",
+      icons: [
+        {
+          src: finalIconUrl,
+          sizes: "180x180",
+          type: "image/png",
+          purpose: "any"
+        },
+        {
+          src: finalIconUrl,
+          sizes: "192x192",
+          type: "image/png",
+          purpose: "any"
+        },
+        {
+          src: finalIconUrl,
+          sizes: "512x512",
+          type: "image/png",
+          purpose: "any"
+        }
+      ]
+    };
+
+    const manifestBlob = new Blob([JSON.stringify(dynamicManifest)], { type: 'application/json' });
+    const manifestUrl = URL.createObjectURL(manifestBlob);
+
+    let manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+    if (!manifestLink) {
+      manifestLink = document.createElement('link');
+      manifestLink.rel = 'manifest';
+      document.head.appendChild(manifestLink);
+    }
+    manifestLink.href = manifestUrl;
+  } catch (err) {
+    console.warn('Failed to generate dynamic manifest:', err);
+  }
+}
+

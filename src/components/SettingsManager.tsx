@@ -842,27 +842,54 @@ export function SettingsManager({
         <div className={`p-6 rounded-2xl border shadow-sm space-y-5 ${
           isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
         }`}>
-          <h3 className={`text-sm font-bold uppercase tracking-wider ${isLight ? 'text-slate-500' : 'text-slate-400'} flex items-center gap-2 border-b pb-3 ${isLight ? 'border-slate-100' : 'border-slate-800/80'}`}>
-            <Image size={16} className={getAccentTextClass()} />
-            <span>Kustomisasi Dokumen Kuitansi (Logo & Tanda Tangan)</span>
-          </h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3 border-slate-100 dark:border-slate-800/80">
+            <h3 className={`text-sm font-bold uppercase tracking-wider ${isLight ? 'text-slate-800' : 'text-slate-200'} flex items-center gap-2`}>
+              <Image size={16} className={getAccentTextClass()} />
+              <span>Kustomisasi Dokumen Kuitansi (Logo & Tanda Tangan)</span>
+            </h3>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              isLight ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/30'
+            }`}>
+              Panduan Format PDF A5
+            </span>
+          </div>
+
+          {/* Guidelines Callout Box */}
+          <div className={`p-4 rounded-xl border flex items-start gap-3 ${
+            isLight ? 'bg-amber-50/70 border-amber-200/80 text-amber-900' : 'bg-amber-950/30 border-amber-800/50 text-amber-200'
+          }`}>
+            <AlertCircle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+            <div className="text-xs leading-relaxed space-y-1">
+              <p className="font-bold">Panduan Ukuran Gambar Kuitansi (Agar Tidak Pecah / Melebar / Terdistorsi):</p>
+              <ul className="list-disc list-inside space-y-0.5 text-[11px] opacity-90">
+                <li><span className="font-semibold">Logo Instansi:</span> Gunakan rasio <b>4:3</b> atau <b>1:1 (Persegi)</b>. Ukuran rekomendasi <b>300 × 200 px</b> atau <b>300 × 300 px</b> (Maks. 1MB).</li>
+                <li><span className="font-semibold">Tanda Tangan Elektronik:</span> Gunakan rasio memanjang <b>8:3 (2.5 : 1)</b> dengan ukuran rekomendasi <b>400 × 150 px</b> atau <b>600 × 225 px</b>.</li>
+                <li><span className="font-semibold">Format TTD:</span> Wajib berkas <b>PNG Transparan</b> (tanpa background putih) agar tidak menutupi garis & nama pengajar pada kuitansi.</li>
+              </ul>
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
             {/* Logo Upload Card */}
-            <div className={`p-4 rounded-xl border flex flex-col justify-between ${
+            <div className={`p-4.5 rounded-xl border flex flex-col justify-between ${
               isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/30 border-slate-800'
             }`}>
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  Logo Instansi / Les (Menggantikan Default)
-                </label>
-                <p className="text-[10px] text-slate-500 mb-3">
-                  Upload logo format PNG/JPG dengan rasio persegi/lanskap. Logo akan dicetak pada header kiri atas kuitansi.
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className={`block text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-800' : 'text-slate-300'}`}>
+                    Logo Instansi / Les
+                  </label>
+                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                    4:3 / 1:1 (300×200 px)
+                  </span>
+                </div>
+                <p className={`text-[11px] mb-3 leading-normal ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                  Logo dicetak di header kiri atas kuitansi. Disarankan gambar persegi/lanskap sedang dengan resolusi bersih.
                 </p>
                 
                 {invoiceLogo ? (
-                  <div className="relative border border-slate-200 dark:border-slate-800 rounded-xl p-3 bg-slate-100 dark:bg-slate-950/40 flex items-center justify-center h-28 group">
+                  <div className="relative border border-slate-200 dark:border-slate-800 rounded-xl p-3 bg-white dark:bg-slate-950/40 flex items-center justify-center h-28 group shadow-inner">
                     <img 
                       src={invoiceLogo} 
                       alt="Invoice Logo Preview" 
@@ -878,12 +905,12 @@ export function SettingsManager({
                     </button>
                   </div>
                 ) : (
-                  <div className={`border-2 border-dashed rounded-xl p-5 flex flex-col items-center justify-center h-28 hover:border-slate-400 transition cursor-pointer relative group ${
-                    isLight ? 'border-slate-300' : 'border-slate-800'
+                  <div className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center h-28 hover:border-emerald-500 transition cursor-pointer relative group ${
+                    isLight ? 'border-slate-300 bg-white/60' : 'border-slate-800'
                   }`}>
-                    <Upload size={22} className="text-slate-500 group-hover:text-slate-400 transition mb-1.5" />
-                    <span className="text-xs font-semibold text-slate-400 group-hover:text-slate-300">Pilih berkas Logo</span>
-                    <span className="text-[9px] text-slate-500 mt-0.5">Maks. 1MB (PNG/JPG)</span>
+                    <Upload size={22} className="text-slate-400 group-hover:text-emerald-500 transition mb-1" />
+                    <span className={`text-xs font-bold group-hover:text-emerald-600 transition ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>Pilih berkas Logo</span>
+                    <span className={`text-[10px] mt-0.5 font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Ukuran Ideal: 300 × 200 px (PNG/JPG, Maks 1MB)</span>
                     <input
                       type="file"
                       accept="image/png, image/jpeg"
@@ -896,19 +923,24 @@ export function SettingsManager({
             </div>
 
             {/* Signature Upload Card */}
-            <div className={`p-4 rounded-xl border flex flex-col justify-between ${
+            <div className={`p-4.5 rounded-xl border flex flex-col justify-between ${
               isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/30 border-slate-800'
             }`}>
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  Tanda Tangan Elektronik Penerima (Format PNG)
-                </label>
-                <p className="text-[10px] text-slate-500 mb-3">
-                  Upload tanda tangan dengan background transparan (PNG) untuk ditempelkan secara otomatis di atas nama pengajar.
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className={`block text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-800' : 'text-slate-300'}`}>
+                    Tanda Tangan Elektronik (TTD)
+                  </label>
+                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    8:3 (400×150 px - PNG Transparan)
+                  </span>
+                </div>
+                <p className={`text-[11px] mb-3 leading-normal ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                  TTD ditempelkan di atas nama penerima. Wajib background transparan (PNG) agar tidak menutupi teks kuitansi.
                 </p>
                 
                 {invoiceSignature ? (
-                  <div className="relative border border-slate-200 dark:border-slate-800 rounded-xl p-3 bg-slate-100 dark:bg-slate-950/40 flex items-center justify-center h-28 group">
+                  <div className="relative border border-slate-200 dark:border-slate-800 rounded-xl p-3 bg-white dark:bg-slate-950/40 flex items-center justify-center h-28 group shadow-inner">
                     <img 
                       src={invoiceSignature} 
                       alt="Invoice Signature Preview" 
@@ -924,12 +956,12 @@ export function SettingsManager({
                     </button>
                   </div>
                 ) : (
-                  <div className={`border-2 border-dashed rounded-xl p-5 flex flex-col items-center justify-center h-28 hover:border-slate-400 transition cursor-pointer relative group ${
-                    isLight ? 'border-slate-300' : 'border-slate-800'
+                  <div className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center h-28 hover:border-emerald-500 transition cursor-pointer relative group ${
+                    isLight ? 'border-slate-300 bg-white/60' : 'border-slate-800'
                   }`}>
-                    <Upload size={22} className="text-slate-500 group-hover:text-slate-400 transition mb-1.5" />
-                    <span className="text-xs font-semibold text-slate-400 group-hover:text-slate-300">Pilih berkas TTD</span>
-                    <span className="text-[9px] text-slate-500 mt-0.5">Disarankan PNG transparan</span>
+                    <Upload size={22} className="text-slate-400 group-hover:text-emerald-500 transition mb-1" />
+                    <span className={`text-xs font-bold group-hover:text-emerald-600 transition ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>Pilih berkas TTD</span>
+                    <span className={`text-[10px] mt-0.5 font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Ukuran Ideal: 400 × 150 px (PNG Transparan)</span>
                     <input
                       type="file"
                       accept="image/png"

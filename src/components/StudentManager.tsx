@@ -562,8 +562,8 @@ export function StudentManager({
                 }`}>
                   <th className="p-4">Nama Siswa</th>
                   <th className="p-4">Orang Tua / HP</th>
-                  <th className="p-4">Level</th>
-                  <th className="p-4">Materi Aktif</th>
+                  <th className="p-4 hidden sm:table-cell">Level</th>
+                  <th className="p-4 hidden sm:table-cell">Materi Aktif</th>
                   <th className="p-4">Gabung Sejak</th>
                   <th className="p-4">Status</th>
                   <th className="p-4 text-center">Aksi</th>
@@ -647,12 +647,12 @@ export function StudentManager({
                           <span>{student.parentPhone}</span>
                         </a>
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 hidden sm:table-cell">
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400">
                           {student.level || 'Dasar'}
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 hidden sm:table-cell">
                         {(() => {
                           const activeMat = materials.find(m => m.id === student.activeMaterialId);
                           return (

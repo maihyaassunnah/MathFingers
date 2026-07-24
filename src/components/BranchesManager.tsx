@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Branch, AdminUser } from '../types';
-import { Building, UserPlus, Users, Trash2, Edit2, ShieldAlert, Plus, Shield, Check, Lock, MapPin, Phone, RefreshCw } from 'lucide-react';
+import { Building, UserPlus, Users, Trash2, Edit2, ShieldAlert, Plus, Shield, Check, Lock, MapPin, Phone, RefreshCw, Upload, Link as LinkIcon, Camera, X, Image as ImageIcon } from 'lucide-react';
 import { getAdminAvatar } from '../utils';
 
 interface BranchesManagerProps {
@@ -46,6 +46,24 @@ export function BranchesManager({
   const [editingAdminUsername, setEditingAdminUsername] = useState<string | null>(null);
 
   const [activeSubTab, setActiveSubTab] = useState<'branches' | 'admins'>('branches');
+
+  const handleAvatarFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 3 * 1024 * 1024) {
+      alert('Ukuran foto terlalu besar. Maksimal 3MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        setAdminAvatarUrl(event.target.result as string);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleBranchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -479,51 +497,117 @@ export function BranchesManager({
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Pilih Foto Profil (Tema Tutor/Math Finger)</label>
-                <div className="flex flex-wrap gap-2.5 mb-2">
-                  {[
-                    { name: 'Febrianti', url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200' },
-                    { name: 'Dewi', url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200' },
-                    { name: 'Guru Bandung', url: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200' },
-                    { name: 'Wahyudin', url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200' },
-                    { name: 'Tutor Kreatif', url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200' },
-                    { name: 'Tutor Cerdas', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200' }
-                  ].map((preset, idx) => {
-                    const isSelected = adminAvatarUrl === preset.url;
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setAdminAvatarUrl(preset.url)}
-                        title={preset.name}
-                        className={`relative w-10 h-10 rounded-xl overflow-hidden border-2 transition shrink-0 ${
-                          isSelected ? 'border-emerald-500 scale-105 shadow-md shadow-emerald-500/10' : 'border-transparent opacity-70 hover:opacity-100'
-                        }`}
-                      >
-                        <img
-                          src={preset.url}
-                          alt={preset.name}
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover"
-                        />
-                        {isSelected && (
-                          <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center">
-                            <Check size={14} className="text-white drop-shadow-md" />
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
+                <label className={`block text-[10px] font-bold uppercase tracking-wider mb-2 ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
+                  Foto Profil Admin Cabang
+                </label>
+
+                {/* Current Avatar Preview Box */}
+                <div className={`p-3 rounded-xl border flex items-center gap-3 mb-3 ${
+                  isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/40 border-slate-800'
+                }`}>
+                  <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-200 dark:bg-slate-800 shrink-0">
+                    {adminAvatarUrl ? (
+                      <img
+                        src={adminAvatarUrl}
+                        alt="Avatar Preview"
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400">
+                        <ImageIcon size={20} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-xs font-bold truncate ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                      {adminAvatarUrl ? (adminAvatarUrl.startsWith('data:') ? 'Foto dari Galeri Device' : 'Foto dari Link URL') : 'Belum Ada Foto Profil'}
+                    </div>
+                    <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                      {adminAvatarUrl ? adminAvatarUrl : 'Pilih dari galeri, tempel link, atau pilih preset.'}
+                    </p>
+                  </div>
+                  {adminAvatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setAdminAvatarUrl('')}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-slate-200/50 dark:hover:bg-slate-800 transition"
+                      title="Hapus Foto"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </div>
-                <input
-                  type="url"
-                  value={adminAvatarUrl}
-                  onChange={(e) => setAdminAvatarUrl(e.target.value)}
-                  placeholder="Atau masukkan link foto kustom..."
-                  className={`w-full px-4 py-2.5 rounded-xl border text-[11px] font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${
-                    isLight ? 'bg-slate-50 border-slate-200 text-slate-850' : 'bg-slate-950/50 border-slate-800 text-white'
-                  }`}
-                />
+
+                {/* Input Controls: File Upload & URL Link */}
+                <div className="space-y-2 mb-3">
+                  <div className="flex items-center gap-2">
+                    <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-dashed cursor-pointer transition text-xs font-semibold ${
+                      isLight ? 'bg-white border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/50 text-slate-700' : 'bg-slate-900 border-slate-700 hover:border-emerald-500 text-slate-300'
+                    }`}>
+                      <Upload size={14} className="text-emerald-500 shrink-0" />
+                      <span>Upload dari Galeri Device</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarFileUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="relative">
+                    <LinkIcon size={14} className="absolute left-3 top-3 text-slate-400" />
+                    <input
+                      type="url"
+                      value={adminAvatarUrl}
+                      onChange={(e) => setAdminAvatarUrl(e.target.value)}
+                      placeholder="Atau tempel link URL foto (misal https://...)"
+                      className={`w-full pl-8 pr-4 py-2 rounded-xl border text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${
+                        isLight ? 'bg-slate-50 border-slate-200 text-slate-850' : 'bg-slate-950/50 border-slate-800 text-white'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Preset Tutor Avatars */}
+                <div>
+                  <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Pilihan Preset Foto:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { name: 'Febrianti', url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200' },
+                      { name: 'Dewi', url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200' },
+                      { name: 'Guru Bandung', url: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200' },
+                      { name: 'Wahyudin', url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200' },
+                      { name: 'Tutor Cerdas', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200' }
+                    ].map((preset, idx) => {
+                      const isSelected = adminAvatarUrl === preset.url;
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setAdminAvatarUrl(preset.url)}
+                          title={preset.name}
+                          className={`relative w-8 h-8 rounded-lg overflow-hidden border-2 transition shrink-0 ${
+                            isSelected ? 'border-emerald-500 scale-105 shadow-md shadow-emerald-500/10' : 'border-transparent opacity-60 hover:opacity-100'
+                          }`}
+                        >
+                          <img
+                            src={preset.url}
+                            alt={preset.name}
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover"
+                          />
+                          {isSelected && (
+                            <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center">
+                              <Check size={12} className="text-white drop-shadow-md" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

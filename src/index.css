@@ -51,3 +51,12 @@ body {
   animation: slideUpFade 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* Elegant and subtle repeating mathematical pattern backgrounds */
+.math-pattern-light {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cg fill='%23059669' fill-opacity='0.16' font-family='var(--font-sans), sans-serif' font-size='20' font-weight='bold'%3E%3Ctext x='20' y='40'%3E%2B%3C/text%3E%3Ctext x='120' y='35'%3E-%3C/text%3E%3Ctext x='190' y='50'%3E%C3%97%3C/text%3E%3Ctext x='60' y='100'%3E=%3C/text%3E%3Ctext x='160' y='90'%3E%C3%B7%3C/text%3E%3Ctext x='20' y='160'%3E%E2%88%9A%3C/text%3E%3Ctext x='115' y='165'%3E%CF%80%3C/text%3E%3Ctext x='200' y='150'%3E%E2%88%91%3C/text%3E%3Ctext x='70' y='210'%3E%E2%88%AB%3C/text%3E%3Ctext x='150' y='200'%3E123%3C/text%3E%3Ctext x='90' y='90'%3Ex%C2%B2%3C/text%3E%3Ctext x='140' y='140'%3Ey%3C/text%3E%3Ctext x='180' y='215'%3E%25%3C/text%3E%3C/g%3E%3C/svg%3E");
+}
+
+.math-pattern-dark {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cg fill='%2334d399' fill-opacity='0.10' font-family='var(--font-sans), sans-serif' font-size='20' font-weight='bold'%3E%3Ctext x='20' y='40'%3E%2B%3C/text%3E%3Ctext x='120' y='35'%3E-%3C/text%3E%3Ctext x='190' y='50'%3E%C3%97%3C/text%3E%3Ctext x='60' y='100'%3E=%3C/text%3E%3Ctext x='160' y='90'%3E%C3%B7%3C/text%3E%3Ctext x='20' y='160'%3E%E2%88%9A%3C/text%3E%3Ctext x='115' y='165'%3E%CF%80%3C/text%3E%3Ctext x='200' y='150'%3E%E2%88%91%3C/text%3E%3Ctext x='70' y='210'%3E%E2%88%AB%3C/text%3E%3Ctext x='150' y='200'%3E123%3C/text%3E%3Ctext x='90' y='90'%3Ex%C2%B2%3C/text%3E%3Ctext x='140' y='140'%3Ey%3C/text%3E%3Ctext x='180' y='215'%3E%25%3C/text%3E%3C/g%3E%3C/svg%3E");
+}
+

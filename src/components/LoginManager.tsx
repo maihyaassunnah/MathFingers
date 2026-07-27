@@ -59,8 +59,8 @@ export function LoginManager({ onLogin, theme, adminUsers = [], branches = [] }:
   };
 
   return (
-    <div className={`min-h-screen flex items-center justify-center p-4 sm:p-6 transition-colors duration-150 ${
-      isLight ? 'bg-[#fdfbf7]' : 'bg-[#0f172a]'
+    <div className={`min-h-screen flex items-center justify-center p-4 sm:p-6 transition-colors duration-150 relative ${
+      isLight ? 'bg-[#fdfbf7] math-pattern-light' : 'bg-[#0f172a] math-pattern-dark'
     }`} id="login-container">
       <div className="absolute top-4 left-4 sm:top-6 sm:left-6">
         <MathFingerLogo size={42} showText={true} theme={theme} />

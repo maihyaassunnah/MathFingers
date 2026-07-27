@@ -175,7 +175,7 @@ export function StudentProgressReport({ students, attendance, notes, grades, the
               </div>
             </div>
 
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left Column: Grade history list & speed visualization */}
               <div className="space-y-4">
                 <div className="flex items-center gap-1.5">
@@ -208,6 +208,54 @@ export function StudentProgressReport({ students, attendance, notes, grades, the
                             <div className="bg-emerald-500 h-full transition-all" style={{ width: `${g.score}%` }} />
                           </div>
                         </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Middle Column: Attendance History list */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="text-slate-500" size={16} />
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Daftar Riwayat Presensi</h4>
+                </div>
+
+                {studentAttendance.length === 0 ? (
+                  <p className={`text-sm italic p-4 rounded-xl border ${
+                    isLight ? 'bg-slate-50 border-slate-100 text-slate-500' : 'bg-slate-950/40 border-slate-800 text-slate-400'
+                  }`}>Belum ada riwayat absensi harian di database.</p>
+                ) : (
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+                    {studentAttendance.map((a) => (
+                      <div key={a.id} className={`p-3 border rounded-xl flex items-start justify-between gap-2.5 ${
+                        isLight ? 'bg-slate-50 border-slate-100' : 'bg-slate-950/40 border-slate-800'
+                      }`}>
+                        <div className="space-y-1 min-w-0">
+                          <div className="text-xs font-bold font-mono text-slate-400">
+                            {(() => {
+                              try {
+                                return new Date(a.date).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+                              } catch {
+                                return a.date;
+                              }
+                            })()}
+                          </div>
+                          {a.notes && (
+                            <p className={`text-[11px] italic leading-tight ${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'}`} title={a.notes}>
+                              "{a.notes}"
+                            </p>
+                          )}
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-black shrink-0 ${
+                          a.status === 'present'
+                            ? 'bg-emerald-500/15 text-emerald-500'
+                            : a.status === 'permission'
+                              ? 'bg-amber-500/15 text-amber-500'
+                              : 'bg-rose-500/15 text-rose-500'
+                        }`}>
+                          {a.status === 'present' ? 'Hadir' : a.status === 'permission' ? 'Izin' : 'Alpa'}
+                        </span>
                       </div>
                     ))}
                   </div>

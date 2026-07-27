@@ -36,6 +36,8 @@ export function AttendanceTracker({
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const [attendanceMap, setAttendanceMap] = useState<Record<string, { status: 'present' | 'absent' | 'permission'; notes: string }>>({});
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [savedRecordsCount, setSavedRecordsCount] = useState(0);
   const [expandedStudentNotes, setExpandedStudentNotes] = useState<Record<string, boolean>>({});
   const [filterBySchedule, setFilterBySchedule] = useState(false);
 
@@ -173,6 +175,8 @@ export function AttendanceTracker({
     try {
       await onAddAttendanceBatch(recordsToSave);
       setSaveStatus('saved');
+      setSavedRecordsCount(recordsToSave.length);
+      setShowSuccessModal(true);
       setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (err) {
       console.error(err);
@@ -1285,6 +1289,47 @@ export function AttendanceTracker({
                 className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition"
               >
                 Tutup Detail
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* === SUCCESS MODAL POPUP === */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`rounded-2xl w-full max-w-sm shadow-2xl border p-6 text-center transform transition-all scale-100 ${
+            isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#090d16] border-slate-800 text-white'
+          }`}>
+            <div className="w-16 h-16 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
+              <CheckSquare size={36} />
+            </div>
+            
+            <h3 className={`text-lg font-extrabold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+              Presensi Berhasil Disimpan! 🎉
+            </h3>
+            
+            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+              Sebanyak <strong className="text-emerald-500 font-extrabold">{savedRecordsCount} data kehadiran siswa</strong> pada tanggal{' '}
+              <strong className={isLight ? 'text-slate-800 font-bold' : 'text-slate-200 font-bold'}>
+                {(() => {
+                  try {
+                    return new Date(selectedDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                  } catch {
+                    return selectedDate;
+                  }
+                })()}
+              </strong>{' '}
+              telah aman disimpan ke database.
+            </p>
+            
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition shadow-md shadow-emerald-600/10"
+              >
+                Tutup & Selesai
               </button>
             </div>
           </div>

@@ -189,7 +189,16 @@ export function useMathFinggersDb() {
 
       // Set state and save locally for offline capabilities
       const loadedStudents = studentsData || [];
-      const loadedAttendance = (attendanceData || []).sort((a, b) => b.date.localeCompare(a.date));
+      
+      // Deduplicate pre-existing records to ensure one attendance per day per student
+      const rawAttendance = attendanceData || [];
+      const uniqueAttendanceMap: Record<string, Attendance> = {};
+      rawAttendance.forEach((item: Attendance) => {
+        const key = `${item.studentId}_${item.date}`;
+        uniqueAttendanceMap[key] = item;
+      });
+      const loadedAttendance = Object.values(uniqueAttendanceMap).sort((a, b) => b.date.localeCompare(a.date));
+
       const loadedNotes = (notesData || []).sort((a, b) => b.date.localeCompare(a.date));
       const loadedInvoices = invoicesData || [];
       const loadedGrades = (gradesData || []).sort((a, b) => b.date.localeCompare(a.date));
@@ -455,7 +464,13 @@ export function useMathFinggersDb() {
       setGrades(seedGrades);
     } else {
       setStudents(localStudents);
-      setAttendance(getLocalData<Attendance[]>('attendance', []));
+      const localAttendance = getLocalData<Attendance[]>('attendance', []);
+      const uniqueAttendanceMap: Record<string, Attendance> = {};
+      localAttendance.forEach((item: Attendance) => {
+        const key = `${item.studentId}_${item.date}`;
+        uniqueAttendanceMap[key] = item;
+      });
+      setAttendance(Object.values(uniqueAttendanceMap).sort((a, b) => b.date.localeCompare(a.date)));
       setNotes(getLocalData<TeacherNote[]>('notes', []));
       setInvoices(getLocalData<Invoice[]>('invoices', []));
       setGrades(getLocalData<Grade[]>('grades', []));
@@ -661,13 +676,15 @@ export function useMathFinggersDb() {
 
     if (supabase && !isOfflineFallback) {
       try {
-        // Upsert style: delete existing on matching studentId + date first, then insert
-        for (const rec of records) {
+        // Safe batch operation: delete existing records for these students on this specific date in one fast query
+        const studentIds = records.map(r => r.studentId);
+        if (studentIds.length > 0 && records[0]?.date) {
           await supabase.from('attendance')
             .delete()
-            .eq('studentId', rec.studentId)
-            .eq('date', rec.date);
+            .in('studentId', studentIds)
+            .eq('date', records[0].date);
         }
+        
         const { error } = await supabase.from('attendance').insert(newRecords);
         if (error) throw error;
       } catch (err) {

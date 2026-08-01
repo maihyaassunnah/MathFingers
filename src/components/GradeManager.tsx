@@ -22,6 +22,7 @@ export function GradeManager({
 }: GradeManagerProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [studentFilter, setStudentFilter] = useState('All');
+  const [topicFilter, setTopicFilter] = useState('All');
   const [viewMode, setViewMode] = useState<'input' | 'leger'>('input');
   const [legerSearchQuery, setLegerSearchQuery] = useState('');
 
@@ -194,7 +195,8 @@ export function GradeManager({
     const matchesSearch = grade.topic.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           grade.studentName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStudent = studentFilter === 'All' || grade.studentId === studentFilter;
-    return matchesSearch && matchesStudent;
+    const matchesTopic = topicFilter === 'All' || grade.topic === topicFilter;
+    return matchesSearch && matchesStudent && matchesTopic;
   });
 
   // --- LEGER CALCULATIONS ---
@@ -571,12 +573,12 @@ export function GradeManager({
           />
         </div>
 
-        <div className="w-full md:w-auto">
+        <div className="w-full md:w-auto flex flex-col sm:flex-row gap-3">
           <select
             id="filter-grade-student"
             value={studentFilter}
             onChange={(e) => setStudentFilter(e.target.value)}
-            className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+            className={`w-full sm:w-auto border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
               isLight 
                 ? 'bg-white border-slate-200 text-slate-755' 
                 : 'bg-slate-900 border-slate-800 text-slate-300'
@@ -585,6 +587,22 @@ export function GradeManager({
             <option value="All" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Semua Siswa</option>
             {students.map(s => (
               <option key={s.id} value={s.id} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>{s.name}</option>
+            ))}
+          </select>
+
+          <select
+            id="filter-grade-topic"
+            value={topicFilter}
+            onChange={(e) => setTopicFilter(e.target.value)}
+            className={`w-full sm:w-auto border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+              isLight 
+                ? 'bg-white border-slate-200 text-slate-755' 
+                : 'bg-slate-900 border-slate-800 text-slate-300'
+            }`}
+          >
+            <option value="All" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Semua Materi Uji</option>
+            {Array.from(new Set(grades.map(g => g.topic))).sort().map(topic => (
+              <option key={topic} value={topic} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>{topic}</option>
             ))}
           </select>
         </div>

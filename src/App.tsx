@@ -676,25 +676,43 @@ export default function App() {
           {navigationItems.map((item) => {
             const IconComponent = item.icon;
             const isActive = activeTab === item.id;
+            const isDivider2 = item.id === 'branches_mgmt' || (item.id === 'settings' && currentUser?.role !== 'super_admin');
 
             return (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-150 relative ${
-                  isActive 
-                    ? getAccentBgClass() 
-                    : theme === 'dark'
-                      ? 'text-slate-400 hover:text-white hover:bg-slate-800/30'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <IconComponent size={18} className={isActive ? 'text-white dark:text-slate-950' : theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} />
-                <span className="whitespace-nowrap truncate">{item.name}</span>
-                {isActive && (
-                  <span className="absolute right-3 top-4.5 w-1.5 h-1.5 bg-white dark:bg-slate-950 rounded-full" />
+              <div key={item.id} className="space-y-1">
+                {item.id === 'attendance' && (
+                  <div className="pt-4 pb-1.5 px-3">
+                    <div className={`border-t ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'} mb-2.5`} />
+                    <span className={`text-[10px] font-bold tracking-wider uppercase block ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                      Akademik & Operasional
+                    </span>
+                  </div>
                 )}
-              </button>
+                {isDivider2 && (
+                  <div className="pt-4 pb-1.5 px-3">
+                    <div className={`border-t ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'} mb-2.5`} />
+                    <span className={`text-[10px] font-bold tracking-wider uppercase block ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                      Administrasi & Sistem
+                    </span>
+                  </div>
+                )}
+                <button
+                  onClick={() => setActiveTab(item.id)}
+                  className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-150 relative ${
+                    isActive 
+                      ? getAccentBgClass() 
+                      : theme === 'dark'
+                        ? 'text-slate-400 hover:text-white hover:bg-slate-800/30'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <IconComponent size={18} className={isActive ? 'text-white dark:text-slate-950' : theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} />
+                  <span className="whitespace-nowrap truncate">{item.name}</span>
+                  {isActive && (
+                    <span className="absolute right-3 top-4.5 w-1.5 h-1.5 bg-white dark:bg-slate-950 rounded-full" />
+                  )}
+                </button>
+              </div>
             );
           })}
         </nav>
@@ -773,25 +791,43 @@ export default function App() {
               {navigationItems.map((item) => {
                 const IconComponent = item.icon;
                 const isActive = activeTab === item.id;
+                const isDivider2 = item.id === 'branches_mgmt' || (item.id === 'settings' && currentUser?.role !== 'super_admin');
 
                 return (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      setActiveTab(item.id);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl font-bold text-xs transition ${
-                      isActive 
-                        ? getAccentBgClass() 
-                        : theme === 'dark'
-                          ? 'text-slate-400 hover:text-white hover:bg-slate-800/30'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                    }`}
-                  >
-                    <IconComponent size={16} />
-                    <span>{item.name}</span>
-                  </button>
+                  <div key={item.id} className="space-y-1">
+                    {item.id === 'attendance' && (
+                      <div className="pt-4 pb-1.5 px-3">
+                        <div className={`border-t ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'} mb-2.5`} />
+                        <span className={`text-[10px] font-bold tracking-wider uppercase block ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                          Akademik & Operasional
+                        </span>
+                      </div>
+                    )}
+                    {isDivider2 && (
+                      <div className="pt-4 pb-1.5 px-3">
+                        <div className={`border-t ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'} mb-2.5`} />
+                        <span className={`text-[10px] font-bold tracking-wider uppercase block ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                          Administrasi & Sistem
+                        </span>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => {
+                        setActiveTab(item.id);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl font-bold text-xs transition ${
+                        isActive 
+                          ? getAccentBgClass() 
+                          : theme === 'dark'
+                            ? 'text-slate-400 hover:text-white hover:bg-slate-800/30'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      }`}
+                    >
+                      <IconComponent size={16} className={isActive ? 'text-white dark:text-slate-950' : theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} />
+                      <span>{item.name}</span>
+                    </button>
+                  </div>
                 );
               })}
             </nav>

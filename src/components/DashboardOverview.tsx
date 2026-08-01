@@ -196,11 +196,11 @@ export function DashboardOverview({
     <div id="dashboard-overview-section" className="space-y-6">
       
       {/* Brand Hero Welcome Banner */}
-      <div className={`relative overflow-hidden bg-gradient-to-r ${
+      <div className={`relative overflow-hidden bg-gradient-to-r transition-all duration-300 ${
         isLight 
-          ? 'from-[#ffffff] via-[#f8fafc] to-[#f1f5f9] border-slate-200 text-slate-800' 
-          : 'from-[#020617] via-[#0f172a] to-emerald-950 border-slate-800 text-white'
-        } p-6 sm:p-8 rounded-3xl shadow-md border`}
+          ? 'from-white/70 via-slate-50/70 to-slate-100/60 border-white/50 text-slate-800 shadow-[0_8px_32px_rgba(148,163,184,0.05)]' 
+          : 'from-[#020617]/50 via-[#0f172a]/50 to-emerald-950/40 border-emerald-500/10 text-white shadow-[0_8px_32px_rgba(0,0,0,0.25)]'
+        } p-6 sm:p-8 rounded-3xl border backdrop-blur-md`}
       >
         <div className="relative z-10 max-w-xl space-y-3">
           <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full backdrop-blur-sm border ${
@@ -249,8 +249,10 @@ export function DashboardOverview({
 
       {/* Super Admin: Statistik Keseluruhan Cabang */}
       {isSuperAdmin && (
-        <div className={`p-5 sm:p-6 rounded-3xl border shadow-sm space-y-4 ${
-          isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+        <div className={`p-5 sm:p-6 rounded-3xl border shadow-sm space-y-4 backdrop-blur-md transition-all duration-300 ${
+          isLight 
+            ? 'bg-white/75 border-white/50 shadow-[0_8px_32px_rgba(148,163,184,0.05)]' 
+            : 'bg-slate-900/60 border-emerald-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.25)]'
         }`}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-4 mb-2 gap-2">
             <div className="flex items-center gap-2">
@@ -372,8 +374,10 @@ export function DashboardOverview({
         {/* Metric 1 */}
         <div 
           onClick={() => onNavigate('students')} 
-          className={`p-3 sm:p-5 rounded-2xl border shadow-sm flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:border-slate-400 transition group ${
-            isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+          className={`p-3 sm:p-5 rounded-2xl border flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:border-emerald-500/40 transition-all duration-300 group backdrop-blur-md ${
+            isLight 
+              ? 'bg-white/75 border-white/50 shadow-[0_8px_32px_rgba(148,163,184,0.05)] hover:shadow-[0_12px_40px_rgba(5,150,105,0.08)]' 
+              : 'bg-slate-900/60 border-emerald-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.25)] hover:shadow-[0_12px_40px_rgba(16,185,129,0.15)]'
           }`}
         >
           <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition border ${
@@ -391,8 +395,10 @@ export function DashboardOverview({
         {/* Metric 2 */}
         <div 
           onClick={() => onNavigate('attendance')} 
-          className={`p-3 sm:p-5 rounded-2xl border shadow-sm flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:border-slate-400 transition group ${
-            isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+          className={`p-3 sm:p-5 rounded-2xl border flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:border-emerald-500/40 transition-all duration-300 group backdrop-blur-md ${
+            isLight 
+              ? 'bg-white/75 border-white/50 shadow-[0_8px_32px_rgba(148,163,184,0.05)] hover:shadow-[0_12px_40px_rgba(5,150,105,0.08)]' 
+              : 'bg-slate-900/60 border-emerald-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.25)] hover:shadow-[0_12px_40px_rgba(16,185,129,0.15)]'
           }`}
         >
           <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition border ${
@@ -412,8 +418,10 @@ export function DashboardOverview({
         {/* Metric 3 */}
         <div 
           onClick={() => onNavigate('spp')} 
-          className={`p-3 sm:p-5 rounded-2xl border shadow-sm flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:border-slate-400 transition group ${
-            isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+          className={`p-3 sm:p-5 rounded-2xl border flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:border-emerald-500/40 transition-all duration-300 group backdrop-blur-md ${
+            isLight 
+              ? 'bg-white/75 border-white/50 shadow-[0_8px_32px_rgba(148,163,184,0.05)] hover:shadow-[0_12px_40px_rgba(5,150,105,0.08)]' 
+              : 'bg-slate-900/60 border-emerald-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.25)] hover:shadow-[0_12px_40px_rgba(16,185,129,0.15)]'
           }`}
         >
           <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition border ${
@@ -433,8 +441,10 @@ export function DashboardOverview({
         {/* Metric 4 */}
         <div 
           onClick={() => onNavigate('grades')} 
-          className={`p-3 sm:p-5 rounded-2xl border shadow-sm flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:border-slate-400 transition group ${
-            isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+          className={`p-3 sm:p-5 rounded-2xl border flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:border-emerald-500/40 transition-all duration-300 group backdrop-blur-md ${
+            isLight 
+              ? 'bg-white/75 border-white/50 shadow-[0_8px_32px_rgba(148,163,184,0.05)] hover:shadow-[0_12px_40px_rgba(5,150,105,0.08)]' 
+              : 'bg-slate-900/60 border-emerald-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.25)] hover:shadow-[0_12px_40px_rgba(16,185,129,0.15)]'
           }`}
         >
           <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition border ${
@@ -452,8 +462,10 @@ export function DashboardOverview({
       </div>
 
       {/* SECTION: KEGIATAN & AGENDA HARI INI */}
-      <div className={`p-5 sm:p-6 rounded-3xl border shadow-sm ${
-        isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+      <div className={`p-5 sm:p-6 rounded-3xl border shadow-sm backdrop-blur-md transition-all duration-300 ${
+        isLight 
+          ? 'bg-white/75 border-white/50 shadow-[0_8px_32px_rgba(148,163,184,0.05)]' 
+          : 'bg-slate-900/60 border-emerald-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.25)]'
       }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-4 mb-5 gap-3">
           <div className="flex items-center gap-2">
@@ -648,8 +660,10 @@ export function DashboardOverview({
         
         {/* Left column: Action shortcuts */}
         {!isSuperAdmin && (
-          <div className={`hidden md:block p-5 rounded-2xl border shadow-sm space-y-4 lg:col-span-1 ${
-            isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+          <div className={`hidden md:block p-5 rounded-2xl border shadow-sm space-y-4 lg:col-span-1 backdrop-blur-md transition-all duration-300 ${
+            isLight 
+              ? 'bg-white/75 border-white/50 shadow-[0_8px_32px_rgba(148,163,184,0.05)]' 
+              : 'bg-slate-900/60 border-emerald-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.25)]'
           }`}>
             <h3 className={`font-bold text-base ${isLight ? 'text-slate-850' : 'text-white'}`}>Menu Navigasi Pintar</h3>
             <div className="grid grid-cols-1 gap-2">
@@ -733,8 +747,10 @@ export function DashboardOverview({
         {/* Right column: Recent activity feed */}
         <div className={`p-5 rounded-2xl border shadow-sm ${
           isSuperAdmin ? 'lg:col-span-3' : 'lg:col-span-2'
-        } flex flex-col justify-between ${
-          isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+        } flex flex-col justify-between backdrop-blur-md transition-all duration-300 ${
+          isLight 
+            ? 'bg-white/75 border-white/50 shadow-[0_8px_32px_rgba(148,163,184,0.05)]' 
+            : 'bg-slate-900/60 border-emerald-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.25)]'
         }`}>
           <div>
             <h3 className={`font-bold text-base mb-3 ${isLight ? 'text-slate-800' : 'text-white'}`}>Aktivitas Uji Kompetensi Terakhir</h3>

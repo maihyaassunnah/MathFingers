@@ -68,10 +68,10 @@ export function LoginManager({ onLogin, theme, adminUsers = [], branches = [] }:
 
       <div className="w-full max-w-md">
         {/* Main Card */}
-        <div className={`p-8 rounded-3xl border shadow-xl transition-all relative overflow-hidden ${
+        <div className={`p-8 rounded-3xl border transition-all duration-300 transform hover:scale-105 opacity-95 hover:opacity-100 relative overflow-hidden backdrop-blur-lg ${
           isLight 
-            ? 'bg-white border-slate-150 shadow-slate-100' 
-            : 'bg-slate-900/90 border-slate-800 shadow-slate-950/20'
+            ? 'bg-white/75 border-emerald-500/20 shadow-[0_8px_32px_rgba(5,150,105,0.08)] hover:shadow-[0_20px_50px_rgba(5,150,105,0.15)]' 
+            : 'bg-slate-900/70 border-emerald-500/25 shadow-[0_8px_32px_rgba(16,185,129,0.12)] hover:shadow-[0_20px_50px_rgba(16,185,129,0.22)]'
         }`} id="login-card">
           {/* Top subtle line/glow */}
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-500" />
@@ -213,12 +213,12 @@ export function LoginManager({ onLogin, theme, adminUsers = [], branches = [] }:
               type="submit"
               id="login-submit-button"
               disabled={isSuccess || !selectedUser || !passwordInput}
-              className={`w-full py-4 rounded-xl font-bold text-sm tracking-wide transition flex items-center justify-center gap-2 ${
+              className={`w-full py-4 rounded-xl font-bold text-sm tracking-wide transition-all duration-150 flex items-center justify-center gap-2 transform active:scale-95 ${
                 isSuccess
                   ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
                   : (!selectedUser || !passwordInput)
                     ? 'bg-slate-300 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
-                    : 'bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white shadow-lg hover:shadow-emerald-500/10'
+                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg hover:shadow-emerald-500/10'
               }`}
             >
               {isSuccess ? (

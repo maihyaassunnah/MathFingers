@@ -629,7 +629,7 @@ export function AttendanceTracker({
                               </div>
                               <div className="flex items-center gap-2 flex-wrap mt-1">
                                 <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 shrink-0">
-                                  #{index + 1}
+                                  {index + 1}
                                 </span>
                                 <h4 className={`font-bold text-sm truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</h4>
                                 <span className="text-[9px] font-mono font-bold px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15">
@@ -701,7 +701,7 @@ export function AttendanceTracker({
                               </div>
                               <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
                                 <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 shrink-0">
-                                  #{index + 1}
+                                  {index + 1}
                                 </span>
                                 <h3 className={`font-bold text-base ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</h3>
                                 <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15">

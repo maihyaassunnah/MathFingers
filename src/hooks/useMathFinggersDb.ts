@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
-import { Student, Attendance, TeacherNote, Invoice, Installment, Grade, LearningMaterial, AppSettings, DashboardTask, Branch, AdminUser, ClassGroup } from '../types';
+import { Student, Attendance, TeacherNote, Invoice, Installment, Grade, LearningMaterial, AppSettings, DashboardTask, Branch, AdminUser, ClassGroup, FinanceIncome, FinanceExpense } from '../types';
 import { SEED_MATERIALS, generateInvoiceNo, updateDynamicPwaIcon } from '../utils';
 
 // Helper to load localStorage fallbacks
@@ -64,6 +64,8 @@ export function useMathFinggersDb() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [classes, setClasses] = useState<ClassGroup[]>([]);
+  const [manualIncomes, setManualIncomes] = useState<FinanceIncome[]>([]);
+  const [expenses, setExpenses] = useState<FinanceExpense[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOfflineFallback, setIsOfflineFallback] = useState(false);
 
@@ -178,6 +180,24 @@ export function useMathFinggersDb() {
         console.warn('Failed to fetch classes from Supabase:', e);
       }
 
+      // Fetch Incomes
+      let incomesData = null;
+      try {
+        const { data, error } = await supabase.from('finance_incomes').select('*');
+        if (!error) incomesData = data;
+      } catch (e) {
+        console.warn('Failed to fetch finance_incomes from Supabase:', e);
+      }
+
+      // Fetch Expenses
+      let expensesData = null;
+      try {
+        const { data, error } = await supabase.from('finance_expenses').select('*');
+        if (!error) expensesData = data;
+      } catch (e) {
+        console.warn('Failed to fetch finance_expenses from Supabase:', e);
+      }
+
       // Fetch App Settings (All branch settings)
       let appSettingsRows: any[] = [];
       try {
@@ -273,6 +293,14 @@ export function useMathFinggersDb() {
 
       setGrades(loadedGrades);
       saveLocalData('grades', loadedGrades);
+
+      const loadedIncomes = incomesData || getLocalData<FinanceIncome[]>('finance_incomes', []);
+      setManualIncomes(loadedIncomes);
+      saveLocalData('finance_incomes', loadedIncomes);
+
+      const loadedExpenses = expensesData || getLocalData<FinanceExpense[]>('finance_expenses', []);
+      setExpenses(loadedExpenses);
+      saveLocalData('finance_expenses', loadedExpenses);
 
       // Detect if the materials table actually has the new column "capaianPembelajaran"
       const tableHasNewSchema = materialsData && materialsData.length > 0 && ("capaianPembelajaran" in materialsData[0]);
@@ -462,6 +490,18 @@ export function useMathFinggersDb() {
       ];
       saveLocalData('grades', seedGrades);
       setGrades(seedGrades);
+
+      const seedIncomes: FinanceIncome[] = [
+        { id: 'inc-1', date: '2026-08-01', category: 'Lainnya', amount: 500000, source: 'Kas Awal', notes: 'Saldo awal kas bimbingan belajar', createdAt: Date.now() - 2 * 24 * 3600 * 1000, branch: 'Pusat' }
+      ];
+      saveLocalData('finance_incomes', seedIncomes);
+      setManualIncomes(seedIncomes);
+
+      const seedExpenses: FinanceExpense[] = [
+        { id: 'exp-1', date: '2026-08-02', category: 'Cetak buku', amount: 50000, paidTo: 'Percetakan Agung', paymentMethod: 'Tunai', notes: 'Cetak modul matematika level 1', createdAt: Date.now() - 24 * 3600 * 1000, branch: 'Pusat' }
+      ];
+      saveLocalData('finance_expenses', seedExpenses);
+      setExpenses(seedExpenses);
     } else {
       setStudents(localStudents);
       const localAttendance = getLocalData<Attendance[]>('attendance', []);
@@ -474,6 +514,8 @@ export function useMathFinggersDb() {
       setNotes(getLocalData<TeacherNote[]>('notes', []));
       setInvoices(getLocalData<Invoice[]>('invoices', []));
       setGrades(getLocalData<Grade[]>('grades', []));
+      setManualIncomes(getLocalData<FinanceIncome[]>('finance_incomes', []));
+      setExpenses(getLocalData<FinanceExpense[]>('finance_expenses', []));
     }
     
     const localMats = getLocalData<LearningMaterial[]>('materials', []);
@@ -1265,6 +1307,102 @@ export function useMathFinggersDb() {
     }
   };
 
+  // --- FINANCE INCOME WRITERS ---
+  const addManualIncome = async (incomeData: Omit<FinanceIncome, 'id' | 'createdAt'>) => {
+    const newIncome: FinanceIncome = {
+      ...incomeData,
+      id: `inc-${generateId()}`,
+      createdAt: Date.now()
+    };
+    const updated = [newIncome, ...manualIncomes];
+    setManualIncomes(updated);
+    saveLocalData('finance_incomes', updated);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        await supabase.from('finance_incomes').insert([newIncome]);
+      } catch (e) {
+        console.error('Failed to save manual income to Supabase:', e);
+      }
+    }
+  };
+
+  const updateManualIncome = async (id: string, updatedFields: Partial<FinanceIncome>) => {
+    const updated = manualIncomes.map(inc => inc.id === id ? { ...inc, ...updatedFields } : inc);
+    setManualIncomes(updated);
+    saveLocalData('finance_incomes', updated);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        await supabase.from('finance_incomes').update(updatedFields).eq('id', id);
+      } catch (e) {
+        console.error('Failed to update manual income in Supabase:', e);
+      }
+    }
+  };
+
+  const deleteManualIncome = async (id: string) => {
+    const updated = manualIncomes.filter(inc => inc.id !== id);
+    setManualIncomes(updated);
+    saveLocalData('finance_incomes', updated);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        await supabase.from('finance_incomes').delete().eq('id', id);
+      } catch (e) {
+        console.error('Failed to delete manual income in Supabase:', e);
+      }
+    }
+  };
+
+  // --- FINANCE EXPENSE WRITERS ---
+  const addExpense = async (expenseData: Omit<FinanceExpense, 'id' | 'createdAt'>) => {
+    const newExpense: FinanceExpense = {
+      ...expenseData,
+      id: `exp-${generateId()}`,
+      createdAt: Date.now()
+    };
+    const updated = [newExpense, ...expenses];
+    setExpenses(updated);
+    saveLocalData('finance_expenses', updated);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        await supabase.from('finance_expenses').insert([newExpense]);
+      } catch (e) {
+        console.error('Failed to save expense to Supabase:', e);
+      }
+    }
+  };
+
+  const updateExpense = async (id: string, updatedFields: Partial<FinanceExpense>) => {
+    const updated = expenses.map(exp => exp.id === id ? { ...exp, ...updatedFields } : exp);
+    setExpenses(updated);
+    saveLocalData('finance_expenses', updated);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        await supabase.from('finance_expenses').update(updatedFields).eq('id', id);
+      } catch (e) {
+        console.error('Failed to update expense in Supabase:', e);
+      }
+    }
+  };
+
+  const deleteExpense = async (id: string) => {
+    const updated = expenses.filter(exp => exp.id !== id);
+    setExpenses(updated);
+    saveLocalData('finance_expenses', updated);
+
+    if (supabase && !isOfflineFallback) {
+      try {
+        await supabase.from('finance_expenses').delete().eq('id', id);
+      } catch (e) {
+        console.error('Failed to delete expense in Supabase:', e);
+      }
+    }
+  };
+
   // --- MANUAL BACKUP IMPORT WRITER ---
   const importBackupData = async (backupPayload: any) => {
     try {
@@ -1438,6 +1576,8 @@ export function useMathFinggersDb() {
     branches,
     adminUsers,
     classes,
+    manualIncomes,
+    expenses,
     settings,
     allSettingsMap,
     getBranchSettings,
@@ -1477,6 +1617,12 @@ export function useMathFinggersDb() {
     addClassGroup,
     updateClassGroup,
     deleteClassGroup,
+    addManualIncome,
+    updateManualIncome,
+    deleteManualIncome,
+    addExpense,
+    updateExpense,
+    deleteExpense,
     importBackupData
   };
 }

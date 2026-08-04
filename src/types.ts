@@ -142,3 +142,29 @@ export interface ClassGroup {
   createdAt: number;
 }
 
+export interface FinanceIncome {
+  id: string;
+  date: string; // YYYY-MM-DD
+  category: 'SPP' | 'Uang Pendaftaran' | 'Penjualan Buku' | 'Lainnya';
+  amount: number;
+  source: string; // e.g. "Siswa Aisyah", "Sponsor Utama"
+  notes: string;
+  invoiceId?: string; // Ref to invoice if integrated
+  branch?: string;
+  createdAt: number;
+}
+
+export interface FinanceExpense {
+  id: string;
+  date: string; // YYYY-MM-DD
+  category: 'Gaji tutor' | 'Fee admin aplikasi' | 'Cetak buku' | 'ATK' | 'Reward siswa' | 'Promosi' | 'Listrik' | 'Internet' | 'Transport' | 'Lainnya';
+  amount: number;
+  paidTo: string;
+  paymentMethod: 'Transfer' | 'Tunai';
+  notes: string;
+  receiptImage?: string; // Base64 or image url (optional)
+  branch?: string;
+  createdAt: number;
+}
+
+

@@ -48,7 +48,7 @@ export function SupabaseSqlEditor({
     tables: { name: string; status: 'ok' | 'error' | 'unchecked'; errorMsg?: string }[];
   } | null>(null);
 
-  const tables = ['students', 'classes', 'attendance', 'notes', 'invoices', 'grades', 'materials', 'branches', 'admin_users', 'hari_les', 'app_settings'];
+  const tables = ['students', 'classes', 'attendance', 'notes', 'invoices', 'grades', 'materials', 'branches', 'admin_users', 'hari_les', 'app_settings', 'finance_incomes', 'finance_expenses'];
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -327,6 +327,43 @@ ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branches TEXT DEFAULT 'Semua';
 ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "appIcon" TEXT;
 
 
+-- 11. TABEL FINANCE_INCOMES (Pemasukan Keuangan Manual / Lainnya)
+CREATE TABLE IF NOT EXISTS finance_incomes (
+  id TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('SPP', 'Uang Pendaftaran', 'Penjualan Buku', 'Lainnya')),
+  amount NUMERIC NOT NULL,
+  source TEXT NOT NULL,
+  notes TEXT,
+  "invoiceId" TEXT REFERENCES invoices(id) ON DELETE SET NULL,
+  branch TEXT DEFAULT 'Pusat',
+  "createdAt" BIGINT NOT NULL
+);
+
+ALTER TABLE finance_incomes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON finance_incomes;
+CREATE POLICY "Allow public read-write for demo" ON finance_incomes FOR ALL USING (true) WITH CHECK (true);
+
+
+-- 12. TABEL FINANCE_EXPENSES (Pengeluaran Keuangan)
+CREATE TABLE IF NOT EXISTS finance_expenses (
+  id TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('Gaji tutor', 'Fee admin aplikasi', 'Cetak buku', 'ATK', 'Reward siswa', 'Promosi', 'Listrik', 'Internet', 'Transport', 'Lainnya')),
+  amount NUMERIC NOT NULL,
+  "paidTo" TEXT NOT NULL,
+  "paymentMethod" TEXT NOT NULL CHECK ("paymentMethod" IN ('Transfer', 'Tunai')),
+  notes TEXT,
+  "receiptImage" TEXT,
+  branch TEXT DEFAULT 'Pusat',
+  "createdAt" BIGINT NOT NULL
+);
+
+ALTER TABLE finance_expenses ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON finance_expenses;
+CREATE POLICY "Allow public read-write for demo" ON finance_expenses FOR ALL USING (true) WITH CHECK (true);
+
+
 -- ====================================================================
 -- SEED DATA AWAL (Jalankan Sekali Saja)
 -- ====================================================================
@@ -500,7 +537,40 @@ ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "appIcon" TEXT;
 
 INSERT INTO app_settings (id, branch, branches, "bankName", "bankAccountNo", "bankAccountHolder", "defaultSppAmount", "accentColor", "defaultTeacherName", "invoicePrefix", "updatedAt")
 VALUES ('default', 'Semua', 'Semua', 'Bank BCA', '1234567890', 'Admin Math Fingers', 250000, 'emerald', 'Admin Math Fingers', 'INV/MF', 1719600000)
-ON CONFLICT (id) DO NOTHING;`
+ON CONFLICT (id) DO NOTHING;`,
+
+    finance_incomes: `CREATE TABLE IF NOT EXISTS finance_incomes (
+  id TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('SPP', 'Uang Pendaftaran', 'Penjualan Buku', 'Lainnya')),
+  amount NUMERIC NOT NULL,
+  source TEXT NOT NULL,
+  notes TEXT,
+  "invoiceId" TEXT REFERENCES invoices(id) ON DELETE SET NULL,
+  branch TEXT DEFAULT 'Pusat',
+  "createdAt" BIGINT NOT NULL
+);
+
+ALTER TABLE finance_incomes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON finance_incomes;
+CREATE POLICY "Allow public read-write for demo" ON finance_incomes FOR ALL USING (true) WITH CHECK (true);`,
+
+    finance_expenses: `CREATE TABLE IF NOT EXISTS finance_expenses (
+  id TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('Gaji tutor', 'Fee admin aplikasi', 'Cetak buku', 'ATK', 'Reward siswa', 'Promosi', 'Listrik', 'Internet', 'Transport', 'Lainnya')),
+  amount NUMERIC NOT NULL,
+  "paidTo" TEXT NOT NULL,
+  "paymentMethod" TEXT NOT NULL CHECK ("paymentMethod" IN ('Transfer', 'Tunai')),
+  notes TEXT,
+  "receiptImage" TEXT,
+  branch TEXT DEFAULT 'Pusat',
+  "createdAt" BIGINT NOT NULL
+);
+
+ALTER TABLE finance_expenses ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON finance_expenses;
+CREATE POLICY "Allow public read-write for demo" ON finance_expenses FOR ALL USING (true) WITH CHECK (true);`
   };
 
   const alterSqlScripts = {
@@ -653,7 +723,41 @@ CREATE TABLE IF NOT EXISTS app_settings (
 
 ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Semua';
 ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branches TEXT DEFAULT 'Semua';
-ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "appIcon" TEXT;`,
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "appIcon" TEXT;
+
+-- 10. Tambah Tabel Keuangan (Pemasukan & Pengeluaran) jika belum ada
+CREATE TABLE IF NOT EXISTS finance_incomes (
+  id TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('SPP', 'Uang Pendaftaran', 'Penjualan Buku', 'Lainnya')),
+  amount NUMERIC NOT NULL,
+  source TEXT NOT NULL,
+  notes TEXT,
+  "invoiceId" TEXT REFERENCES invoices(id) ON DELETE SET NULL,
+  branch TEXT DEFAULT 'Pusat',
+  "createdAt" BIGINT NOT NULL
+);
+
+ALTER TABLE finance_incomes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON finance_incomes;
+CREATE POLICY "Allow public read-write for demo" ON finance_incomes FOR ALL USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS finance_expenses (
+  id TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('Gaji tutor', 'Fee admin aplikasi', 'Cetak buku', 'ATK', 'Reward siswa', 'Promosi', 'Listrik', 'Internet', 'Transport', 'Lainnya')),
+  amount NUMERIC NOT NULL,
+  "paidTo" TEXT NOT NULL,
+  "paymentMethod" TEXT NOT NULL CHECK ("paymentMethod" IN ('Transfer', 'Tunai')),
+  notes TEXT,
+  "receiptImage" TEXT,
+  branch TEXT DEFAULT 'Pusat',
+  "createdAt" BIGINT NOT NULL
+);
+
+ALTER TABLE finance_expenses ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON finance_expenses;
+CREATE POLICY "Allow public read-write for demo" ON finance_expenses FOR ALL USING (true) WITH CHECK (true);`,
     app_settings: `-- Melengkapi kolom 'app_settings' untuk Ikon PWA (appIcon), Logo Invoice, dan Multi-Cabang
 CREATE TABLE IF NOT EXISTS app_settings (
   id TEXT PRIMARY KEY DEFAULT 'default',
@@ -754,7 +858,41 @@ CREATE TABLE IF NOT EXISTS classes (
 
 ALTER TABLE classes ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read-write for demo" ON classes;
-CREATE POLICY "Allow public read-write for demo" ON classes FOR ALL USING (true) WITH CHECK (true);`
+CREATE POLICY "Allow public read-write for demo" ON classes FOR ALL USING (true) WITH CHECK (true);`,
+
+    finance: `-- Pembuatan Tabel Keuangan Khusus (Pemasukan & Pengeluaran) jika belum ada
+CREATE TABLE IF NOT EXISTS finance_incomes (
+  id TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('SPP', 'Uang Pendaftaran', 'Penjualan Buku', 'Lainnya')),
+  amount NUMERIC NOT NULL,
+  source TEXT NOT NULL,
+  notes TEXT,
+  "invoiceId" TEXT REFERENCES invoices(id) ON DELETE SET NULL,
+  branch TEXT DEFAULT 'Pusat',
+  "createdAt" BIGINT NOT NULL
+);
+
+ALTER TABLE finance_incomes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON finance_incomes;
+CREATE POLICY "Allow public read-write for demo" ON finance_incomes FOR ALL USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS finance_expenses (
+  id TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('Gaji tutor', 'Fee admin aplikasi', 'Cetak buku', 'ATK', 'Reward siswa', 'Promosi', 'Listrik', 'Internet', 'Transport', 'Lainnya')),
+  amount NUMERIC NOT NULL,
+  "paidTo" TEXT NOT NULL,
+  "paymentMethod" TEXT NOT NULL CHECK ("paymentMethod" IN ('Transfer', 'Tunai')),
+  notes TEXT,
+  "receiptImage" TEXT,
+  branch TEXT DEFAULT 'Pusat',
+  "createdAt" BIGINT NOT NULL
+);
+
+ALTER TABLE finance_expenses ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON finance_expenses;
+CREATE POLICY "Allow public read-write for demo" ON finance_expenses FOR ALL USING (true) WITH CHECK (true);`
   };
 
   return (
@@ -991,6 +1129,16 @@ CREATE POLICY "Allow public read-write for demo" ON classes FOR ALL USING (true)
                   }`}
                 >
                   Fix Relasi CASCADE DELETE
+                </button>
+                <button
+                  onClick={() => setSelectedTable('finance')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                    selectedTable === 'finance'
+                      ? 'bg-slate-800 text-emerald-400 border border-emerald-500/20'
+                      : 'bg-slate-950/40 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Tabel Keuangan (Pemasukan & Pengeluaran)
                 </button>
               </div>
 

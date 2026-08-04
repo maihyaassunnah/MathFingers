@@ -17,6 +17,7 @@ import { SupabaseSqlEditor } from './components/SupabaseSqlEditor';
 import { AlumniManager } from './components/AlumniManager';
 import { BranchesManager } from './components/BranchesManager';
 import { ClassManager } from './components/ClassManager';
+import FinanceManager from './components/FinanceManager';
 import { AdminUser, Branch } from './types';
 import { getAdminAvatar, updateDynamicPwaIcon } from './utils';
 
@@ -43,7 +44,8 @@ import {
   Database,
   GraduationCap,
   Building,
-  Layers
+  Layers,
+  Wallet
 } from 'lucide-react';
 
 export default function App() {
@@ -85,8 +87,8 @@ export default function App() {
       
       // Ensure activeTab is always one of the valid tabs for the role
       const validTabIds = currentUser.role === 'super_admin'
-        ? ['overview', 'students', 'classes', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'grades', 'report', 'branches_mgmt', 'supabase_sql', 'settings', 'simulator']
-        : ['overview', 'students', 'classes', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'grades', 'report', 'settings', 'simulator'];
+        ? ['overview', 'students', 'classes', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'finance', 'grades', 'report', 'branches_mgmt', 'supabase_sql', 'settings', 'simulator']
+        : ['overview', 'students', 'classes', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'finance', 'grades', 'report', 'settings', 'simulator'];
       if (!validTabIds.includes(activeTab)) {
         setActiveTab('overview');
       }
@@ -103,6 +105,8 @@ export default function App() {
     branches,
     adminUsers,
     classes,
+    manualIncomes,
+    expenses,
     settings,
     allSettingsMap,
     getBranchSettings,
@@ -142,6 +146,12 @@ export default function App() {
     addClassGroup,
     updateClassGroup,
     deleteClassGroup,
+    addManualIncome,
+    updateManualIncome,
+    deleteManualIncome,
+    addExpense,
+    updateExpense,
+    deleteExpense,
     importBackupData
   } = useMathFinggersDb();
 
@@ -194,7 +204,35 @@ export default function App() {
     return activeBranch === 'all' || b === activeBranch;
   });
 
+  const filteredManualIncomes = manualIncomes.filter(mi => {
+    const b = getAssignedBranch(mi.branch);
+    return activeBranch === 'all' || b === activeBranch;
+  });
+
+  const filteredExpenses = expenses.filter(e => {
+    const b = getAssignedBranch(e.branch);
+    return activeBranch === 'all' || b === activeBranch;
+  });
+
   // Multi-branch aware writers
+  const handleAddManualIncome = async (incomeData: any) => {
+    const defaultBranchName = branches[0]?.name || 'Pusat';
+    const branchToSet = incomeData.branch || (currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName));
+    await addManualIncome({
+      ...incomeData,
+      branch: branchToSet
+    });
+  };
+
+  const handleAddExpense = async (expenseData: any) => {
+    const defaultBranchName = branches[0]?.name || 'Pusat';
+    const branchToSet = expenseData.branch || (currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName));
+    await addExpense({
+      ...expenseData,
+      branch: branchToSet
+    });
+  };
+
   const handleAddStudent = async (studentData: any) => {
     const defaultBranchName = branches[0]?.name || 'Pusat';
     const branchToSet = studentData.branch || (currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName));
@@ -273,6 +311,7 @@ export default function App() {
         { id: 'journal_history', name: 'Riwayat Jurnal', icon: History },
         { id: 'spp', name: 'Pembayaran SPP', icon: Receipt },
         { id: 'spp_history', name: 'Riwayat Pembayaran', icon: History },
+        { id: 'finance', name: 'Keuangan', icon: Wallet },
         { id: 'grades', name: 'Input Nilai', icon: Award },
         { id: 'simulator', name: 'Kurikulum', icon: BookOpen },
         { id: 'report', name: 'Rapor Perkembangan', icon: TrendingUp },
@@ -290,6 +329,7 @@ export default function App() {
         { id: 'journal_history', name: 'Riwayat Jurnal', icon: History },
         { id: 'spp', name: 'Pembayaran SPP', icon: Receipt },
         { id: 'spp_history', name: 'Riwayat Pembayaran', icon: History },
+        { id: 'finance', name: 'Keuangan', icon: Wallet },
         { id: 'grades', name: 'Input Nilai', icon: Award },
         { id: 'simulator', name: 'Kurikulum', icon: BookOpen },
         { id: 'report', name: 'Rapor Perkembangan', icon: TrendingUp },
@@ -458,6 +498,24 @@ export default function App() {
           <SppHistory 
             students={filteredStudents} 
             invoices={filteredInvoices} 
+            theme={theme}
+          />
+        );
+      case 'finance':
+        return (
+          <FinanceManager 
+            students={filteredStudents}
+            invoices={filteredInvoices}
+            manualIncomes={filteredManualIncomes}
+            expenses={filteredExpenses}
+            onAddManualIncome={handleAddManualIncome}
+            onUpdateManualIncome={updateManualIncome}
+            onDeleteManualIncome={deleteManualIncome}
+            onAddExpense={handleAddExpense}
+            onUpdateExpense={updateExpense}
+            onDeleteExpense={deleteExpense}
+            branches={branches}
+            isSuperAdmin={isSuperAdmin}
             theme={theme}
           />
         );

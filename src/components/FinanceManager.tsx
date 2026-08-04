@@ -709,7 +709,7 @@ export default function FinanceManager({
           }`}>
             <div className="flex items-center gap-2">
               <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              <span className={`font-semibold ${isLight ? 'text-slate-500' : 'text-slate-300'}`}>Bulan:</span>
+              <span className={`hidden md:inline font-semibold ${isLight ? 'text-slate-500' : 'text-slate-300'}`}>Bulan:</span>
             </div>
             <select
               value={filterMonth}
@@ -733,7 +733,7 @@ export default function FinanceManager({
           }`}>
             <div className="flex items-center gap-2">
               <Layers className="w-3.5 h-3.5 text-slate-400" />
-              <span className={`font-semibold ${isLight ? 'text-slate-500' : 'text-slate-300'}`}>Cabang:</span>
+              <span className={`hidden md:inline font-semibold ${isLight ? 'text-slate-500' : 'text-slate-300'}`}>Cabang:</span>
             </div>
             <select
               value={filterBranch}

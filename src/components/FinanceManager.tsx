@@ -700,19 +700,21 @@ export default function FinanceManager({
         </div>
         
         {/* Branch & Month Filters & Quick Stats info */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="grid grid-cols-2 gap-2 w-full md:flex md:w-auto md:items-center md:gap-3">
           {/* Month Filter */}
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs transition-colors ${
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs transition-colors justify-between md:justify-start ${
             isLight 
               ? 'bg-white border-slate-200 shadow-sm' 
               : 'bg-slate-900 border-slate-800'
           }`}>
-            <Calendar className="w-3.5 h-3.5 text-slate-400" />
-            <span className={`font-semibold ${isLight ? 'text-slate-500' : 'text-slate-300'}`}>Bulan:</span>
+            <div className="flex items-center gap-2">
+              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+              <span className={`font-semibold ${isLight ? 'text-slate-500' : 'text-slate-300'}`}>Bulan:</span>
+            </div>
             <select
               value={filterMonth}
               onChange={(e) => setFilterMonth(e.target.value)}
-              className="bg-transparent border-none outline-none font-bold text-emerald-600 dark:text-emerald-400 cursor-pointer"
+              className="bg-transparent border-none outline-none font-bold text-emerald-600 dark:text-emerald-400 cursor-pointer text-right md:text-left text-ellipsis overflow-hidden whitespace-nowrap max-w-[100px] sm:max-w-none"
             >
               <option value="all" className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>Semua Bulan</option>
               {uniqueMonths.map(m => (
@@ -724,17 +726,19 @@ export default function FinanceManager({
           </div>
 
           {/* Branch Filter */}
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs transition-colors ${
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs transition-colors justify-between md:justify-start ${
             isLight 
               ? 'bg-white border-slate-200 shadow-sm' 
               : 'bg-slate-900 border-slate-800'
           }`}>
-            <Layers className="w-3.5 h-3.5 text-slate-400" />
-            <span className={`font-semibold ${isLight ? 'text-slate-500' : 'text-slate-300'}`}>Cabang:</span>
+            <div className="flex items-center gap-2">
+              <Layers className="w-3.5 h-3.5 text-slate-400" />
+              <span className={`font-semibold ${isLight ? 'text-slate-500' : 'text-slate-300'}`}>Cabang:</span>
+            </div>
             <select
               value={filterBranch}
               onChange={(e) => setFilterBranch(e.target.value)}
-              className="bg-transparent border-none outline-none font-bold text-emerald-600 dark:text-emerald-400 cursor-pointer"
+              className="bg-transparent border-none outline-none font-bold text-emerald-600 dark:text-emerald-400 cursor-pointer text-right md:text-left text-ellipsis overflow-hidden whitespace-nowrap max-w-[100px] sm:max-w-none"
             >
               <option value="all" className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>Semua Cabang</option>
               {branches.map(b => (
@@ -746,7 +750,7 @@ export default function FinanceManager({
       </div>
 
       {/* --- INTERNAL MENUS (SUB TABS) --- */}
-      <div className={`flex flex-wrap items-center gap-1.5 p-1 rounded-2xl border transition-all max-w-2xl ${
+      <div className={`flex overflow-x-auto no-scrollbar flex-nowrap items-center gap-1.5 p-1 rounded-2xl border transition-all max-w-full md:max-w-2xl ${
         isLight 
           ? 'bg-white border-slate-200/80 shadow-sm' 
           : 'bg-slate-900/80 border-slate-800/30'
@@ -767,7 +771,7 @@ export default function FinanceManager({
                 setActiveSubTab(tab.id as TabType);
                 setSearchTerm('');
               }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 whitespace-nowrap ${
                 isActive 
                   ? (isLight 
                     ? 'bg-emerald-600 text-white shadow-sm' 

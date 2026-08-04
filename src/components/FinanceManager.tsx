@@ -951,7 +951,7 @@ export default function FinanceManager({
             </div>
 
             {/* Smart Analytical Insight block */}
-            <div className={`p-6 rounded-3xl border shadow-sm space-y-4 ${
+            <div className={`hidden lg:block p-6 rounded-3xl border shadow-sm space-y-4 ${
               isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900/40 border-slate-800/40 text-slate-100'
             }`}>
               <h3 className="text-sm font-bold flex items-center gap-2">

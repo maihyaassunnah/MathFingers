@@ -120,6 +120,24 @@ export function StudentQrCards({
     };
   }, [isScannerOpen]);
 
+  // Automatically reset scanner and confirmation modal state when scanSuccess is true
+  useEffect(() => {
+    if (scanSuccess) {
+      const timer = setTimeout(() => {
+        setSelectedScanStudent(null);
+        setScanSuccess(false);
+        setScanNotes('');
+        setScanStatus('present');
+        // Resume any paused QR scanner frames and ensure focus on invisible input
+        scanCooldownRef.current = false;
+        if (isScannerOpen && hiddenInputRef.current) {
+          hiddenInputRef.current.focus();
+        }
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [scanSuccess, isScannerOpen]);
+
   // Filter students
   const activeStudents = students.filter(s => s.status === 'active');
 
@@ -484,12 +502,6 @@ export function StudentQrCards({
 
       await onAddAttendanceBatch([record]);
       setScanSuccess(true);
-      setTimeout(() => {
-        setSelectedScanStudent(null);
-        setScanSuccess(false);
-        setScanNotes('');
-        setScanStatus('present');
-      }, 1500);
     } catch (err) {
       console.error(err);
       alert('Gagal merekam presensi siswa.');

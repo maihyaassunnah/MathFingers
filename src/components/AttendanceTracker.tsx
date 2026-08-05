@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Student, Attendance, ClassGroup } from '../types';
 import { getWhatsAppLink, getStudentUniqueCode } from '../utils';
-import { Calendar, Check, X, ShieldAlert, Send, Save, CheckSquare, Clock, Search, Users, TrendingUp, ChevronDown, MessageSquare, Trash2, Layers, DoorClosed, User } from 'lucide-react';
+import { Calendar, Check, X, ShieldAlert, Send, Save, CheckSquare, Clock, Search, Users, TrendingUp, ChevronDown, MessageSquare, Trash2, Layers, DoorClosed, User, QrCode, Printer, Copy, ExternalLink } from 'lucide-react';
 
 interface AttendanceTrackerProps {
   students: Student[];
@@ -37,6 +37,8 @@ export function AttendanceTracker({
   const [attendanceMap, setAttendanceMap] = useState<Record<string, { status: 'present' | 'absent' | 'permission'; notes: string }>>({});
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [savedRecordsCount, setSavedRecordsCount] = useState(0);
   const [expandedStudentNotes, setExpandedStudentNotes] = useState<Record<string, boolean>>({});
   const [filterBySchedule, setFilterBySchedule] = useState(false);
@@ -321,6 +323,21 @@ export function AttendanceTracker({
                   className={`bg-transparent focus:outline-none font-medium ${isLight ? 'text-slate-800' : 'text-white'}`}
                 />
               </div>
+
+              <button
+                id="btn-qr-attendance"
+                type="button"
+                onClick={() => setShowQrModal(true)}
+                className={`flex items-center gap-1.5 font-semibold px-3.5 py-2.5 rounded-xl transition text-sm border cursor-pointer ${
+                  isLight 
+                    ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200 shadow-sm' 
+                    : 'bg-indigo-950/40 hover:bg-indigo-900/50 text-indigo-400 border-indigo-850 shadow-sm'
+                }`}
+                title="Tampilkan QR Code untuk Absen Mandiri Siswa"
+              >
+                <QrCode size={16} />
+                <span>QR Absen</span>
+              </button>
               
               <button
                 id="btn-mark-all-present"
@@ -1330,6 +1347,270 @@ export function AttendanceTracker({
                 className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition shadow-md shadow-emerald-600/10"
               >
                 Tutup & Selesai
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* === QR CODE ABSEN MANDIRI MODAL === */}
+      {showQrModal && (
+        <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`rounded-3xl w-full max-w-md shadow-2xl border p-6 sm:p-7 transform transition-all scale-100 ${
+            isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#090d16] border-slate-800 text-white'
+          }`}>
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200/50 dark:border-slate-850 mb-5">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 rounded-xl">
+                  <QrCode size={20} />
+                </div>
+                <div>
+                  <h3 className={`font-black text-base ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                    QR Absen Mandiri
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">
+                    Math Fingers Attendance
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowQrModal(false)}
+                className={`p-1.5 rounded-xl transition ${
+                  isLight ? 'hover:bg-slate-100 text-slate-400 hover:text-slate-600' : 'hover:bg-slate-800/60 text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Session Info Details */}
+            <div className={`p-3.5 rounded-2xl border mb-5 text-xs space-y-1.5 ${
+              isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/40 border-slate-850/60'
+            }`}>
+              <div className="flex justify-between">
+                <span className="text-slate-450 font-semibold">Kelas Target:</span>
+                <span className="text-indigo-500 font-extrabold">{selectedClassFilter === 'ALL' ? 'Semua Kelas' : selectedClassFilter}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-450 font-semibold">Sesi Tanggal:</span>
+                <span className={`font-bold ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                  {(() => {
+                    try {
+                      return new Date(selectedDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                    } catch {
+                      return selectedDate;
+                    }
+                  })()}
+                </span>
+              </div>
+            </div>
+
+            {/* QR Image Display */}
+            <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-slate-200/80 max-w-[240px] mx-auto shadow-sm">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
+                  `${window.location.origin}${window.location.pathname}?absen=1&kelas=${encodeURIComponent(selectedClassFilter)}&tanggal=${selectedDate}`
+                )}&color=059669`}
+                alt="QR Code Absen"
+                className="w-48 h-48 object-contain"
+                referrerPolicy="no-referrer"
+              />
+              <span className="text-[10px] text-emerald-600 font-black mt-2 tracking-widest uppercase">
+                PINDAI QR UNTUK ABSEN
+              </span>
+            </div>
+
+            {/* Share Link Input + Copy Button */}
+            <div className="mt-5 space-y-2">
+              <label className={`block text-[11px] font-bold tracking-wide uppercase ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                Link Absen Mandiri Siswa
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={`${window.location.origin}${window.location.pathname}?absen=1&kelas=${encodeURIComponent(selectedClassFilter)}&tanggal=${selectedDate}`}
+                  className={`flex-1 px-3 py-2.5 rounded-xl text-xs font-mono font-medium border focus:outline-none ${
+                    isLight 
+                      ? 'bg-slate-50 border-slate-200 text-slate-700' 
+                      : 'bg-slate-950/50 border-slate-850 text-slate-350'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = `${window.location.origin}${window.location.pathname}?absen=1&kelas=${encodeURIComponent(selectedClassFilter)}&tanggal=${selectedDate}`;
+                    navigator.clipboard.writeText(url);
+                    setCopiedLink(true);
+                    setTimeout(() => setCopiedLink(false), 2000);
+                  }}
+                  className={`px-3 py-2 rounded-xl transition border text-xs font-bold flex items-center gap-1 shrink-0 ${
+                    copiedLink
+                      ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                      : isLight
+                        ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                        : 'bg-slate-850 hover:bg-slate-800 text-slate-300 border-slate-800'
+                  }`}
+                >
+                  <Copy size={14} />
+                  <span>{copiedLink ? 'Disalin' : 'Salin'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Primary Action Controls */}
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  const url = `${window.location.origin}${window.location.pathname}?absen=1&kelas=${encodeURIComponent(selectedClassFilter)}&tanggal=${selectedDate}`;
+                  const printWindow = window.open('', '_blank');
+                  if (!printWindow) return;
+                  printWindow.document.write(`
+                    <html>
+                      <head>
+                        <title>Cetak QR Code Absensi - Math Fingers</title>
+                        <style>
+                          body {
+                            font-family: system-ui, -apple-system, sans-serif;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            min-height: 90vh;
+                            margin: 0;
+                            text-align: center;
+                            color: #334155;
+                          }
+                          .card {
+                            border: 2px solid #e2e8f0;
+                            border-radius: 24px;
+                            padding: 40px;
+                            max-width: 450px;
+                            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+                          }
+                          .logo {
+                            font-size: 24px;
+                            font-weight: 800;
+                            color: #059669;
+                            margin-bottom: 8px;
+                          }
+                          .title {
+                            font-size: 20px;
+                            font-weight: 700;
+                            color: #1e293b;
+                            margin-bottom: 20px;
+                          }
+                          .qr-image {
+                            width: 260px;
+                            height: 260px;
+                            margin: 20px 0;
+                            border: 1px solid #f1f5f9;
+                            padding: 10px;
+                            background: white;
+                            border-radius: 12px;
+                          }
+                          .info {
+                            background: #f8fafc;
+                            border-radius: 12px;
+                            padding: 16px;
+                            font-size: 14px;
+                            margin-top: 20px;
+                            text-align: left;
+                            border: 1px solid #e2e8f0;
+                          }
+                          .info-row {
+                            display: flex;
+                            justify-content: space-between;
+                            margin-bottom: 6px;
+                          }
+                          .info-row:last-child {
+                            margin-bottom: 0;
+                          }
+                          .label {
+                            font-weight: 600;
+                            color: #64748b;
+                          }
+                          .value {
+                            font-weight: 700;
+                            color: #334155;
+                          }
+                          .footer-text {
+                            font-size: 11px;
+                            color: #94a3b8;
+                            margin-top: 24px;
+                          }
+                          @media print {
+                            body { min-height: auto; }
+                            .card { border: none; box-shadow: none; padding: 0; }
+                          }
+                        </style>
+                      </head>
+                      <body>
+                        <div class="card">
+                          <div class="logo">Math Fingers</div>
+                          <div class="title">SCAN UNTUK ABSEN MANDIRI</div>
+                          <img class="qr-image" src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=\${encodeURIComponent(url)}&color=059669" alt="QR Code" />
+                          <div class="info">
+                            <div class="info-row">
+                              <span class="label">Kelas:</span>
+                              <span class="value" style="color: #059669;">\${selectedClassFilter === 'ALL' ? 'Semua Kelas' : selectedClassFilter}</span>
+                            </div>
+                            <div class="info-row">
+                              <span class="label">Tanggal:</span>
+                              <span class="value">\${(() => {
+                                try {
+                                  return new Date(selectedDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                                } catch {
+                                  return selectedDate;
+                                }
+                              })()}</span>
+                            </div>
+                          </div>
+                          <div class="footer-text">Silakan scan menggunakan smartphone Anda, pilih nama, dan masukkan Kode Unik Siswa.</div>
+                        </div>
+                        <script>
+                          window.onload = function() {
+                            window.print();
+                            setTimeout(function() { window.close(); }, 500);
+                          };
+                        </script>
+                      </body>
+                    </html>
+                  `);
+                  printWindow.document.close();
+                }}
+                className={`py-2.5 px-4 rounded-xl text-xs font-bold transition border flex items-center justify-center gap-1.5 cursor-pointer ${
+                  isLight
+                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                    : 'bg-slate-850 hover:bg-slate-800 text-slate-200 border-slate-800'
+                }`}
+              >
+                <Printer size={14} />
+                <span>Cetak QR</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const url = `${window.location.origin}${window.location.pathname}?absen=1&kelas=${encodeURIComponent(selectedClassFilter)}&tanggal=${selectedDate}`;
+                  const formattedDateText = (() => {
+                    try {
+                      return new Date(selectedDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                    } catch {
+                      return selectedDate;
+                    }
+                  })();
+                  const message = `Halo siswa-siswi Math Fingers! Silakan lakukan absensi mandiri untuk sesi bimbingan:\n\n📅 Hari/Tgl: ${formattedDateText}\n🏫 Kelas: ${selectedClassFilter === 'ALL' ? 'Semua Kelas' : selectedClassFilter}\n\nLakukan absensi mandiri melalui link berikut ini:\n🔗 ${url}\n\nTerima kasih! 😊`;
+                  window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+                }}
+                className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <ExternalLink size={14} />
+                <span>Bagikan ke WA</span>
               </button>
             </div>
           </div>

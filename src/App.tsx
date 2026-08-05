@@ -18,8 +18,10 @@ import { AlumniManager } from './components/AlumniManager';
 import { BranchesManager } from './components/BranchesManager';
 import { ClassManager } from './components/ClassManager';
 import FinanceManager from './components/FinanceManager';
+import { StudentSelfAttendanceView } from './components/StudentSelfAttendanceView';
+import { StudentQrCards } from './components/StudentQrCards';
 import { AdminUser, Branch } from './types';
-import { getAdminAvatar, updateDynamicPwaIcon } from './utils';
+import { getAdminAvatar, updateDynamicPwaIcon, getStudentUniqueCode } from './utils';
 
 import { 
   Home, 
@@ -45,10 +47,36 @@ import {
   GraduationCap,
   Building,
   Layers,
-  Wallet
+  Wallet,
+  QrCode,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 
 export default function App() {
+  const [isSelfAttendanceMode, setIsSelfAttendanceMode] = useState<boolean>(false);
+  const [selfAttendanceClass, setSelfAttendanceClass] = useState<string>('');
+  const [selfAttendanceDate, setSelfAttendanceDate] = useState<string>('');
+  const [scannedStudentId, setScannedStudentId] = useState<string | null>(null);
+  const [scanStatus, setScanStatus] = useState<'present' | 'absent' | 'permission'>('present');
+  const [scanNotes, setScanNotes] = useState<string>('');
+  const [scanDate, setScanDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [scanSuccess, setScanSuccess] = useState<boolean>(false);
+  const [scanSaving, setScanSaving] = useState<boolean>(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('absen') === '1') {
+      setIsSelfAttendanceMode(true);
+      setSelfAttendanceClass(params.get('kelas') || 'ALL');
+      setSelfAttendanceDate(params.get('tanggal') || new Date().toISOString().slice(0, 10));
+    }
+    const scanId = params.get('scan_student');
+    if (scanId) {
+      setScannedStudentId(scanId);
+    }
+  }, []);
+
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(() => {
     const savedObj = localStorage.getItem('math_finggers_current_user_obj');
     if (savedObj) {
@@ -87,8 +115,8 @@ export default function App() {
       
       // Ensure activeTab is always one of the valid tabs for the role
       const validTabIds = currentUser.role === 'super_admin'
-        ? ['overview', 'students', 'classes', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'finance', 'grades', 'report', 'branches_mgmt', 'supabase_sql', 'settings', 'simulator']
-        : ['overview', 'students', 'classes', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'finance', 'grades', 'report', 'settings', 'simulator'];
+        ? ['overview', 'students', 'classes', 'qr_cards', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'finance', 'grades', 'report', 'branches_mgmt', 'supabase_sql', 'settings', 'simulator']
+        : ['overview', 'students', 'classes', 'qr_cards', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'finance', 'grades', 'report', 'settings', 'simulator'];
       if (!validTabIds.includes(activeTab)) {
         setActiveTab('overview');
       }
@@ -261,6 +289,42 @@ export default function App() {
     await addAttendanceBatch(updatedRecords);
   };
 
+  const handleSaveScannedAttendance = async () => {
+    if (!scannedStudentId) return;
+    const student = students.find(s => s.id === scannedStudentId);
+    if (!student) return;
+
+    setScanSaving(true);
+    try {
+      const defaultBranchName = branches[0]?.name || 'Pusat';
+      const branchToSet = student.branch || currentUser?.branch || defaultBranchName;
+      
+      const record = {
+        studentId: student.id,
+        studentName: student.name,
+        date: scanDate,
+        status: scanStatus,
+        notes: scanNotes,
+        branch: branchToSet
+      };
+
+      await addAttendanceBatch([record]);
+      setScanSuccess(true);
+      setTimeout(() => {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setScannedStudentId(null);
+        setScanSuccess(false);
+        setScanNotes('');
+        setScanStatus('present');
+      }, 2000);
+    } catch (err) {
+      console.error(err);
+      alert('Gagal mencatat presensi QR!');
+    } finally {
+      setScanSaving(false);
+    }
+  };
+
   const handleAddTeacherNote = async (noteData: any) => {
     const defaultBranchName = branches[0]?.name || 'Pusat';
     const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
@@ -305,6 +369,7 @@ export default function App() {
         { id: 'overview', name: 'Statistik', icon: Home },
         { id: 'students', name: 'Siswa', icon: Users },
         { id: 'classes', name: 'Kelas', icon: Layers },
+        { id: 'qr_cards', name: 'Kartu QR Siswa', icon: QrCode },
         { id: 'alumni', name: 'Alumni / Lulus', icon: GraduationCap },
         { id: 'attendance', name: 'Absensi', icon: CheckSquare },
         { id: 'notes', name: 'Jurnal Guru', icon: FileText },
@@ -323,6 +388,7 @@ export default function App() {
         { id: 'overview', name: 'Dashboard Cabang', icon: Home },
         { id: 'students', name: 'Siswa', icon: Users },
         { id: 'classes', name: 'Kelas', icon: Layers },
+        { id: 'qr_cards', name: 'Kartu QR Siswa', icon: QrCode },
         { id: 'alumni', name: 'Alumni / Lulus', icon: GraduationCap },
         { id: 'attendance', name: 'Absensi', icon: CheckSquare },
         { id: 'notes', name: 'Jurnal Guru', icon: FileText },
@@ -424,6 +490,17 @@ export default function App() {
             theme={theme}
             isSuperAdmin={isSuperAdmin}
             branches={branches}
+          />
+        );
+      case 'qr_cards':
+        return (
+          <StudentQrCards 
+            students={filteredStudents}
+            classes={filteredClasses}
+            branches={branches}
+            attendance={attendance}
+            onAddAttendanceBatch={addAttendanceBatch}
+            theme={theme}
           />
         );
       case 'classes':
@@ -621,6 +698,24 @@ export default function App() {
         );
     }
   };
+
+  if (isSelfAttendanceMode) {
+    return (
+      <StudentSelfAttendanceView
+        students={students}
+        classes={classes}
+        targetClass={selfAttendanceClass}
+        targetDate={selfAttendanceDate}
+        onAddAttendanceBatch={addAttendanceBatch}
+        onClose={() => {
+          // Clear search parameters
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setIsSelfAttendanceMode(false);
+        }}
+        theme={theme}
+      />
+    );
+  }
 
   if (!currentUser) {
     return (
@@ -1059,6 +1154,198 @@ export default function App() {
           </button>
         </div>
       </div>
+
+      {/* SCAN STUDENT QR ATTENDANCE MODAL OVERLAY */}
+      {scannedStudentId && (() => {
+        const student = students.find(s => s.id === scannedStudentId);
+        const isLight = theme === 'light';
+        
+        const existingAttendance = attendance.find(
+          a => a.studentId === scannedStudentId && a.date === scanDate
+        );
+
+        const handleCloseScan = () => {
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setScannedStudentId(null);
+          setScanNotes('');
+          setScanStatus('present');
+          setScanSuccess(false);
+        };
+
+        if (!student) {
+          return (
+            <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className={`rounded-3xl p-6 text-center max-w-sm w-full border ${
+                isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+              }`}>
+                <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto mb-4">
+                  <X size={24} />
+                </div>
+                <h3 className="font-bold text-lg">Siswa Tidak Ditemukan</h3>
+                <p className="text-sm text-slate-400 mt-1 mb-5">
+                  ID QR Code tidak valid atau data siswa telah dihapus dari sistem.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleCloseScan}
+                  className="w-full bg-slate-800 hover:bg-slate-700 text-white py-2.5 rounded-xl text-xs font-bold cursor-pointer"
+                >
+                  Tutup / Batalkan
+                </button>
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div className={`rounded-3xl w-full max-w-md shadow-2xl border p-6 relative animate-page-fade-in ${
+              isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#090d16] border-slate-850 text-white'
+            }`}>
+              
+              {scanSuccess ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 rounded-full bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 flex items-center justify-center mx-auto mb-4 animate-bounce">
+                    <CheckCircle className="w-10 h-10" />
+                  </div>
+                  <h3 className="font-black text-xl text-emerald-500">Presensi Berhasil!</h3>
+                  <p className="text-sm text-slate-400 mt-1">
+                    Data kehadiran untuk <strong>{student.name}</strong> berhasil dicatat pada tanggal {scanDate}.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center gap-2.5 mb-5 border-b border-slate-800/80 pb-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                      <QrCode size={20} />
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-black tracking-widest text-emerald-500 uppercase">SCAN QR BERHASIL</div>
+                      <h3 className="font-extrabold text-base">Konfirmasi Kehadiran Siswa</h3>
+                    </div>
+                  </div>
+
+                  {/* Student profile summary */}
+                  <div className={`p-4 rounded-2xl border mb-4 text-sm ${
+                    isLight ? 'bg-slate-50 border-slate-200/60' : 'bg-slate-950/40 border-slate-850/85'
+                  }`}>
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15">
+                        #{getStudentUniqueCode(student)}
+                      </span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-450 border border-indigo-500/15">
+                        Cabang: {student.branch || 'Pusat'}
+                      </span>
+                    </div>
+                    <div className={`font-extrabold text-base ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                      {student.name}
+                    </div>
+                    <div className="text-xs text-slate-400 mt-1 flex flex-wrap gap-x-2">
+                      <span>Kelas: <strong className="text-emerald-500">{student.kelas || '-'}</strong></span>
+                      <span>•</span>
+                      <span>Level: <strong className="text-slate-350">{student.level ? student.level.split(':')[0] : 'Dasar'}</strong></span>
+                    </div>
+                  </div>
+
+                  {/* Warning if already attended today */}
+                  {existingAttendance && (
+                    <div className="p-3.5 rounded-xl border border-amber-500/25 bg-amber-500/10 text-amber-500 mb-4 text-xs flex gap-2 items-start">
+                      <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                      <div>
+                        Siswa ini sudah diabsen hari ini dengan status:{' '}
+                        <strong className="uppercase text-amber-400">
+                          {existingAttendance.status === 'present' ? 'HADIR' : existingAttendance.status === 'permission' ? 'IZIN' : 'ALPA'}
+                        </strong>
+                        . Menyimpan ulang akan memperbarui data sebelumnya.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Input form */}
+                  <div className="space-y-3.5">
+                    {/* Date picker */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Tanggal Absensi</label>
+                      <input
+                        type="date"
+                        value={scanDate}
+                        onChange={(e) => setScanDate(e.target.value)}
+                        className={`w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                          isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-850 text-white'
+                        }`}
+                      />
+                    </div>
+
+                    {/* Status Selector */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Status Kehadiran</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { value: 'present', label: 'Hadir', activeClass: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30 font-bold' },
+                          { value: 'permission', label: 'Izin', activeClass: 'bg-blue-500/10 text-blue-500 border-blue-500/30 font-bold' },
+                          { value: 'absent', label: 'Alpa', activeClass: 'bg-rose-500/10 text-rose-500 border-rose-500/30 font-bold' }
+                        ].map(opt => {
+                          const isActive = scanStatus === opt.value;
+                          return (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => setScanStatus(opt.value as any)}
+                              className={`py-2 px-1 rounded-xl text-xs text-center border transition cursor-pointer ${
+                                isActive 
+                                  ? opt.activeClass 
+                                  : isLight ? 'border-slate-200 text-slate-600 hover:bg-slate-50' : 'border-slate-850 text-slate-400 hover:bg-slate-900'
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Catatan (Opsional)</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: Datang terlambat, lupa bawa modul..."
+                        value={scanNotes}
+                        onChange={(e) => setScanNotes(e.target.value)}
+                        className={`w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-500 ${
+                          isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-850 text-white'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-slate-850/80">
+                    <button
+                      type="button"
+                      onClick={handleCloseScan}
+                      disabled={scanSaving}
+                      className={`py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                        isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' : 'bg-slate-900 hover:bg-slate-850 text-slate-400'
+                      }`}
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveScannedAttendance}
+                      disabled={scanSaving}
+                      className="py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold transition shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      {scanSaving ? 'Menyimpan...' : 'Simpan Presensi'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );

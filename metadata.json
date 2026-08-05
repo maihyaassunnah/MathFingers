@@ -1,6 +1,6 @@
 {
   "name": "Math Fingers",
   "description": "Aplikasi manajemen Les Privat Math Fingers dengan motto 'Berhitung Cepat & Akurat Tanpa Alat'.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

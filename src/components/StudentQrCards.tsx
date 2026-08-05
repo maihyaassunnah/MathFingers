@@ -46,6 +46,7 @@ export function StudentQrCards({
   const [branchFilter, setBranchFilter] = useState('All');
   const [classFilter, setClassFilter] = useState('All');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [downloadingCardId, setDownloadingCardId] = useState<string | null>(null);
 
   // Print Setup Options
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -176,6 +177,173 @@ export function StudentQrCards({
     // Dark color of QR: Black for inkSaver, emerald color (059669 -> "059669") for premium colored
     const qrColor = inkSaver ? '000000' : '059669';
     return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(dataUrl)}&color=${qrColor}`;
+  };
+
+  // Generate and download student card as a transparent PNG
+  const handleDownloadCardPng = async (student: Student) => {
+    if (downloadingCardId) return;
+    setDownloadingCardId(student.id);
+
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 600;
+      canvas.height = 800;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas context not available');
+
+      // Create QR Code Image with crossOrigin enabled to avoid tained canvas security issues
+      const qrImg = new Image();
+      qrImg.crossOrigin = 'anonymous';
+      qrImg.src = getQrImgSrc(student, 300);
+
+      await new Promise((resolve, reject) => {
+        qrImg.onload = resolve;
+        qrImg.onerror = () => reject(new Error('Failed to load QR code image'));
+      });
+
+      // Clear rect for transparent background
+      ctx.clearRect(0, 0, 600, 800);
+
+      // Helper function to draw rounded rectangles
+      const drawRoundedRect = (
+        x: number, y: number, w: number, h: number, r: number, 
+        fill: boolean, stroke: boolean, isDashed: boolean = false
+      ) => {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+        
+        if (isDashed) {
+          ctx.setLineDash([8, 6]);
+        } else {
+          ctx.setLineDash([]);
+        }
+        
+        if (fill) ctx.fill();
+        if (stroke) ctx.stroke();
+      };
+
+      // 1. Draw outer border (Emerald solid line)
+      ctx.strokeStyle = '#059669'; // Emerald-600
+      ctx.lineWidth = 5;
+      drawRoundedRect(20, 20, 560, 760, 28, false, true, false);
+
+      // 2. Draw inner border (Emerald-400 dashed line)
+      ctx.strokeStyle = '#34d399'; // Emerald-400
+      ctx.lineWidth = 2;
+      drawRoundedRect(32, 32, 536, 736, 20, false, true, true);
+
+      // 3. Header: "Math Fingers"
+      ctx.fillStyle = '#059669';
+      ctx.font = '900 40px system-ui, -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Math Fingers', 300, 85);
+
+      // 4. Subtitle: "KARTU PRESENSI SISWA"
+      ctx.fillStyle = '#64748b'; // Slate-400
+      ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
+      ctx.fillText('KARTU PRESENSI SISWA', 300, 115);
+
+      // 5. White container specifically behind the QR Code for maximum readability on dark image viewers
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.08)';
+      ctx.shadowBlur = 15;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 4;
+      drawRoundedRect(150, 150, 300, 300, 16, true, false, false);
+
+      // Reset shadows
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+
+      // Draw loaded QR Code image
+      ctx.drawImage(qrImg, 170, 170, 260, 260);
+
+      // 6. Student Name
+      ctx.fillStyle = '#1e293b'; // Slate-800
+      ctx.font = '900 34px system-ui, -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(student.name, 300, 510);
+
+      // 7. Student ID Code Badge
+      const idText = `ID: #${getStudentUniqueCode(student)}`;
+      ctx.font = 'bold 18px monospace';
+      const textWidth = ctx.measureText(idText).width;
+      const badgeW = textWidth + 24;
+      const badgeH = 34;
+      const badgeX = 300 - badgeW / 2;
+      const badgeY = 535;
+
+      ctx.fillStyle = '#f1f5f9'; // Slate-100
+      ctx.beginPath();
+      ctx.moveTo(badgeX + 6, badgeY);
+      ctx.lineTo(badgeX + badgeW - 6, badgeY);
+      ctx.quadraticCurveTo(badgeX + badgeW, badgeY, badgeX + badgeW, badgeY + 6);
+      ctx.lineTo(badgeX + badgeW, badgeY + badgeH - 6);
+      ctx.quadraticCurveTo(badgeX + badgeW, badgeY + badgeH, badgeX + badgeW - 6, badgeY + badgeH);
+      ctx.lineTo(badgeX + 6, badgeY + badgeH);
+      ctx.quadraticCurveTo(badgeX, badgeY + badgeH, badgeX, badgeY + badgeH - 6);
+      ctx.lineTo(badgeX, badgeY + 6);
+      ctx.quadraticCurveTo(badgeX, badgeY, badgeX + 6, badgeY);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#475569'; // Slate-600
+      ctx.fillText(idText, 300, 558);
+
+      // 8. Separator Line
+      ctx.strokeStyle = '#e2e8f0'; // Slate-200
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(60, 595);
+      ctx.lineTo(540, 595);
+      ctx.stroke();
+
+      // 9. Student Details Rows (Omit Level as requested!)
+      ctx.font = 'bold 20px system-ui, -apple-system, sans-serif';
+
+      // Row A: Cabang
+      ctx.fillStyle = '#64748b'; // Label color
+      ctx.textAlign = 'left';
+      ctx.fillText('Cabang:', 70, 640);
+
+      ctx.fillStyle = '#334155'; // Value color
+      ctx.textAlign = 'right';
+      ctx.fillText(student.branch || 'Pusat', 530, 640);
+
+      // Row B: Kelas
+      ctx.fillStyle = '#64748b'; // Label color
+      ctx.textAlign = 'left';
+      ctx.fillText('Kelas:', 70, 695);
+
+      ctx.fillStyle = '#059669'; // Emerald Value color
+      ctx.textAlign = 'right';
+      ctx.fillText(student.kelas || '-', 530, 695);
+
+      // Generate Data URL and Trigger download link
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `Kartu_${student.name.replace(/\s+/g, '_')}_MathFingers.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Error generating card PNG:', err);
+      alert('Gagal membuat gambar kartu PNG.');
+    } finally {
+      setDownloadingCardId(null);
+    }
   };
 
   // Start Camera Stream
@@ -1325,38 +1493,59 @@ export function StudentQrCards({
               </div>
 
               {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-3 mt-6">
+              <div className="flex flex-col gap-2 mt-6">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const imgUrl = getQrImgSrc(selectedStudent, 500);
+                      const link = document.createElement('a');
+                      link.href = imgUrl;
+                      link.target = '_blank';
+                      link.download = `QR_${selectedStudent.name}.png`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                    className={`py-2.5 px-3 rounded-xl text-xs font-bold transition border flex items-center justify-center gap-1.5 cursor-pointer ${
+                      isLight 
+                        ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200' 
+                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                    }`}
+                  >
+                    <Download size={14} />
+                    <span>Unduh QR</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handlePrintSingle(selectedStudent);
+                      setSelectedStudent(null);
+                    }}
+                    className="py-2.5 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Printer size={14} />
+                    <span>Cetak Kartu</span>
+                  </button>
+                </div>
+                
                 <button
                   type="button"
-                  onClick={() => {
-                    const imgUrl = getQrImgSrc(selectedStudent, 500);
-                    const link = document.createElement('a');
-                    link.href = imgUrl;
-                    link.target = '_blank';
-                    link.download = `QR_${selectedStudent.name}.png`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  }}
-                  className={`py-2.5 px-4 rounded-xl text-xs font-bold transition border flex items-center justify-center gap-1.5 cursor-pointer ${
-                    isLight 
-                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200' 
-                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
-                  }`}
+                  disabled={downloadingCardId === selectedStudent.id}
+                  onClick={() => handleDownloadCardPng(selectedStudent)}
+                  className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-600/50 text-white rounded-xl text-xs font-extrabold transition shadow-md flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <Download size={14} />
-                  <span>Unduh QR</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handlePrintSingle(selectedStudent);
-                    setSelectedStudent(null);
-                  }}
-                  className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold transition shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Printer size={14} />
-                  <span>Cetak Kartu</span>
+                  {downloadingCardId === selectedStudent.id ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" />
+                      <span>Sedang Mengunduh...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileImage size={14} />
+                      <span>Unduh Kartu PNG (Latar Transparan)</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

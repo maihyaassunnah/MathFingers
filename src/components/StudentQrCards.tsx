@@ -65,8 +65,12 @@ export function StudentQrCards({
   const [manualCode, setManualCode] = useState('');
 
   // Auto scan and standby states
-  const [scanNotification, setScanNotification] = useState<{ name: string; type: 'success' | 'error'; message: string } | null>(null);
+  const [scanNotification, setScanNotification] = useState<{ name: string; type: 'success' | 'warning' | 'error'; message: string } | null>(null);
   const scanCooldownRef = useRef(false);
+
+  // Keyboard/physical scanner hidden input states and refs
+  const hiddenInputRef = useRef<HTMLInputElement | null>(null);
+  const [hiddenScannerValue, setHiddenScannerValue] = useState('');
 
   // Scanner Confirmation Dialog States
   const [selectedScanStudent, setSelectedScanStudent] = useState<Student | null>(null);
@@ -80,6 +84,41 @@ export function StudentQrCards({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+
+  // Auto-focus physical/keyboard scanner hidden input when scanner modal is open
+  useEffect(() => {
+    if (isScannerOpen) {
+      const timer = setTimeout(() => {
+        if (hiddenInputRef.current) {
+          hiddenInputRef.current.focus();
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isScannerOpen]);
+
+  // Keep focus on the hidden scanner input, unless typing in another real input
+  useEffect(() => {
+    if (!isScannerOpen) return;
+
+    const handleWindowClick = () => {
+      const activeEl = document.activeElement;
+      const isTyping = activeEl && (
+        activeEl.tagName === 'INPUT' || 
+        activeEl.tagName === 'TEXTAREA' || 
+        activeEl.hasAttribute('contenteditable')
+      ) && activeEl !== hiddenInputRef.current;
+
+      if (!isTyping && hiddenInputRef.current) {
+        hiddenInputRef.current.focus();
+      }
+    };
+
+    window.addEventListener('click', handleWindowClick);
+    return () => {
+      window.removeEventListener('click', handleWindowClick);
+    };
+  }, [isScannerOpen]);
 
   // Filter students
   const activeStudents = students.filter(s => s.status === 'active');
@@ -110,7 +149,8 @@ export function StudentQrCards({
 
   // Helper to generate URLs and Images for QR code
   const getQrUrl = (student: Student) => {
-    return `${window.location.origin}${window.location.pathname}?scan_student=${student.id}`;
+    // Return a stable, deterministic url that never changes even if opened on localhost/dev/prod
+    return `https://mathfingers.app/scan?scan_student=${student.id}`;
   };
 
   const getQrImgSrc = (student: Student, size: number = 200, inkSaver: boolean = false) => {
@@ -255,6 +295,52 @@ export function StudentQrCards({
     );
 
     if (matched) {
+      // Check for duplicate attendance today
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const isDuplicate = attendance.some(
+        a => a.studentId === matched.id && a.date === todayStr
+      );
+
+      if (isDuplicate) {
+        // Sound cue (Duplicate warning sound: dual alarm beeps)
+        try {
+          const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const osc1 = audioCtx.createOscillator();
+          const osc2 = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc1.connect(gain);
+          osc2.connect(gain);
+          gain.connect(audioCtx.destination);
+          
+          osc1.frequency.setValueAtTime(440, audioCtx.currentTime);
+          osc2.frequency.setValueAtTime(440, audioCtx.currentTime + 0.15);
+          gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+          
+          osc1.start();
+          osc1.stop(audioCtx.currentTime + 0.1);
+          osc2.start(audioCtx.currentTime + 0.15);
+          osc2.stop(audioCtx.currentTime + 0.25);
+        } catch (e) {}
+
+        // Show warning notification
+        setScanNotification({
+          name: matched.name,
+          type: 'warning',
+          message: 'Siswa sudah melakukan presensi hari ini (Scan Ganda)!'
+        });
+
+        // Automatically clear and standby in 1.8 seconds
+        setTimeout(() => {
+          setScanNotification(null);
+          scanCooldownRef.current = false;
+          // Re-focus the hidden input if modal is still open
+          if (isScannerOpen && hiddenInputRef.current) {
+            hiddenInputRef.current.focus();
+          }
+        }, 1800);
+        return;
+      }
+
       // Sound cue (High beep for success)
       try {
         const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -276,7 +362,7 @@ export function StudentQrCards({
         const record = {
           studentId: matched.id,
           studentName: matched.name,
-          date: new Date().toISOString().slice(0, 10),
+          date: todayStr,
           status: 'present' as const,
           notes: 'Auto-scanned via QR',
           branch: branchToSet
@@ -325,6 +411,10 @@ export function StudentQrCards({
     setTimeout(() => {
       setScanNotification(null);
       scanCooldownRef.current = false;
+      // Re-focus the hidden input if modal is still open
+      if (isScannerOpen && hiddenInputRef.current) {
+        hiddenInputRef.current.focus();
+      }
     }, 1800);
   };
 
@@ -363,6 +453,14 @@ export function StudentQrCards({
     if (!manualCode.trim()) return;
     handleScanSuccess(manualCode.trim());
     setManualCode('');
+  };
+
+  // Hidden scanner physical keyboard emulator submit handler
+  const handleHiddenScannerSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!hiddenScannerValue.trim()) return;
+    handleScanSuccess(hiddenScannerValue.trim());
+    setHiddenScannerValue('');
   };
 
   // Save the attendance to database
@@ -1434,6 +1532,18 @@ export function StudentQrCards({
               <X size={20} />
             </button>
 
+            {/* Invisible form for keyboard-emulated physical USB/Bluetooth scanners to capture inputs at any time */}
+            <form onSubmit={handleHiddenScannerSubmit} className="absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden">
+              <input
+                ref={hiddenInputRef}
+                type="text"
+                value={hiddenScannerValue}
+                onChange={(e) => setHiddenScannerValue(e.target.value)}
+                className="w-0 h-0 opacity-0 pointer-events-none"
+                autoComplete="off"
+              />
+            </form>
+
             {/* Real-time scanning feedback overlay */}
             {scanNotification && (
               <div className="absolute inset-x-4 top-[70px] bottom-4 z-20 flex items-center justify-center p-2 animate-page-fade-in">
@@ -1444,13 +1554,21 @@ export function StudentQrCards({
                     <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 flex items-center justify-center mb-4 animate-bounce">
                       <CheckCircle2 size={32} />
                     </div>
+                  ) : scanNotification.type === 'warning' ? (
+                    <div className="w-16 h-16 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/30 flex items-center justify-center mb-4 animate-bounce">
+                      <AlertCircle size={32} />
+                    </div>
                   ) : (
                     <div className="w-16 h-16 rounded-full bg-red-500/10 text-red-500 border border-red-500/30 flex items-center justify-center mb-4 animate-bounce">
                       <AlertCircle size={32} />
                     </div>
                   )}
                   <div className="text-[10px] uppercase tracking-widest font-extrabold opacity-70 mb-1.5">
-                    {scanNotification.type === 'success' ? 'PRESENSI BERHASIL' : 'PRESENSI GAGAL'}
+                    {scanNotification.type === 'success' 
+                      ? 'PRESENSI BERHASIL' 
+                      : scanNotification.type === 'warning' 
+                        ? 'DUPLIKAT SCAN' 
+                        : 'PRESENSI GAGAL'}
                   </div>
                   <h4 className={`font-black text-xl tracking-tight line-clamp-2 mb-2 ${
                     isLight ? 'text-slate-800' : 'text-white'
@@ -1458,7 +1576,11 @@ export function StudentQrCards({
                     {scanNotification.name}
                   </h4>
                   <p className={`text-sm font-bold ${
-                    scanNotification.type === 'success' ? 'text-emerald-500' : 'text-red-500'
+                    scanNotification.type === 'success' 
+                      ? 'text-emerald-500' 
+                      : scanNotification.type === 'warning' 
+                        ? 'text-amber-500' 
+                        : 'text-red-500'
                   }`}>
                     {scanNotification.message}
                   </p>
@@ -1466,7 +1588,7 @@ export function StudentQrCards({
                   {/* Auto-standby text and progress dot */}
                   <div className="mt-6 flex items-center gap-1.5 text-xs text-slate-400 font-medium">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                    <span>Kembali standby dalam 1.8 detik...</span>
+                    <span>Kembali standby untuk scan berikutnya...</span>
                   </div>
                 </div>
               </div>

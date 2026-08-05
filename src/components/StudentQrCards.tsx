@@ -64,6 +64,10 @@ export function StudentQrCards({
   const [scanError, setScanError] = useState('');
   const [manualCode, setManualCode] = useState('');
 
+  // Auto scan and standby states
+  const [scanNotification, setScanNotification] = useState<{ name: string; type: 'success' | 'error'; message: string } | null>(null);
+  const scanCooldownRef = useRef(false);
+
   // Scanner Confirmation Dialog States
   const [selectedScanStudent, setSelectedScanStudent] = useState<Student | null>(null);
   const [scanStatus, setScanStatus] = useState<'present' | 'absent' | 'permission'>('present');
@@ -159,8 +163,14 @@ export function StudentQrCards({
 
   // Monitor Camera scan state transitions
   useEffect(() => {
-    if (isScannerOpen && selectedTab === 'camera') {
-      startCamera();
+    if (isScannerOpen) {
+      setScanNotification(null);
+      scanCooldownRef.current = false;
+      if (selectedTab === 'camera') {
+        startCamera();
+      } else {
+        stopCamera();
+      }
     } else {
       stopCamera();
     }
@@ -173,6 +183,11 @@ export function StudentQrCards({
 
     const scanTick = () => {
       if (!videoRef.current || !canvasRef.current || !scannerActive) {
+        animationFrameRef.current = requestAnimationFrame(scanTick);
+        return;
+      }
+
+      if (scanCooldownRef.current) {
         animationFrameRef.current = requestAnimationFrame(scanTick);
         return;
       }
@@ -214,7 +229,10 @@ export function StudentQrCards({
   }, [scannerActive]);
 
   // Handle successful QR detection
-  const handleScanSuccess = (decodedData: string) => {
+  const handleScanSuccess = async (decodedData: string) => {
+    if (scanCooldownRef.current) return;
+    scanCooldownRef.current = true;
+
     let studentId = '';
     try {
       if (decodedData.includes('scan_student=')) {
@@ -237,26 +255,77 @@ export function StudentQrCards({
     );
 
     if (matched) {
-      // Sound cue
+      // Sound cue (High beep for success)
       try {
         const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain);
         gain.connect(audioCtx.destination);
-        osc.frequency.value = 880;
+        osc.frequency.value = 1000;
         gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
         osc.start();
-        osc.stop(audioCtx.currentTime + 0.12);
+        osc.stop(audioCtx.currentTime + 0.15);
       } catch (e) {}
 
-      // Open Confirmation Overlay and Close Scanner
-      setSelectedScanStudent(matched);
-      setIsScannerOpen(false);
-      stopCamera();
+      // Automatically register attendance as present (Hadir)
+      try {
+        const defaultBranchName = branches[0]?.name || 'Pusat';
+        const branchToSet = matched.branch || defaultBranchName;
+        
+        const record = {
+          studentId: matched.id,
+          studentName: matched.name,
+          date: new Date().toISOString().slice(0, 10),
+          status: 'present' as const,
+          notes: 'Auto-scanned via QR',
+          branch: branchToSet
+        };
+
+        if (onAddAttendanceBatch) {
+          await onAddAttendanceBatch([record]);
+        }
+
+        // Show elegant success notification inside the modal
+        setScanNotification({
+          name: matched.name,
+          type: 'success',
+          message: 'Berhasil Presensi Hadir!'
+        });
+      } catch (err) {
+        console.error(err);
+        setScanNotification({
+          name: matched.name,
+          type: 'error',
+          message: 'Gagal merekam presensi.'
+        });
+      }
     } else {
-      alert(`QR Code terbaca ("${decodedData}"), tetapi siswa tidak ditemukan dalam database.`);
+      // Sound cue (Low buzz for error)
+      try {
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.value = 220;
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
+      } catch (e) {}
+
+      setScanNotification({
+        name: decodedData.trim().substring(0, 20),
+        type: 'error',
+        message: 'Siswa tidak ditemukan!'
+      });
     }
+
+    // Automatically clear notification and standby for next scan in 1.8 seconds
+    setTimeout(() => {
+      setScanNotification(null);
+      scanCooldownRef.current = false;
+    }, 1800);
   };
 
   // Image upload decoding
@@ -1364,6 +1433,44 @@ export function StudentQrCards({
             >
               <X size={20} />
             </button>
+
+            {/* Real-time scanning feedback overlay */}
+            {scanNotification && (
+              <div className="absolute inset-x-4 top-[70px] bottom-4 z-20 flex items-center justify-center p-2 animate-page-fade-in">
+                <div className={`w-full h-full rounded-2xl shadow-2xl p-6 border flex flex-col items-center justify-center text-center transition ${
+                  isLight ? 'bg-white border-slate-200' : 'bg-[#090d16] border-slate-800'
+                }`}>
+                  {scanNotification.type === 'success' ? (
+                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 flex items-center justify-center mb-4 animate-bounce">
+                      <CheckCircle2 size={32} />
+                    </div>
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-red-500/10 text-red-500 border border-red-500/30 flex items-center justify-center mb-4 animate-bounce">
+                      <AlertCircle size={32} />
+                    </div>
+                  )}
+                  <div className="text-[10px] uppercase tracking-widest font-extrabold opacity-70 mb-1.5">
+                    {scanNotification.type === 'success' ? 'PRESENSI BERHASIL' : 'PRESENSI GAGAL'}
+                  </div>
+                  <h4 className={`font-black text-xl tracking-tight line-clamp-2 mb-2 ${
+                    isLight ? 'text-slate-800' : 'text-white'
+                  }`}>
+                    {scanNotification.name}
+                  </h4>
+                  <p className={`text-sm font-bold ${
+                    scanNotification.type === 'success' ? 'text-emerald-500' : 'text-red-500'
+                  }`}>
+                    {scanNotification.message}
+                  </p>
+                  
+                  {/* Auto-standby text and progress dot */}
+                  <div className="mt-6 flex items-center gap-1.5 text-xs text-slate-400 font-medium">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                    <span>Kembali standby dalam 1.8 detik...</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center gap-2.5 mb-3 pb-2 border-b border-slate-850">
               <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">

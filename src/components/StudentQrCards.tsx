@@ -249,7 +249,8 @@ export function StudentQrCards({
             
             if (code && code.data && code.data.trim().length >= 4) {
               handleScanSuccess(code.data);
-              return; // stop execution frame, successfully parsed
+              animationFrameRef.current = requestAnimationFrame(scanTick);
+              return; // stop current frame, but schedule next frame
             }
           } catch (err) {
             console.error('Failed to analyze frame:', err);

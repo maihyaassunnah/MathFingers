@@ -177,7 +177,8 @@ export function StudentQrCards({
         return;
       }
 
-      if (videoRef.current.readyState === videoRef.current.HAVE_CURRENT_DATA) {
+      // Safe readyState checking (HAVE_CURRENT_DATA is 2, HAVE_ENOUGH_DATA is 4)
+      if (videoRef.current.readyState >= 2 && videoRef.current.videoWidth > 0 && videoRef.current.videoHeight > 0) {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         if (ctx) {
@@ -185,14 +186,18 @@ export function StudentQrCards({
           canvas.height = videoRef.current.videoHeight;
           ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
           
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const code = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: 'dontInvert',
-          });
-          
-          if (code) {
-            handleScanSuccess(code.data);
-            return; // stop execution frame, successfully parsed
+          try {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: 'dontInvert',
+            });
+            
+            if (code && code.data && code.data.trim().length >= 4) {
+              handleScanSuccess(code.data);
+              return; // stop execution frame, successfully parsed
+            }
+          } catch (err) {
+            console.error('Failed to analyze frame:', err);
           }
         }
       }
@@ -212,12 +217,11 @@ export function StudentQrCards({
   const handleScanSuccess = (decodedData: string) => {
     let studentId = '';
     try {
-      if (decodedData.includes('?scan_student=')) {
-        const url = new URL(decodedData);
-        studentId = url.searchParams.get('scan_student') || '';
-      } else if (decodedData.includes('scan_student=')) {
-        const match = decodedData.match(/scan_student=([^&]+)/);
-        if (match) studentId = match[1];
+      if (decodedData.includes('scan_student=')) {
+        const match = decodedData.match(/[?&]scan_student=([^&?#]+)/) || decodedData.match(/scan_student=([^&?#]+)/);
+        if (match) {
+          studentId = match[1];
+        }
       }
     } catch (e) {
       // ignore parsing error
@@ -272,7 +276,7 @@ export function StudentQrCards({
           ctx.drawImage(img, 0, 0);
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           const code = jsQR(imageData.data, imageData.width, imageData.height);
-          if (code) {
+          if (code && code.data && code.data.trim().length >= 4) {
             handleScanSuccess(code.data);
           } else {
             alert('Tidak ditemukan QR Code valid pada gambar ini. Silakan unggah gambar yang lebih jelas.');
@@ -1072,7 +1076,7 @@ export function StudentQrCards({
 
       {/* SINGLE STUDENT PREVIEW MODAL */}
       {selectedStudent && (
-        <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-4 sm:pt-12 md:pt-16 overflow-y-auto">
           <div className={`rounded-3xl w-full max-w-sm shadow-2xl border p-6 sm:p-7 relative ${
             isLight ? 'bg-white border-slate-200 text-slate-850' : 'bg-[#090d16] border-slate-800 text-white'
           }`}>
@@ -1182,7 +1186,7 @@ export function StudentQrCards({
 
       {/* MULTI/BULK PRINT CONFIGURATION MODAL */}
       {isPrintModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-4 sm:pt-12 md:pt-16 overflow-y-auto">
           <div className={`rounded-3xl w-full max-w-md shadow-2xl border p-6 relative animate-page-fade-in ${
             isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#090d16] border-slate-800 text-white'
           }`}>
@@ -1347,8 +1351,8 @@ export function StudentQrCards({
 
       {/* SCAN QR PRESENSI INTERACTIVE MODAL */}
       {isScannerOpen && (
-        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className={`rounded-3xl w-full max-w-lg shadow-2xl border p-6 relative animate-page-fade-in ${
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-start justify-center p-2 pt-2 sm:p-4 sm:pt-4 md:pt-6 overflow-y-auto">
+          <div className={`rounded-3xl w-full max-w-lg shadow-2xl border p-4 sm:p-5 relative animate-page-fade-in ${
             isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#090d16] border-slate-850 text-white'
           }`}>
             <button
@@ -1361,18 +1365,18 @@ export function StudentQrCards({
               <X size={20} />
             </button>
 
-            <div className="flex items-center gap-2.5 mb-5 pb-3 border-b border-slate-850">
-              <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500">
+            <div className="flex items-center gap-2.5 mb-3 pb-2 border-b border-slate-850">
+              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
                 <QrCode size={20} />
               </div>
               <div>
-                <h3 className="font-extrabold text-base">Scan QR Absensi Masuk</h3>
-                <p className="text-xs text-slate-400">Gunakan Kamera, Unggah Berkas Gambar, atau Scanner Fisik.</p>
+                <h3 className="font-extrabold text-sm sm:text-base">Scan QR Absensi Masuk</h3>
+                <p className="text-[10px] sm:text-xs text-slate-400">Gunakan Kamera, Unggah Berkas Gambar, atau Scanner Fisik.</p>
               </div>
             </div>
 
             {/* Tab selection for scanner modes */}
-            <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-slate-950/40 border border-slate-850 mb-5">
+            <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-slate-950/40 border border-slate-850 mb-3">
               {[
                 { id: 'camera', label: 'Kamera Aktif', icon: Camera },
                 { id: 'upload', label: 'Unggah Gambar', icon: Upload },
@@ -1400,14 +1404,14 @@ export function StudentQrCards({
 
             {/* TAB: CAMERA ACTIVE STREAM SCAN */}
             {selectedTab === 'camera' && (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {scanError ? (
                   <div className="p-4 rounded-xl border border-red-500/15 bg-red-500/5 text-red-500 text-xs flex gap-2.5 items-start">
                     <AlertCircle size={16} className="shrink-0 mt-0.5" />
                     <div>{scanError}</div>
                   </div>
                 ) : (
-                  <div className="relative w-full aspect-video max-w-sm mx-auto overflow-hidden rounded-2xl border border-slate-800 bg-black flex items-center justify-center">
+                  <div className="relative w-full aspect-video max-w-xs sm:max-w-sm mx-auto overflow-hidden rounded-2xl border border-slate-800 bg-black flex items-center justify-center">
                     
                     {/* Hidden canvas for decoder */}
                     <canvas ref={canvasRef} className="hidden" />
@@ -1518,7 +1522,7 @@ export function StudentQrCards({
             )}
 
             {/* Cancel Actions */}
-            <div className="mt-6 pt-4 border-t border-slate-850 text-right">
+            <div className="mt-4 pt-3 border-t border-slate-850 text-right">
               <button
                 type="button"
                 onClick={() => {
@@ -1538,7 +1542,7 @@ export function StudentQrCards({
 
       {/* CONFIRMATION ATTENDANCE DIRECT FORM MODAL (WHEN STUDENT SCAN SUCCEEDS) */}
       {selectedScanStudent && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-start justify-center p-4 pt-4 sm:pt-12 md:pt-16 overflow-y-auto">
           <div className={`rounded-3xl w-full max-w-md shadow-2xl border p-6 relative animate-page-fade-in ${
             isLight ? 'bg-white border-slate-200 text-slate-850' : 'bg-[#090d16] border-slate-850 text-white'
           }`}>

@@ -1174,7 +1174,7 @@ export default function App() {
 
         if (!student) {
           return (
-            <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-4 sm:pt-12 md:pt-16 overflow-y-auto">
               <div className={`rounded-3xl p-6 text-center max-w-sm w-full border ${
                 isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
               }`}>
@@ -1198,7 +1198,7 @@ export default function App() {
         }
 
         return (
-          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-start justify-center p-4 pt-4 sm:pt-12 md:pt-16 overflow-y-auto">
             <div className={`rounded-3xl w-full max-w-md shadow-2xl border p-6 relative animate-page-fade-in ${
               isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#090d16] border-slate-850 text-white'
             }`}>

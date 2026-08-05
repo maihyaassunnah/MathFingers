@@ -325,21 +325,6 @@ export function AttendanceTracker({
               </div>
 
               <button
-                id="btn-qr-attendance"
-                type="button"
-                onClick={() => setShowQrModal(true)}
-                className={`flex items-center gap-1.5 font-semibold px-3.5 py-2.5 rounded-xl transition text-sm border cursor-pointer ${
-                  isLight 
-                    ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200 shadow-sm' 
-                    : 'bg-indigo-950/40 hover:bg-indigo-900/50 text-indigo-400 border-indigo-850 shadow-sm'
-                }`}
-                title="Tampilkan QR Code untuk Absen Mandiri Siswa"
-              >
-                <QrCode size={16} />
-                <span>QR Absen</span>
-              </button>
-              
-              <button
                 id="btn-mark-all-present"
                 onClick={handleMarkAllPresent}
                 className={`flex items-center gap-1.5 font-medium px-3.5 py-2.5 rounded-xl transition text-sm border ${

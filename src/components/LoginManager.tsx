@@ -22,8 +22,9 @@ export function LoginManager({ onLogin, theme, adminUsers = [], branches = [] }:
 
   // Fallback default admins if none fetched yet
   const defaultAdmins: AdminUser[] = [
-    { username: 'febrianti', name: 'Febrianti Dewi', role: 'super_admin', branch: 'Pusat', password: 'admin123' },
-    { username: 'dewi', name: 'Dewi Safitri', role: 'branch_admin', branch: 'Pusat', password: 'dewi123' },
+    { username: 'wahyudin', name: 'Wahyudin Hafiz, S.Pd', role: 'super_admin', branch: 'Pusat', password: 'admin123' },
+    { username: 'febrianti', name: 'Febrianti Dewi, S.Pd', role: 'branch_admin', branch: 'Pusat', password: 'admin123' },
+    { username: 'dewi', name: 'Dewi Safitri, S.H', role: 'branch_admin', branch: 'Pusat', password: 'dewi123' },
     { username: 'les_bandung', name: 'Les Privat Bandung', role: 'branch_admin', branch: 'Bandung', password: 'bdg123' }
   ];
 

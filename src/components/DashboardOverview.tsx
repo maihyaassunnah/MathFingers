@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Student, Attendance, Invoice, Grade, AppSettings, DashboardTask, Branch } from '../types';
+import { Student, Attendance, Invoice, Grade, AppSettings, DashboardTask, Branch, AdminUser } from '../types';
 import { formatRupiah, getWhatsAppLink, getStudentUniqueCode } from '../utils';
 import { MathFingerLogo } from './MathFingerLogo';
 import { 
@@ -40,6 +40,7 @@ interface DashboardOverviewProps {
   allAttendance?: Attendance[];
   allInvoices?: Invoice[];
   allGrades?: Grade[];
+  currentUser?: AdminUser | null;
 }
 
 export function DashboardOverview({ 
@@ -59,9 +60,60 @@ export function DashboardOverview({
   allStudents = [],
   allAttendance = [],
   allInvoices = [],
-  allGrades = []
+  allGrades = [],
+  currentUser = null
 }: DashboardOverviewProps) {
   const [newTaskText, setNewTaskText] = useState('');
+
+  // Get active admin from prop, or fallback to localStorage if null/undefined
+  const getActiveUser = () => {
+    if (currentUser) return currentUser;
+    const savedObj = localStorage.getItem('math_finggers_current_user_obj');
+    if (savedObj) {
+      try {
+        const parsed = JSON.parse(savedObj);
+        if (parsed && typeof parsed === 'object') {
+          return parsed;
+        }
+      } catch (e) {
+        // Fallback
+      }
+    }
+    return null;
+  };
+
+  const activeUser = getActiveUser();
+
+  const resolveAdminName = () => {
+    if (!activeUser) return 'Wahyudin Hafiz, S.Pd';
+    const nameLower = activeUser.name.toLowerCase();
+    const usernameLower = (activeUser.username || '').toLowerCase();
+    
+    // Check specific username or name keywords first
+    if (usernameLower.includes('febrianti') || nameLower.includes('febrianti')) {
+      return 'Febrianti Dewi, S.Pd';
+    }
+    if (usernameLower.includes('dewi') || nameLower.includes('dewi') || nameLower.includes('safitri')) {
+      return 'Dewi Safitri, S.H';
+    }
+    if (usernameLower.includes('wahyudin') || nameLower.includes('wahyudin') || nameLower.includes('hafiz') || activeUser.role === 'super_admin') {
+      return 'Wahyudin Hafiz, S.Pd';
+    }
+    return activeUser.name;
+  };
+
+  const activeAdminName = resolveAdminName();
+
+  const resolveAdminRole = () => {
+    if (!activeUser) return 'Super Admin';
+    const name = activeAdminName.toLowerCase();
+    if (name.includes('wahyudin')) {
+      return 'Super Admin';
+    }
+    return `Admin Cabang (${activeUser.branch || 'Pusat'})`;
+  };
+
+  const activeAdminRoleText = resolveAdminRole();
 
   const activeStudents = students.filter(s => s.status === 'active');
   const unpaidInvoices = invoices.filter(inv => inv.status === 'unpaid');
@@ -212,6 +264,23 @@ export function DashboardOverview({
           <div className="py-2">
             <MathFingerLogo size={80} textSize="xl" theme={theme === 'dark' ? 'dark' : 'light'} />
           </div>
+          
+          <div className={`p-4 rounded-2xl border transition-all ${
+            isLight 
+              ? 'bg-slate-150/40 border-slate-200/50 text-slate-800' 
+              : 'bg-emerald-950/20 border-emerald-500/10 text-white'
+          }`}>
+            <p className="text-[10px] font-bold uppercase tracking-wider opacity-65">
+              Administrator Aktif
+            </p>
+            <h1 className="text-lg sm:text-2xl font-black tracking-tight mt-0.5">
+              {activeAdminName}
+            </h1>
+            <p className="text-xs font-semibold opacity-80 mt-0.5">
+              Role: {activeAdminRoleText}
+            </p>
+          </div>
+
           <p className={`${isLight ? 'text-slate-500' : 'text-slate-300'} text-sm sm:text-base font-medium italic`}>
             "Berhitung Cepat & Akurat Tanpa Alat"
           </p>

@@ -81,14 +81,27 @@ export default function App() {
     const savedObj = localStorage.getItem('math_finggers_current_user_obj');
     if (savedObj) {
       try {
-        return JSON.parse(savedObj);
+        const parsed = JSON.parse(savedObj);
+        if (parsed && typeof parsed === 'object') {
+          return parsed;
+        }
       } catch (e) {
         // Fallback
       }
     }
     const legacyStringUser = localStorage.getItem('math_finggers_current_user');
     if (legacyStringUser) {
-      return { username: 'febrianti', name: legacyStringUser, role: 'super_admin', branch: 'Pusat' };
+      const lower = legacyStringUser.toLowerCase();
+      if (lower.includes('wahyudin') || lower.includes('hafiz')) {
+        return { username: 'wahyudin', name: 'Wahyudin Hafiz, S.Pd', role: 'super_admin', branch: 'Pusat' };
+      }
+      if (lower.includes('febrianti')) {
+        return { username: 'febrianti', name: 'Febrianti Dewi, S.Pd', role: 'branch_admin', branch: 'Pusat' };
+      }
+      if (lower.includes('dewi') || lower.includes('safitri')) {
+        return { username: 'dewi', name: 'Dewi Safitri, S.H', role: 'branch_admin', branch: 'Pusat' };
+      }
+      return { username: 'dewi', name: legacyStringUser, role: 'branch_admin', branch: 'Pusat' };
     }
     return null;
   });
@@ -473,6 +486,7 @@ export default function App() {
             allAttendance={attendance}
             allInvoices={invoices}
             allGrades={grades}
+            currentUser={currentUser}
           />
         );
       case 'students':
@@ -694,6 +708,7 @@ export default function App() {
             allAttendance={attendance}
             allInvoices={invoices}
             allGrades={grades}
+            currentUser={currentUser}
           />
         );
     }

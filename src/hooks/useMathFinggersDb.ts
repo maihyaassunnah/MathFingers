@@ -231,9 +231,10 @@ export function useMathFinggersDb() {
       saveLocalData('branches', loadedBranches);
 
       const loadedAdminUsers = adminUsersData || getLocalData<AdminUser[]>('admin_users', [
-        { username: 'febrianti', name: 'Febrianti Dewi', role: 'super_admin', branch: 'Pusat', avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200' },
-        { username: 'dewi', name: 'Dewi Safitri', role: 'branch_admin', branch: 'Pusat', avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200' },
-        { username: 'les_bandung', name: 'Les Privat Bandung', role: 'branch_admin', branch: 'Bandung', avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200' }
+        { username: 'wahyudin', name: 'Wahyudin Hafiz, S.Pd', role: 'super_admin', branch: 'Pusat', avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200' },
+        { username: 'febrianti', name: 'Febrianti Dewi, S.Pd', role: 'branch_admin', branch: 'Pusat', avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200' },
+        { username: 'dewi', name: 'Dewi Safitri, S.H', role: 'branch_admin', branch: 'Pusat', avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200' },
+        { username: 'les_bandung', name: 'Les Privat Bandung', role: 'branch_admin', branch: 'Bandung', avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200' }
       ]);
       setAdminUsers(loadedAdminUsers);
       saveLocalData('admin_users', loadedAdminUsers);

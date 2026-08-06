@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { ClassGroup, Student, Branch } from '../types';
+import { CustomDropdown } from './CustomDropdown';
+import { OfflineIndicator } from './OfflineIndicator';
 import { 
   Search, 
   Plus, 
@@ -244,20 +246,18 @@ export function ClassManager({
         </div>
 
         {isSuperAdmin && branches.length > 0 && (
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <Building2 size={15} className="text-slate-400" />
-            <select
+          <div className="flex items-center gap-2.5 w-full md:w-auto">
+            <Building2 size={15} className="text-slate-400 shrink-0" />
+            <CustomDropdown
               value={selectedBranchFilter}
-              onChange={(e) => setSelectedBranchFilter(e.target.value)}
-              className={`py-2 px-3 rounded-xl text-xs border ${
-                isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/60 border-slate-800'
-              }`}
-            >
-              <option value="all">Semua Cabang</option>
-              {branches.map(b => (
-                <option key={b.id} value={b.name}>Cabang {b.name}</option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedBranchFilter(val)}
+              options={[
+                { value: 'all', label: 'Semua Cabang' },
+                ...branches.map(b => ({ value: b.name, label: `Cabang ${b.name}` }))
+              ]}
+              theme={theme}
+              className="w-full sm:w-[180px]"
+            />
           </div>
         )}
       </div>
@@ -424,6 +424,7 @@ export function ClassManager({
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+              <OfflineIndicator theme={theme} className="mb-2" />
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
                   Nama Kelas <span className="text-red-500">*</span>
@@ -445,20 +446,20 @@ export function ClassManager({
                   <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
                     Hari Les / Bimbingan
                   </label>
-                  <select
+                  <CustomDropdown
                     value={scheduleDays}
-                    onChange={(e) => setScheduleDays(e.target.value)}
-                    className={`w-full py-2.5 px-3.5 rounded-xl text-xs border ${
-                      isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
-                    }`}
-                  >
-                    <option value="Senin & Rabu">Senin & Rabu</option>
-                    <option value="Selasa & Kamis">Selasa & Kamis</option>
-                    <option value="Jumat & Ahad">Jumat & Ahad</option>
-                    <option value="Sabtu & Ahad">Sabtu & Ahad</option>
-                    <option value="Senin - Jumat">Senin - Jumat (Harian)</option>
-                    <option value="Khusus Weekend">Khusus Weekend</option>
-                  </select>
+                    onChange={(val) => setScheduleDays(val)}
+                    options={[
+                      { value: 'Senin & Rabu', label: 'Senin & Rabu' },
+                      { value: 'Selasa & Kamis', label: 'Selasa & Kamis' },
+                      { value: 'Jumat & Ahad', label: 'Jumat & Ahad' },
+                      { value: 'Sabtu & Ahad', label: 'Sabtu & Ahad' },
+                      { value: 'Senin - Jumat', label: 'Senin - Jumat (Harian)' },
+                      { value: 'Khusus Weekend', label: 'Khusus Weekend' }
+                    ]}
+                    theme={theme}
+                    className="w-full"
+                  />
                 </div>
 
                 <div>
@@ -530,18 +531,14 @@ export function ClassManager({
                   <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
                     Cabang
                   </label>
-                  <select
+                  <CustomDropdown
                     value={branch}
-                    onChange={(e) => setBranch(e.target.value)}
+                    onChange={(val) => setBranch(val)}
                     disabled={!isSuperAdmin && activeBranch !== 'all'}
-                    className={`w-full py-2.5 px-3.5 rounded-xl text-xs border ${
-                      isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
-                    }`}
-                  >
-                    {branches.map(b => (
-                      <option key={b.id} value={b.name}>Cabang {b.name}</option>
-                    ))}
-                  </select>
+                    options={branches.map(b => ({ value: b.name, label: `Cabang ${b.name}` }))}
+                    theme={theme}
+                    className="w-full"
+                  />
                 </div>
               </div>
 
@@ -549,17 +546,13 @@ export function ClassManager({
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
                   Materi / Kurikulum Utama Kelas
                 </label>
-                <select
+                <CustomDropdown
                   value={level}
-                  onChange={(e) => setLevel(e.target.value)}
-                  className={`w-full py-2.5 px-3.5 rounded-xl text-xs border ${
-                    isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
-                  }`}
-                >
-                  {levelsList.map((lvl, idx) => (
-                    <option key={idx} value={lvl}>{lvl}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setLevel(val)}
+                  options={levelsList.map(lvl => ({ value: lvl, label: lvl }))}
+                  theme={theme}
+                  className="w-full"
+                />
               </div>
 
               <div className="pt-4 border-t border-slate-800 flex items-center justify-end gap-3">

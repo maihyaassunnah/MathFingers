@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Student, TeacherNote } from '../types';
 import { getWhatsAppLink } from '../utils';
 import { BookOpen, FileText, Plus, Search, Calendar, User, Trash2, Send, AlertCircle, CheckSquare, Square } from 'lucide-react';
+import { CustomDropdown } from './CustomDropdown';
+import { OfflineIndicator } from './OfflineIndicator';
 
 interface TeacherNotesProps {
   students: Student[];
@@ -223,22 +225,18 @@ export function TeacherNotes({
           />
         </div>
 
-        <div className="w-full md:w-auto">
-          <select
+        <div className="w-full md:w-auto min-w-[200px]">
+          <CustomDropdown
             id="filter-note-student"
             value={studentFilter}
-            onChange={(e) => setStudentFilter(e.target.value)}
-            className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-              isLight 
-                ? 'bg-white border-slate-200 text-slate-750' 
-                : 'bg-slate-950/40 border-slate-800 text-slate-300'
-            }`}
-          >
-            <option value="All" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Semua Siswa</option>
-            {students.map(s => (
-              <option key={s.id} value={s.id} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>{s.name}</option>
-            ))}
-          </select>
+            onChange={(val) => setStudentFilter(val)}
+            options={[
+              { value: 'All', label: 'Semua Siswa' },
+              ...students.map(s => ({ value: s.id, label: s.name }))
+            ]}
+            theme={theme}
+            className="w-full"
+          />
         </div>
       </div>
 
@@ -257,6 +255,7 @@ export function TeacherNotes({
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+              <OfflineIndicator theme={theme} className="mb-2" />
               {/* Row 1: Date & Teacher */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>

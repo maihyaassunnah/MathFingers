@@ -3,6 +3,8 @@ import { Student, LearningMaterial, Attendance, TeacherNote, Grade, Branch, Clas
 import { formatWhatsAppPhone, getWhatsAppLink, getStudentUniqueCode } from '../utils';
 import { generateStudentPDFReport } from '../utils/pdfGenerator';
 import { Search, Plus, UserPlus, Phone, Calendar, BookOpen, Trash2, Edit2, CheckCircle, XCircle, AlertCircle, Download, Award, Video, ExternalLink, Eye, X, Image as ImageIcon, Check, Layers, Users } from 'lucide-react';
+import { CustomDropdown } from './CustomDropdown';
+import { OfflineIndicator } from './OfflineIndicator';
 
 interface StudentManagerProps {
   students: Student[];
@@ -17,6 +19,7 @@ interface StudentManagerProps {
   theme?: string;
   isSuperAdmin?: boolean;
   branches?: Branch[];
+  loading?: boolean;
 }
 
 export function StudentManager({ 
@@ -31,7 +34,8 @@ export function StudentManager({
   onDeleteStudent,
   theme = 'dark',
   isSuperAdmin = false,
-  branches = []
+  branches = [],
+  loading = false
 }: StudentManagerProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
@@ -246,87 +250,73 @@ export function StudentManager({
           />
         </div>
         
-        <div className="flex flex-wrap gap-2 w-full md:w-auto">
+        <div className="flex flex-wrap gap-2.5 w-full md:w-auto items-center">
           {/* Urutan Abjad */}
-          <select
+          <CustomDropdown
             id="sort-student-alphabetical"
             value={sortAlphabetical}
-            onChange={(e) => setSortAlphabetical(e.target.value as 'asc' | 'desc')}
-            className={`border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-              isLight 
-                ? 'bg-white border-slate-200 text-slate-700' 
-                : 'bg-slate-950/40 border-slate-800 text-slate-300'
-            }`}
-          >
-            <option value="asc" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Nama: A - Z</option>
-            <option value="desc" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Nama: Z - A</option>
-          </select>
+            onChange={(val) => setSortAlphabetical(val as 'asc' | 'desc')}
+            options={[
+              { value: 'asc', label: 'Nama: A - Z' },
+              { value: 'desc', label: 'Nama: Z - A' }
+            ]}
+            theme={theme}
+            className="w-full sm:w-auto sm:min-w-[140px]"
+          />
 
           {/* Cabang Filter */}
-          <select
+          <CustomDropdown
             id="filter-student-branch"
             value={branchFilter}
-            onChange={(e) => setBranchFilter(e.target.value)}
-            className={`border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-              isLight 
-                ? 'bg-white border-slate-200 text-slate-700' 
-                : 'bg-slate-950/40 border-slate-800 text-slate-300'
-            }`}
-          >
-            <option value="All" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Semua Cabang</option>
-            {availableBranches.map(b => (
-              <option key={b} value={b} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Cabang: {b}</option>
-            ))}
-          </select>
+            onChange={(val) => setBranchFilter(val)}
+            options={[
+              { value: 'All', label: 'Semua Cabang' },
+              ...availableBranches.map(b => ({ value: b, label: `Cabang: ${b}` }))
+            ]}
+            theme={theme}
+            className="w-full sm:w-auto sm:min-w-[150px]"
+          />
 
           {/* Kelas Filter */}
-          <select
+          <CustomDropdown
             id="filter-student-kelas"
             value={kelasFilter}
-            onChange={(e) => setKelasFilter(e.target.value)}
-            className={`border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-              isLight 
-                ? 'bg-white border-slate-200 text-slate-700' 
-                : 'bg-slate-950/40 border-slate-800 text-slate-300'
-            }`}
-          >
-            <option value="All" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Semua Kelas</option>
-            {availableClasses.map(k => (
-              <option key={k} value={k} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Kelas: {k}</option>
-            ))}
-          </select>
+            onChange={(val) => setKelasFilter(val)}
+            options={[
+              { value: 'All', label: 'Semua Kelas' },
+              ...availableClasses.map(k => ({ value: k, label: `Kelas: ${k}` }))
+            ]}
+            theme={theme}
+            className="w-full sm:w-auto sm:min-w-[150px]"
+          />
 
           {/* Gender Filter */}
-          <select
+          <CustomDropdown
             id="filter-student-gender"
             value={genderFilter}
-            onChange={(e) => setGenderFilter(e.target.value)}
-            className={`border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-              isLight 
-                ? 'bg-white border-slate-200 text-slate-700' 
-                : 'bg-slate-950/40 border-slate-800 text-slate-300'
-            }`}
-          >
-            <option value="All" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Semua Gender</option>
-            <option value="Laki-laki" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Laki-laki</option>
-            <option value="Perempuan" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Perempuan</option>
-          </select>
+            onChange={(val) => setGenderFilter(val)}
+            options={[
+              { value: 'All', label: 'Semua Gender' },
+              { value: 'Laki-laki', label: 'Laki-laki' },
+              { value: 'Perempuan', label: 'Perempuan' }
+            ]}
+            theme={theme}
+            className="w-full sm:w-auto sm:min-w-[140px]"
+          />
 
           {/* Status Filter */}
-          <select
+          <CustomDropdown
             id="filter-student-status"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className={`border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-              isLight 
-                ? 'bg-white border-slate-200 text-slate-700' 
-                : 'bg-slate-950/40 border-slate-800 text-slate-300'
-            }`}
-          >
-            <option value="All" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Semua Status</option>
-            <option value="active" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Aktif</option>
-            <option value="inactive" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Nonaktif</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            options={[
+              { value: 'All', label: 'Semua Status' },
+              { value: 'active', label: 'Aktif' },
+              { value: 'inactive', label: 'Nonaktif' }
+            ]}
+            theme={theme}
+            className="w-full sm:w-auto sm:min-w-[145px]"
+          />
 
           {/* Reset Filter Button */}
           {(searchQuery || statusFilter !== 'active' || genderFilter !== 'All' || branchFilter !== 'All' || kelasFilter !== 'All') && (
@@ -339,7 +329,7 @@ export function StudentManager({
                 setBranchFilter('All');
                 setKelasFilter('All');
               }}
-              className="px-3 py-2 rounded-xl text-xs font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 transition flex items-center gap-1"
+              className="px-3 py-2.5 rounded-xl text-xs font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 transition flex items-center gap-1 h-[38px] cursor-pointer"
               title="Reset Semua Filter"
             >
               <X size={14} />
@@ -368,6 +358,7 @@ export function StudentManager({
             </div>
             
             <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4">
+              <OfflineIndicator theme={theme} className="mb-2" />
               <div>
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Nama Siswa *</label>
                 <input
@@ -426,33 +417,29 @@ export function StudentManager({
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Status Keaktifan</label>
-                  <select
+                  <CustomDropdown
                     value={status}
-                    onChange={(e) => setStatus(e.target.value as 'active' | 'inactive' | 'alumni')}
-                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                      isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
-                    }`}
-                  >
-                    <option value="active" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Aktif</option>
-                    <option value="inactive" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Nonaktif</option>
-                    <option value="alumni" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Alumni (Lulus)</option>
-                  </select>
+                    onChange={(val) => setStatus(val as 'active' | 'inactive' | 'alumni')}
+                    options={[
+                      { value: 'active', label: 'Aktif' },
+                      { value: 'inactive', label: 'Nonaktif' },
+                      { value: 'alumni', label: 'Alumni (Lulus)' }
+                    ]}
+                    theme={theme}
+                    className="w-full"
+                  />
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Level Bimbingan (Administratif)</label>
-                <select
+                <CustomDropdown
                   value={level}
-                  onChange={(e) => setLevel(e.target.value)}
-                  className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                    isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
-                  }`}
-                >
-                  {levels.map(l => (
-                    <option key={l} value={l} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>{l}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setLevel(val)}
+                  options={levels.map(l => ({ value: l, label: l }))}
+                  theme={theme}
+                  className="w-full"
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -484,52 +471,42 @@ export function StudentManager({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Jenis Paket</label>
-                  <select
+                  <CustomDropdown
                     value={jenisPaket}
-                    onChange={(e) => setJenisPaket(e.target.value)}
-                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                      isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
-                    }`}
-                  >
-                    <option value="4P" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>4P</option>
-                    <option value="8P" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>8P</option>
-                  </select>
+                    onChange={(val) => setJenisPaket(val)}
+                    options={[
+                      { value: '4P', label: '4P' },
+                      { value: '8P', label: '8P' }
+                    ]}
+                    theme={theme}
+                    className="w-full"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Jenis Kelamin</label>
-                  <select
+                  <CustomDropdown
                     value={jenisKelamin}
-                    onChange={(e) => setJenisKelamin(e.target.value as 'Laki-laki' | 'Perempuan')}
-                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                      isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
-                    }`}
-                  >
-                    <option value="Laki-laki" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Laki-laki</option>
-                    <option value="Perempuan" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Perempuan</option>
-                  </select>
+                    onChange={(val) => setJenisKelamin(val as 'Laki-laki' | 'Perempuan')}
+                    options={[
+                      { value: 'Laki-laki', label: 'Laki-laki' },
+                      { value: 'Perempuan', label: 'Perempuan' }
+                    ]}
+                    theme={theme}
+                    className="w-full"
+                  />
                 </div>
               </div>
 
               {(isSuperAdmin || branches.length > 0) && (
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Cabang Bimbingan *</label>
-                  <select
+                  <CustomDropdown
                     value={branch}
-                    onChange={(e) => setBranch(e.target.value)}
-                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                      isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
-                    }`}
-                  >
-                    {branches.length > 0 ? (
-                      branches.map((b) => (
-                        <option key={b.id} value={b.name} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>
-                          {b.name}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="Pusat" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Pusat</option>
-                    )}
-                  </select>
+                    onChange={(val) => setBranch(val)}
+                    options={branches.length > 0 ? branches.map(b => ({ value: b.name, label: b.name })) : [{ value: 'Pusat', label: 'Pusat' }]}
+                    theme={theme}
+                    className="w-full"
+                  />
                 </div>
               )}
 
@@ -538,24 +515,21 @@ export function StudentManager({
                   <span>Pilih Kelas Bimbingan</span>
                   <span className="text-[10px] text-indigo-400 font-normal">Opsional</span>
                 </label>
-                <select
+                <CustomDropdown
                   value={kelas}
-                  onChange={(e) => setKelas(e.target.value)}
-                  className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                    isLight ? 'bg-slate-100 border-slate-200 text-slate-750' : 'bg-slate-900 border-slate-800 text-slate-300'
-                  }`}
-                >
-                  <option value="" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>
-                    -- Belum Ditentukan / Tanpa Kelas --
-                  </option>
-                  {classes
-                    .filter(c => !branch || c.branch === branch || branch === 'all')
-                    .map((c) => (
-                      <option key={c.id} value={c.name} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>
-                        {c.name} ({c.scheduleDays || 'Jadwal'} • {c.teacherName || 'Pengajar'})
-                      </option>
-                    ))}
-                </select>
+                  onChange={(val) => setKelas(val)}
+                  options={[
+                    { value: '', label: '-- Belum Ditentukan / Tanpa Kelas --' },
+                    ...classes
+                      .filter(c => !branch || c.branch === branch || branch === 'all')
+                      .map((c) => ({
+                        value: c.name,
+                        label: `${c.name} (${c.scheduleDays || 'Jadwal'} • ${c.teacherName || 'Pengajar'})`
+                      }))
+                  ]}
+                  theme={theme}
+                  className="w-full"
+                />
               </div>
 
               <div>
@@ -608,7 +582,66 @@ export function StudentManager({
       <div className={`rounded-2xl border shadow-sm overflow-hidden ${
         isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
       }`}>
-        {sortedStudents.length === 0 ? (
+        {loading ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className={`border-b text-xs font-semibold uppercase tracking-wider text-slate-500 ${
+                  isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/40 border-slate-800'
+                }`}>
+                  <th className="p-4 w-12 text-center">NO</th>
+                  <th className="p-4">Nama Siswa</th>
+                  <th className="p-4">Orang Tua / HP</th>
+                  <th className="p-4 hidden sm:table-cell">Level</th>
+                  <th className="p-4 hidden sm:table-cell">Materi Aktif</th>
+                  <th className="p-4">Gabung Sejak</th>
+                  <th className="p-4">Status</th>
+                  <th className="p-4 text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className={`divide-y text-sm ${isLight ? 'divide-slate-200 text-slate-700' : 'divide-slate-800/80 text-slate-300'}`}>
+                {[...Array(5)].map((_, idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    <td className="p-4 text-center">
+                      <div className={`h-4 w-4 rounded mx-auto ${isLight ? 'bg-slate-200' : 'bg-slate-800'}`} />
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className={`h-5 w-36 rounded ${isLight ? 'bg-slate-200' : 'bg-slate-800'}`} />
+                        <div className={`h-4 w-12 rounded ${isLight ? 'bg-slate-200' : 'bg-slate-800'}`} />
+                        <div className={`h-4 w-10 rounded ${isLight ? 'bg-slate-200' : 'bg-slate-800'}`} />
+                      </div>
+                      <div className={`h-3 w-48 rounded mt-2 ${isLight ? 'bg-slate-100' : 'bg-slate-900'}`} />
+                    </td>
+                    <td className="p-4">
+                      <div className={`h-4 w-28 rounded ${isLight ? 'bg-slate-200' : 'bg-slate-800'}`} />
+                      <div className={`h-3 w-20 rounded mt-1.5 ${isLight ? 'bg-slate-100' : 'bg-slate-900'}`} />
+                    </td>
+                    <td className="p-4 hidden sm:table-cell">
+                      <div className={`h-4 w-28 rounded ${isLight ? 'bg-slate-100' : 'bg-slate-850'}`} />
+                    </td>
+                    <td className="p-4 hidden sm:table-cell">
+                      <div className={`h-4 w-20 rounded ${isLight ? 'bg-slate-100' : 'bg-slate-850'}`} />
+                    </td>
+                    <td className="p-4">
+                      <div className={`h-4 w-16 rounded ${isLight ? 'bg-slate-100' : 'bg-slate-850'}`} />
+                    </td>
+                    <td className="p-4">
+                      <div className={`h-5 w-14 rounded-full ${isLight ? 'bg-slate-200' : 'bg-slate-800'}`} />
+                    </td>
+                    <td className="p-4 text-center">
+                      <div className="flex gap-2 justify-center">
+                        <div className={`h-8 w-8 rounded-lg ${isLight ? 'bg-slate-200' : 'bg-slate-800'}`} />
+                        <div className={`h-8 w-8 rounded-lg ${isLight ? 'bg-slate-200' : 'bg-slate-800'}`} />
+                        <div className={`h-8 w-8 rounded-lg ${isLight ? 'bg-slate-200' : 'bg-slate-800'}`} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : sortedStudents.length === 0 ? (
           <div className="p-12 text-center text-slate-500">
             <UserPlus size={44} className="mx-auto text-slate-600 mb-3" />
             <p className="font-medium text-slate-400">Tidak ada data siswa ditemukan</p>
@@ -833,22 +866,19 @@ export function StudentManager({
                   <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">PANDUAN MATERI</div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-bold text-sm text-slate-400">Pilih Silabus:</span>
-                    <select
+                    <CustomDropdown
                       value={selectedCurriculumMat.id}
-                      onChange={(e) => {
-                        const matched = materials.find(m => m.id === e.target.value);
+                      onChange={(val) => {
+                        const matched = materials.find(m => m.id === val);
                         if (matched) setSelectedCurriculumMat(matched);
                       }}
-                      className={`px-2.5 py-1.5 border rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                        theme === 'light' ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950 border-slate-800 text-white'
-                      }`}
-                    >
-                      {materials.map(m => (
-                        <option key={m.id} value={m.id}>
-                          {m.level || 'Umum'}
-                        </option>
-                      ))}
-                    </select>
+                      options={materials.map(m => ({
+                        value: m.id,
+                        label: m.level || 'Umum'
+                      }))}
+                      theme={theme}
+                      className="min-w-[120px]"
+                    />
                   </div>
                 </div>
               </div>

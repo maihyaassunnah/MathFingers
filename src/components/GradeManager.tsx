@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Student, Grade } from '../types';
 import { getWhatsAppLink } from '../utils';
 import { Award, Search, Calendar, Zap, Trash2, Send, AlertCircle, Edit2, X, ChevronDown, FileSpreadsheet, Printer, Download } from 'lucide-react';
+import { CustomDropdown } from './CustomDropdown';
+import { OfflineIndicator } from './OfflineIndicator';
 
 interface GradeManagerProps {
   students: Student[];
@@ -332,6 +334,7 @@ export function GradeManager({
         </div>
 
         <form onSubmit={handleBulkSubmit} className="space-y-4">
+          <OfflineIndicator theme={theme} className="mx-5 mt-2" />
           {/* Topic and Date Row */}
           <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-slate-200 dark:border-slate-800/60">
             <div>
@@ -383,22 +386,17 @@ export function GradeManager({
                   </div>
 
                   {/* Sort Dropdown Selector */}
-                  <div className="relative shrink-0 min-w-[140px]">
-                    <select
+                  <div className="shrink-0 min-w-[140px]">
+                    <CustomDropdown
                       value={bulkSortOrder}
-                      onChange={(e) => setBulkSortOrder(e.target.value as 'asc' | 'desc')}
-                      className={`w-full pl-4 pr-10 py-2 border rounded-xl appearance-none focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm font-medium transition duration-150 cursor-pointer ${
-                        isLight 
-                          ? 'bg-slate-50 border-slate-200 text-slate-850 hover:bg-slate-100' 
-                          : 'bg-slate-950/40 border-emerald-500/80 text-emerald-400 hover:bg-slate-900'
-                      }`}
-                    >
-                      <option value="asc">Nama: A - Z</option>
-                      <option value="desc">Nama: Z - A</option>
-                    </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-emerald-400">
-                      <ChevronDown size={16} />
-                    </div>
+                      onChange={(val) => setBulkSortOrder(val as 'asc' | 'desc')}
+                      options={[
+                        { value: 'asc', label: 'Nama: A - Z' },
+                        { value: 'desc', label: 'Nama: Z - A' }
+                      ]}
+                      theme={theme}
+                      className="w-full"
+                    />
                   </div>
 
                   {(bulkStudentSearchQuery || bulkSelectedLetter !== 'ALL' || bulkSortOrder !== 'asc') && (
@@ -573,38 +571,34 @@ export function GradeManager({
           />
         </div>
 
-        <div className="w-full md:w-auto flex flex-col sm:flex-row gap-3">
-          <select
-            id="filter-grade-student"
-            value={studentFilter}
-            onChange={(e) => setStudentFilter(e.target.value)}
-            className={`w-full sm:w-auto border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-              isLight 
-                ? 'bg-white border-slate-200 text-slate-755' 
-                : 'bg-slate-900 border-slate-800 text-slate-300'
-            }`}
-          >
-            <option value="All" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Semua Siswa</option>
-            {students.map(s => (
-              <option key={s.id} value={s.id} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>{s.name}</option>
-            ))}
-          </select>
+        <div className="w-full md:w-auto flex flex-col sm:flex-row gap-3.5 items-center">
+          <div className="w-full sm:w-[180px]">
+            <CustomDropdown
+              id="filter-grade-student"
+              value={studentFilter}
+              onChange={(val) => setStudentFilter(val)}
+              options={[
+                { value: 'All', label: 'Semua Siswa' },
+                ...students.map(s => ({ value: s.id, label: s.name }))
+              ]}
+              theme={theme}
+              className="w-full"
+            />
+          </div>
 
-          <select
-            id="filter-grade-topic"
-            value={topicFilter}
-            onChange={(e) => setTopicFilter(e.target.value)}
-            className={`w-full sm:w-auto border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-              isLight 
-                ? 'bg-white border-slate-200 text-slate-755' 
-                : 'bg-slate-900 border-slate-800 text-slate-300'
-            }`}
-          >
-            <option value="All" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Semua Materi Uji</option>
-            {Array.from(new Set(grades.map(g => g.topic))).sort().map(topic => (
-              <option key={topic} value={topic} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>{topic}</option>
-            ))}
-          </select>
+          <div className="w-full sm:w-[180px]">
+            <CustomDropdown
+              id="filter-grade-topic"
+              value={topicFilter}
+              onChange={(val) => setTopicFilter(val)}
+              options={[
+                { value: 'All', label: 'Semua Materi Uji' },
+                ...Array.from(new Set(grades.map(g => g.topic))).sort().map(topic => ({ value: topic, label: topic }))
+              ]}
+              theme={theme}
+              className="w-full"
+            />
+          </div>
         </div>
       </div>
 
@@ -908,6 +902,7 @@ export function GradeManager({
             </div>
 
             <form onSubmit={handleEditSubmit} className="p-5 space-y-4">
+              <OfflineIndicator theme={theme} className="mb-2" />
               <div>
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Nama Siswa</label>
                 <input

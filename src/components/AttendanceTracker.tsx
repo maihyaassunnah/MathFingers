@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Student, Attendance, ClassGroup } from '../types';
 import { getWhatsAppLink, getStudentUniqueCode } from '../utils';
 import { Calendar, Check, X, ShieldAlert, Send, Save, CheckSquare, Clock, Search, Users, TrendingUp, ChevronDown, MessageSquare, Trash2, Layers, DoorClosed, User, QrCode, Printer, Copy, ExternalLink } from 'lucide-react';
+import { CustomDropdown } from './CustomDropdown';
+import { OfflineIndicator } from './OfflineIndicator';
 
 interface AttendanceTrackerProps {
   students: Student[];
@@ -12,6 +14,7 @@ interface AttendanceTrackerProps {
   onDeleteSingleAttendance?: (id: string) => Promise<void>;
   onUpdateSingleAttendance?: (id: string, updatedFields: Partial<Attendance>) => Promise<void>;
   theme?: string;
+  loading?: boolean;
 }
 
 export function AttendanceTracker({ 
@@ -22,7 +25,8 @@ export function AttendanceTracker({
   onDeleteAttendanceByDate,
   onDeleteSingleAttendance,
   onUpdateSingleAttendance,
-  theme = 'dark'
+  theme = 'dark',
+  loading = false
 }: AttendanceTrackerProps) {
   const [activeSubTab, setActiveSubTab] = useState<'record' | 'history'>('record');
   const [historySearchQuery, setHistorySearchQuery] = useState('');
@@ -42,6 +46,7 @@ export function AttendanceTracker({
   const [savedRecordsCount, setSavedRecordsCount] = useState(0);
   const [expandedStudentNotes, setExpandedStudentNotes] = useState<Record<string, boolean>>({});
   const [filterBySchedule, setFilterBySchedule] = useState(false);
+  const [selectedMissingStudent, setSelectedMissingStudent] = useState<string>('');
 
   const toggleNotes = (studentId: string) => {
     setExpandedStudentNotes(prev => ({
@@ -351,31 +356,23 @@ export function AttendanceTracker({
                 </span>
               </div>
 
-              <div className="relative">
-                <select
+              <div className="relative min-w-[210px] w-full sm:w-auto">
+                <CustomDropdown
                   value={selectedClassFilter}
-                  onChange={(e) => setSelectedClassFilter(e.target.value)}
-                  className={`w-full sm:w-auto px-3.5 py-1.5 rounded-xl text-xs font-bold border transition cursor-pointer ${
-                    isLight 
-                      ? 'bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100' 
-                      : 'bg-slate-950 border-slate-800 text-emerald-400 hover:bg-slate-900'
-                  }`}
-                >
-                  <option value="ALL">Semua Kelas ({activeStudents.length} Siswa)</option>
-                  {classes.map(c => {
-                    const count = activeStudents.filter(s => s.kelas === c.name).length;
-                    return (
-                      <option key={c.id} value={c.name}>
-                        {c.name} ({count} Siswa)
-                      </option>
-                    );
-                  })}
-                  {activeStudents.some(s => !s.kelas) && (
-                    <option value="UNASSIGNED">
-                      Tanpa Kelas ({activeStudents.filter(s => !s.kelas).length} Siswa)
-                    </option>
-                  )}
-                </select>
+                  onChange={(val) => setSelectedClassFilter(val)}
+                  options={[
+                    { value: 'ALL', label: `Semua Kelas (${activeStudents.length} Siswa)` },
+                    ...classes.map(c => {
+                      const count = activeStudents.filter(s => s.kelas === c.name).length;
+                      return { value: c.name, label: `${c.name} (${count} Siswa)` };
+                    }),
+                    ...(activeStudents.some(s => !s.kelas) ? [
+                      { value: 'UNASSIGNED', label: `Tanpa Kelas (${activeStudents.filter(s => !s.kelas).length} Siswa)` }
+                    ] : [])
+                  ]}
+                  theme={theme}
+                  className="w-full"
+                />
               </div>
             </div>
 
@@ -515,22 +512,17 @@ export function AttendanceTracker({
                 </div>
 
                 {/* Sort Dropdown Selector */}
-                <div className="relative shrink-0 min-w-[140px]">
-                  <select
+                <div className="relative shrink-0 min-w-[140px] w-full sm:w-auto">
+                  <CustomDropdown
                     value={sortOrder}
-                    onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-                    className={`w-full pl-4 pr-10 py-2 border rounded-xl appearance-none focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm font-medium transition duration-150 cursor-pointer ${
-                      isLight 
-                        ? 'bg-slate-50 border-slate-200 text-slate-850 hover:bg-slate-100' 
-                        : 'bg-slate-950/40 border-emerald-500/80 text-emerald-400 hover:bg-slate-900'
-                    }`}
-                  >
-                    <option value="asc">Nama: A - Z</option>
-                    <option value="desc">Nama: Z - A</option>
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-emerald-500/80">
-                    <ChevronDown size={16} />
-                  </div>
+                    onChange={(val) => setSortOrder(val as 'asc' | 'desc')}
+                    options={[
+                      { value: 'asc', label: 'Nama: A - Z' },
+                      { value: 'desc', label: 'Nama: Z - A' }
+                    ]}
+                    theme={theme}
+                    className="w-full"
+                  />
                 </div>
 
                 {(recordSearchQuery || sortOrder !== 'asc') && (
@@ -561,10 +553,39 @@ export function AttendanceTracker({
             </div>
           </div>
 
+          <OfflineIndicator theme={theme} className="mb-4" />
+
           <div className={`rounded-2xl border shadow-sm overflow-hidden ${
             isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
           }`}>
-            {activeStudents.length === 0 ? (
+            {loading ? (
+              <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                {[...Array(5)].map((_, idx) => (
+                  <div key={idx} className="p-4 sm:p-5 animate-pulse">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
+                      <div className="flex items-start gap-4">
+                        <div className={`h-9 w-9 rounded-full shrink-0 flex items-center justify-center ${isLight ? 'bg-slate-200' : 'bg-slate-850'}`} />
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <div className={`h-5 w-24 rounded ${isLight ? 'bg-slate-250' : 'bg-slate-800'}`} />
+                            <div className={`h-4 w-14 rounded ${isLight ? 'bg-slate-250' : 'bg-slate-800'}`} />
+                            <div className={`h-4 w-10 rounded ${isLight ? 'bg-slate-250' : 'bg-slate-800'}`} />
+                          </div>
+                          <div className={`h-4 w-32 rounded ${isLight ? 'bg-slate-100' : 'bg-slate-900'}`} />
+                          <div className={`h-3.5 w-48 rounded ${isLight ? 'bg-slate-100' : 'bg-slate-900'}`} />
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        <div className={`h-10 w-28 rounded-xl ${isLight ? 'bg-slate-200' : 'bg-slate-850'}`} />
+                        <div className={`h-10 w-20 rounded-xl ${isLight ? 'bg-slate-200' : 'bg-slate-850'}`} />
+                        <div className={`h-10 w-10 rounded-xl ${isLight ? 'bg-slate-200' : 'bg-slate-850'}`} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : activeStudents.length === 0 ? (
               <div className="p-12 text-center text-slate-500">
                 <ShieldAlert size={44} className="mx-auto text-slate-700 mb-3" />
                 <p className="font-medium text-slate-400">Tidak ada siswa aktif terdaftar</p>
@@ -961,21 +982,17 @@ export function AttendanceTracker({
                 
                 <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                   {/* Class Filter Dropdown for History */}
-                  <select
+                  <CustomDropdown
                     value={historyClassFilter}
-                    onChange={(e) => setHistoryClassFilter(e.target.value)}
-                    className={`px-3 py-1.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs font-medium cursor-pointer ${
-                      isLight 
-                        ? 'bg-white border-slate-200 text-slate-800' 
-                        : 'bg-slate-950/40 border-slate-800 text-slate-200'
-                    }`}
-                  >
-                    <option value="ALL">Semua Kelas</option>
-                    {classes.map(c => (
-                      <option key={c.id} value={c.name}>{c.name}</option>
-                    ))}
-                    <option value="UNASSIGNED">Tanpa Kelas</option>
-                  </select>
+                    onChange={(val) => setHistoryClassFilter(val)}
+                    options={[
+                      { value: 'ALL', label: 'Semua Kelas' },
+                      ...classes.map(c => ({ value: c.name, label: c.name })),
+                      { value: 'UNASSIGNED', label: 'Tanpa Kelas' }
+                    ]}
+                    theme={theme}
+                    className="w-full sm:w-auto sm:min-w-[140px]"
+                  />
 
                   {/* Search Bar */}
                   <div className="relative w-full sm:w-48">
@@ -1240,25 +1257,24 @@ export function AttendanceTracker({
                     isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/20 border-slate-800'
                   }`}>
                     <h4 className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Tambah Siswa Ke Sesi Ini</h4>
-                    <div className="flex gap-2">
-                      <select
-                        id="select-add-missing-student"
-                        className={`flex-1 px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                          isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
-                        }`}
-                      >
-                        <option value="">-- Pilih Siswa --</option>
-                        {missingStudents.map(s => (
-                          <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                      </select>
+                    <div className="flex gap-2.5 items-center w-full">
+                      <div className="flex-1 min-w-[150px]">
+                        <CustomDropdown
+                          value={selectedMissingStudent}
+                          onChange={(val) => setSelectedMissingStudent(val)}
+                          options={[
+                            { value: '', label: '-- Pilih Siswa --' },
+                            ...missingStudents.map(s => ({ value: s.id, label: s.name }))
+                          ]}
+                          theme={theme}
+                          className="w-full"
+                        />
+                      </div>
                       <button
                         type="button"
                         onClick={async () => {
-                          const selectEl = document.getElementById('select-add-missing-student') as HTMLSelectElement | null;
-                          if (selectEl && selectEl.value) {
-                            const studentId = selectEl.value;
-                            const student = students.find(s => s.id === studentId);
+                          if (selectedMissingStudent) {
+                            const student = students.find(s => s.id === selectedMissingStudent);
                             if (student) {
                               await onAddAttendanceBatch([{
                                 studentId: student.id,
@@ -1267,11 +1283,11 @@ export function AttendanceTracker({
                                 status: 'present',
                                 notes: ''
                               }]);
-                              selectEl.value = "";
+                              setSelectedMissingStudent("");
                             }
                           }
                         }}
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition cursor-pointer whitespace-nowrap"
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition cursor-pointer whitespace-nowrap h-[38px] flex items-center justify-center"
                       >
                         Tambah Kehadiran
                       </button>

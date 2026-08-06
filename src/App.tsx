@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useMathFinggersDb } from './hooks/useMathFinggersDb';
+import { supabase } from './supabase';
 import { DashboardOverview } from './components/DashboardOverview';
 import { StudentManager } from './components/StudentManager';
 import { AttendanceTracker } from './components/AttendanceTracker';
@@ -55,6 +56,40 @@ import {
 
 export default function App() {
   const [isSelfAttendanceMode, setIsSelfAttendanceMode] = useState<boolean>(false);
+  const [pingLatency, setPingLatency] = useState<number | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    let intervalId: any;
+
+    const checkPing = async () => {
+      if (!supabase) {
+        if (active) setPingLatency(null);
+        return;
+      }
+      const startTime = performance.now();
+      try {
+        const { error } = await supabase.from('branches').select('id').limit(1);
+        if (error) throw error;
+        const duration = Math.round(performance.now() - startTime);
+        if (active) {
+          setPingLatency(duration);
+        }
+      } catch (err) {
+        if (active) {
+          setPingLatency(null);
+        }
+      }
+    };
+
+    checkPing();
+    intervalId = setInterval(checkPing, 5000);
+
+    return () => {
+      active = false;
+      clearInterval(intervalId);
+    };
+  }, []);
   const [selfAttendanceClass, setSelfAttendanceClass] = useState<string>('');
   const [selfAttendanceDate, setSelfAttendanceDate] = useState<string>('');
   const [scannedStudentId, setScannedStudentId] = useState<string | null>(null);
@@ -415,6 +450,12 @@ export default function App() {
         { id: 'settings', name: 'Pengaturan Cabang', icon: Settings },
       ];
 
+  const visibleMobileTabIds = isSuperAdmin 
+    ? ['overview', 'branches_mgmt', 'settings']
+    : ['overview', 'students', 'attendance', 'grades'];
+
+  const hiddenMobileItemsCount = navigationItems.filter(item => !visibleMobileTabIds.includes(item.id)).length;
+
   if (loading) {
     return (
       <div className={`flex flex-col items-center justify-center min-h-screen ${theme === 'dark' ? 'bg-[#0f172a] text-slate-300' : 'bg-[#fdfbf7] text-slate-700'}`}>
@@ -504,6 +545,7 @@ export default function App() {
             theme={theme}
             isSuperAdmin={isSuperAdmin}
             branches={branches}
+            loading={loading}
           />
         );
       case 'qr_cards':
@@ -551,6 +593,7 @@ export default function App() {
             onDeleteSingleAttendance={deleteSingleAttendance}
             onUpdateSingleAttendance={updateSingleAttendance}
             theme={theme}
+            loading={loading}
           />
         );
       case 'notes':
@@ -777,15 +820,29 @@ export default function App() {
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
 
-          {/* Mobile Offline Status indicator */}
-          {isOfflineFallback ? (
-            <span className="p-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-md" title="Local Storage Mode">
-              <CloudLightning size={14} />
+          {/* Mobile Offline Status indicator with real-time ping latency and rating */}
+          {isOfflineFallback || pingLatency === null ? (
+            <span className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 text-amber-500 dark:text-amber-400 border border-amber-500/20 rounded-xl text-xs shadow-xs" title="Koneksi Terputus - Mode Penyimpanan Lokal Aktif">
+              <CloudLightning size={14} className="animate-pulse text-amber-500" />
+              <span className="font-extrabold text-[10px] tracking-wider uppercase">Lokal Safe</span>
             </span>
           ) : (
-            <span className="p-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-md" title="Supabase Connected">
-              <Wifi size={14} />
-            </span>
+            (() => {
+              const rating = pingLatency < 100 ? { label: 'Sangat Baik', colorClass: 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/20', pingColor: 'bg-emerald-400' } :
+                             pingLatency < 250 ? { label: 'Cukup', colorClass: 'bg-amber-500/10 text-amber-500 dark:text-amber-400 border-amber-500/20', pingColor: 'bg-amber-400' } :
+                             { label: 'Lambat', colorClass: 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/20', pingColor: 'bg-rose-400' };
+              return (
+                <span className={`flex items-center gap-1.5 px-2.5 py-1 border rounded-xl text-xs transition-all shadow-xs ${rating.colorClass}`} title={`Supabase Terhubung - Latensi: ${pingLatency}ms (${rating.label})`}>
+                  <span className="relative flex h-2 w-2">
+                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${rating.pingColor}`}></span>
+                    <span className={`relative inline-flex rounded-full h-2 w-2 ${rating.pingColor.replace('400', '500')}`}></span>
+                  </span>
+                  <Wifi size={14} />
+                  <span className="font-extrabold text-[10px]">{pingLatency} ms</span>
+                  <span className="text-[8px] opacity-75 font-bold uppercase tracking-wider hidden xs:inline">({rating.label})</span>
+                </span>
+              );
+            })()
           )}
         </div>
       </header>
@@ -824,16 +881,27 @@ export default function App() {
         {/* Database Sync Status */}
         <div className={`px-6 py-2.5 border-b flex items-center justify-between text-xs ${theme === 'dark' ? 'bg-slate-950/40 border-slate-800/60' : 'bg-slate-50 border-slate-200'}`}>
           <span className="text-slate-500 font-medium">Database:</span>
-          {isOfflineFallback ? (
-            <span className="inline-flex items-center gap-1 font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-              <CloudLightning size={10} />
-              <span>Lokal Safe</span>
+          {isOfflineFallback || pingLatency === null ? (
+            <span className="inline-flex items-center gap-1 font-semibold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
+              <CloudLightning size={10} className="animate-pulse" />
+              <span>Offline / Lokal</span>
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-              <Wifi size={10} />
-              <span>Supabase Cloud</span>
-            </span>
+            (() => {
+              const rating = pingLatency < 100 ? { label: 'Cepat', colorClass: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20', pingColor: 'bg-emerald-400' } :
+                             pingLatency < 250 ? { label: 'Sedang', colorClass: 'text-amber-500 bg-amber-500/10 border-amber-500/20', pingColor: 'bg-amber-400' } :
+                             { label: 'Lambat', colorClass: 'text-rose-500 bg-rose-500/10 border-rose-500/20', pingColor: 'bg-rose-400' };
+              return (
+                <span className={`inline-flex items-center gap-1.5 font-semibold px-2 py-0.5 rounded-lg border transition-all ${rating.colorClass}`} title={`Latensi Ping: ${pingLatency}ms (${rating.label})`}>
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${rating.pingColor}`}></span>
+                    <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${rating.pingColor.replace('400', '500')}`}></span>
+                  </span>
+                  <Wifi size={10} />
+                  <span>Cloud ({pingLatency} ms - {rating.label})</span>
+                </span>
+              );
+            })()
           )}
         </div>
 
@@ -956,7 +1024,7 @@ export default function App() {
             </div>
 
             <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-              {navigationItems.map((item) => {
+              {navigationItems.filter(item => !visibleMobileTabIds.includes(item.id)).map((item) => {
                 const IconComponent = item.icon;
                 const isActive = activeTab === item.id;
                 const isDivider2 = item.id === 'branches_mgmt' || (item.id === 'settings' && currentUser?.role !== 'super_admin');
@@ -1158,13 +1226,20 @@ export default function App() {
           {/* Menu Lainnya Button */}
           <button
             onClick={() => setIsMobileMenuOpen(true)}
-            className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
+            className={`relative flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
               isMobileMenuOpen 
                 ? getAccentTextClass() 
                 : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
             }`}
           >
-            <Menu size={20} className="transition-transform" />
+            <div className="relative">
+              <Menu size={20} className="transition-transform" />
+              {hiddenMobileItemsCount > 0 && (
+                <span className="absolute -top-1.5 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white ring-1.5 ring-white dark:ring-[#020617] scale-90 animate-pulse">
+                  {hiddenMobileItemsCount}
+                </span>
+              )}
+            </div>
             <span className="text-[10px] font-bold tracking-tight">Lainnya</span>
           </button>
         </div>

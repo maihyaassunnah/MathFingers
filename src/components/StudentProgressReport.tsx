@@ -14,6 +14,7 @@ import {
   Calendar,
   Sparkles
 } from 'lucide-react';
+import { CustomDropdown } from './CustomDropdown';
 
 interface StudentProgressReportProps {
   students: Student[];
@@ -79,20 +80,14 @@ export function StudentProgressReport({ students, attendance, notes, grades, the
 
         {activeStudents.length > 0 && (
           <div className="w-full sm:w-64">
-            <select
+            <CustomDropdown
               id="report-student-selector"
               value={currentStudentId}
-              onChange={(e) => setSelectedStudentId(e.target.value)}
-              className={`w-full border rounded-xl px-3.5 py-2.5 text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500 shadow-sm ${
-                isLight 
-                  ? 'bg-white border-slate-200 text-slate-700' 
-                  : 'bg-slate-900 border-slate-800 text-slate-300'
-              }`}
-            >
-              {activeStudents.map(s => (
-                <option key={s.id} value={s.id} className={isLight ? 'bg-white text-slate-850' : 'bg-[#020617] text-white'}>{s.name} ({s.level})</option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedStudentId(val)}
+              options={activeStudents.map(s => ({ value: s.id, label: `${s.name} (${s.level})` }))}
+              theme={theme}
+              className="w-full"
+            />
           </div>
         )}
       </div>

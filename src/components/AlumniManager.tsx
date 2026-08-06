@@ -2,6 +2,8 @@ import { useState, FormEvent } from 'react';
 import { Student } from '../types';
 import { Search, GraduationCap, RefreshCw, Trash2, Edit3, Award, Calendar, Phone, MapPin, ShieldAlert, X } from 'lucide-react';
 import { getStudentUniqueCode } from '../utils';
+import { CustomDropdown } from './CustomDropdown';
+import { OfflineIndicator } from './OfflineIndicator';
 
 interface AlumniManagerProps {
   students: Student[];
@@ -156,69 +158,63 @@ export function AlumniManager({
         </div>
 
         {/* Select Dropdowns */}
-        <div className="flex flex-wrap gap-2 w-full md:w-auto">
+        <div className="flex flex-wrap gap-2.5 w-full md:w-auto items-center">
           {/* Cabang Filter */}
-          <select
-            value={branchFilter}
-            onChange={(e) => setBranchFilter(e.target.value)}
-            className={`border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-              isLight 
-                ? 'bg-white border-slate-200 text-slate-700' 
-                : 'bg-slate-950/40 border-slate-800 text-slate-300'
-            }`}
-          >
-            <option value="All">Semua Cabang</option>
-            {availableBranches.map(b => (
-              <option key={b} value={b}>Cabang: {b}</option>
-            ))}
-          </select>
+          <div className="w-full sm:w-auto sm:min-w-[150px]">
+            <CustomDropdown
+              value={branchFilter}
+              onChange={(val) => setBranchFilter(val)}
+              options={[
+                { value: 'All', label: 'Semua Cabang' },
+                ...availableBranches.map(b => ({ value: b, label: `Cabang: ${b}` }))
+              ]}
+              theme={theme}
+              className="w-full"
+            />
+          </div>
 
           {/* Kelas Filter */}
-          <select
-            value={kelasFilter}
-            onChange={(e) => setKelasFilter(e.target.value)}
-            className={`border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-              isLight 
-                ? 'bg-white border-slate-200 text-slate-700' 
-                : 'bg-slate-950/40 border-slate-800 text-slate-300'
-            }`}
-          >
-            <option value="All">Semua Kelas</option>
-            {availableClasses.map(k => (
-              <option key={k} value={k}>Kelas: {k}</option>
-            ))}
-          </select>
+          <div className="w-full sm:w-auto sm:min-w-[150px]">
+            <CustomDropdown
+              value={kelasFilter}
+              onChange={(val) => setKelasFilter(val)}
+              options={[
+                { value: 'All', label: 'Semua Kelas' },
+                ...availableClasses.map(k => ({ value: k, label: `Kelas: ${k}` }))
+              ]}
+              theme={theme}
+              className="w-full"
+            />
+          </div>
 
           {/* Level Filter */}
-          <select
-            value={levelFilter}
-            onChange={(e) => setLevelFilter(e.target.value)}
-            className={`border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-              isLight 
-                ? 'bg-white border-slate-200 text-slate-700' 
-                : 'bg-slate-950/40 border-slate-800 text-slate-300'
-            }`}
-          >
-            <option value="All">Semua Level Kelulusan</option>
-            {uniqueLevels.map(l => (
-              <option key={l} value={l}>{l}</option>
-            ))}
-          </select>
+          <div className="w-full sm:w-auto sm:min-w-[180px]">
+            <CustomDropdown
+              value={levelFilter}
+              onChange={(val) => setLevelFilter(val)}
+              options={[
+                { value: 'All', label: 'Semua Level Kelulusan' },
+                ...uniqueLevels.map(l => ({ value: l, label: l }))
+              ]}
+              theme={theme}
+              className="w-full"
+            />
+          </div>
 
           {/* Gender Filter */}
-          <select
-            value={genderFilter}
-            onChange={(e) => setGenderFilter(e.target.value)}
-            className={`border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-              isLight 
-                ? 'bg-white border-slate-200 text-slate-700' 
-                : 'bg-slate-950/40 border-slate-800 text-slate-300'
-            }`}
-          >
-            <option value="All">Semua Jenis Kelamin</option>
-            <option value="Laki-laki">Laki-laki</option>
-            <option value="Perempuan">Perempuan</option>
-          </select>
+          <div className="w-full sm:w-auto sm:min-w-[170px]">
+            <CustomDropdown
+              value={genderFilter}
+              onChange={(val) => setGenderFilter(val)}
+              options={[
+                { value: 'All', label: 'Semua Jenis Kelamin' },
+                { value: 'Laki-laki', label: 'Laki-laki' },
+                { value: 'Perempuan', label: 'Perempuan' }
+              ]}
+              theme={theme}
+              className="w-full"
+            />
+          </div>
 
           {/* Reset Filter Button */}
           {(searchQuery || levelFilter !== 'All' || genderFilter !== 'All' || branchFilter !== 'All' || kelasFilter !== 'All') && (
@@ -529,6 +525,7 @@ export function AlumniManager({
             </div>
 
             <form onSubmit={handleSaveEdit} className="p-6 overflow-y-auto space-y-4">
+              <OfflineIndicator theme={theme} className="mb-2" />
               <div>
                 <label className="block text-xs font-semibold text-slate-450 uppercase tracking-wider mb-1.5">Nama Alumni *</label>
                 <input
@@ -588,16 +585,16 @@ export function AlumniManager({
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-450 uppercase tracking-wider mb-1.5">Jenis Kelamin</label>
-                  <select
+                  <CustomDropdown
                     value={editJenisKelamin}
-                    onChange={(e) => setEditJenisKelamin(e.target.value as 'Laki-laki' | 'Perempuan')}
-                    className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                      isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-slate-300'
-                    }`}
-                  >
-                    <option value="Laki-laki">Laki-laki</option>
-                    <option value="Perempuan">Perempuan</option>
-                  </select>
+                    onChange={(val) => setEditJenisKelamin(val as 'Laki-laki' | 'Perempuan')}
+                    options={[
+                      { value: 'Laki-laki', label: 'Laki-laki' },
+                      { value: 'Perempuan', label: 'Perempuan' }
+                    ]}
+                    theme={theme}
+                    className="w-full"
+                  />
                 </div>
               </div>
 

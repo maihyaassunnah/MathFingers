@@ -9,6 +9,12 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
         console.log('Math Fingers PWA ServiceWorker registered successfully: ', registration.scope);
+        // Register Background Sync if supported
+        if ('sync' in registration) {
+          (registration as any).sync.register('supabase-sync')
+            .then(() => console.log('PWA Background Sync "supabase-sync" registered successfully!'))
+            .catch((err: any) => console.warn('PWA Background Sync registration failed:', err));
+        }
       })
       .catch((error) => {
         console.error('Math Fingers PWA ServiceWorker registration failed: ', error);

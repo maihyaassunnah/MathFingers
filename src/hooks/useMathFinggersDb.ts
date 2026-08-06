@@ -593,7 +593,7 @@ export function useMathFinggersDb() {
     setStudents(updated);
     saveLocalData('students', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         const { error } = await supabase.from('students').insert([newStudent]);
         if (error) {
@@ -631,7 +631,7 @@ export function useMathFinggersDb() {
     setStudents(updated);
     saveLocalData('students', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         const { error } = await supabase.from('students').update(updatedFields).eq('id', id);
         if (error) {
@@ -685,7 +685,7 @@ export function useMathFinggersDb() {
     setGrades(updatedGrades);
     saveLocalData('grades', updatedGrades);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         // Cascade delete child rows in Supabase first to prevent foreign key errors (ON DELETE CASCADE fallback)
         await supabase.from('attendance').delete().eq('studentId', id);
@@ -717,7 +717,7 @@ export function useMathFinggersDb() {
     setAttendance(updated);
     saveLocalData('attendance', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         // Safe batch operation: delete existing records for these students on this specific date in one fast query
         const studentIds = records.map(r => r.studentId);
@@ -741,7 +741,7 @@ export function useMathFinggersDb() {
     setAttendance(updated);
     saveLocalData('attendance', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         const { error } = await supabase.from('attendance').delete().eq('date', date);
         if (error) throw error;
@@ -756,7 +756,7 @@ export function useMathFinggersDb() {
     setAttendance(updated);
     saveLocalData('attendance', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         const { error } = await supabase.from('attendance').delete().eq('id', id);
         if (error) throw error;
@@ -771,7 +771,7 @@ export function useMathFinggersDb() {
     setAttendance(updated);
     saveLocalData('attendance', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         const { error } = await supabase.from('attendance').update(updatedFields).eq('id', id);
         if (error) throw error;
@@ -792,7 +792,7 @@ export function useMathFinggersDb() {
     setNotes(updated);
     saveLocalData('notes', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         const { error } = await supabase.from('notes').insert([newNote]);
         if (error) throw error;
@@ -812,7 +812,7 @@ export function useMathFinggersDb() {
     setNotes(updated);
     saveLocalData('notes', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         const { error } = await supabase.from('notes').insert(newNotes);
         if (error) throw error;
@@ -827,7 +827,7 @@ export function useMathFinggersDb() {
     setNotes(updated);
     saveLocalData('notes', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         const { error } = await supabase.from('notes').delete().eq('id', id);
         if (error) throw error;
@@ -851,7 +851,7 @@ export function useMathFinggersDb() {
     setInvoices(updated);
     saveLocalData('invoices', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         const { error } = await supabase.from('invoices').insert([newInvoice]);
         if (error) throw error;
@@ -866,7 +866,7 @@ export function useMathFinggersDb() {
     setInvoices(updated);
     saveLocalData('invoices', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         const payload: any = { status };
         if (details?.paidAt !== undefined) payload.paidAt = details.paidAt;
@@ -886,7 +886,7 @@ export function useMathFinggersDb() {
     setInvoices(updated);
     saveLocalData('invoices', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         const { error } = await supabase.from('invoices').delete().eq('id', id);
         if (error) throw error;
@@ -907,7 +907,7 @@ export function useMathFinggersDb() {
     setGrades(updated);
     saveLocalData('grades', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         const { error } = await supabase.from('grades').insert([newGrade]);
         if (error) throw error;
@@ -922,7 +922,7 @@ export function useMathFinggersDb() {
     setGrades(updated);
     saveLocalData('grades', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         const { error } = await supabase.from('grades').delete().eq('id', id);
         if (error) throw error;
@@ -937,7 +937,7 @@ export function useMathFinggersDb() {
     setGrades(updated);
     saveLocalData('grades', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         const { error } = await supabase.from('grades').update(updatedGrade).eq('id', updatedGrade.id);
         if (error) throw error;
@@ -956,7 +956,7 @@ export function useMathFinggersDb() {
     setMaterials(updated);
     saveLocalData('materials', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         // Supply title & description as fallbacks for the old not-null constraints
         const insertPayload = {
@@ -994,7 +994,7 @@ export function useMathFinggersDb() {
     setMaterials(updated);
     saveLocalData('materials', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         const updatePayload: any = { ...updatedFields };
         if (updatedFields.materiPembelajaran !== undefined || updatedFields.level !== undefined) {
@@ -1032,7 +1032,7 @@ export function useMathFinggersDb() {
     setMaterials(updated);
     saveLocalData('materials', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         const { error } = await supabase.from('materials').delete().eq('id', id);
         if (error) throw error;
@@ -1046,7 +1046,7 @@ export function useMathFinggersDb() {
     setMaterials([]);
     saveLocalData('materials', []);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         // Deleting all rows by matching id not equal to empty string
         const { error } = await supabase.from('materials').delete().neq('id', '');
@@ -1097,7 +1097,7 @@ export function useMathFinggersDb() {
     saveLocalData('settings', updatedSetting);
     updateDynamicPwaIcon(updatedSetting.appIcon);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         const payload = {
           id: recordId,
@@ -1180,7 +1180,7 @@ export function useMathFinggersDb() {
     setBranches(updated);
     saveLocalData('branches', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         await supabase.from('branches').insert([newBranch]);
       } catch (e) {
@@ -1194,7 +1194,7 @@ export function useMathFinggersDb() {
     setBranches(updated);
     saveLocalData('branches', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         await supabase.from('branches').update(updatedFields).eq('id', id);
       } catch (e) {
@@ -1208,7 +1208,7 @@ export function useMathFinggersDb() {
     setBranches(updated);
     saveLocalData('branches', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         await supabase.from('branches').delete().eq('id', id);
       } catch (e) {
@@ -1223,7 +1223,7 @@ export function useMathFinggersDb() {
     setAdminUsers(updated);
     saveLocalData('admin_users', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         await supabase.from('admin_users').insert([userData]);
       } catch (e) {
@@ -1237,7 +1237,7 @@ export function useMathFinggersDb() {
     setAdminUsers(updated);
     saveLocalData('admin_users', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         await supabase.from('admin_users').update(updatedFields).eq('username', username);
       } catch (e) {
@@ -1251,7 +1251,7 @@ export function useMathFinggersDb() {
     setAdminUsers(updated);
     saveLocalData('admin_users', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         await supabase.from('admin_users').delete().eq('username', username);
       } catch (e) {
@@ -1271,7 +1271,7 @@ export function useMathFinggersDb() {
     setClasses(updated);
     saveLocalData('classes', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         await supabase.from('classes').insert([newClass]);
       } catch (e) {
@@ -1285,7 +1285,7 @@ export function useMathFinggersDb() {
     setClasses(updated);
     saveLocalData('classes', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         await supabase.from('classes').update(updatedFields).eq('id', id);
       } catch (e) {
@@ -1299,7 +1299,7 @@ export function useMathFinggersDb() {
     setClasses(updated);
     saveLocalData('classes', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         await supabase.from('classes').delete().eq('id', id);
       } catch (e) {
@@ -1319,7 +1319,7 @@ export function useMathFinggersDb() {
     setManualIncomes(updated);
     saveLocalData('finance_incomes', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         await supabase.from('finance_incomes').insert([newIncome]);
       } catch (e) {
@@ -1333,7 +1333,7 @@ export function useMathFinggersDb() {
     setManualIncomes(updated);
     saveLocalData('finance_incomes', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         await supabase.from('finance_incomes').update(updatedFields).eq('id', id);
       } catch (e) {
@@ -1347,7 +1347,7 @@ export function useMathFinggersDb() {
     setManualIncomes(updated);
     saveLocalData('finance_incomes', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         await supabase.from('finance_incomes').delete().eq('id', id);
       } catch (e) {
@@ -1367,7 +1367,7 @@ export function useMathFinggersDb() {
     setExpenses(updated);
     saveLocalData('finance_expenses', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         await supabase.from('finance_expenses').insert([newExpense]);
       } catch (e) {
@@ -1381,7 +1381,7 @@ export function useMathFinggersDb() {
     setExpenses(updated);
     saveLocalData('finance_expenses', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         await supabase.from('finance_expenses').update(updatedFields).eq('id', id);
       } catch (e) {
@@ -1395,7 +1395,7 @@ export function useMathFinggersDb() {
     setExpenses(updated);
     saveLocalData('finance_expenses', updated);
 
-    if (supabase && !isOfflineFallback) {
+    if (supabase) {
       try {
         await supabase.from('finance_expenses').delete().eq('id', id);
       } catch (e) {
@@ -1429,7 +1429,7 @@ export function useMathFinggersDb() {
       if (importedSettings) {
         setSettings(importedSettings);
         saveLocalData('settings', importedSettings);
-        if (supabase && !isOfflineFallback) {
+        if (supabase) {
           try {
             await supabase.from('app_settings').upsert([{
               id: 'default',
@@ -1454,7 +1454,7 @@ export function useMathFinggersDb() {
       if (importedStudents) {
         setStudents(importedStudents);
         saveLocalData('students', importedStudents);
-        if (supabase && !isOfflineFallback) {
+        if (supabase) {
           try {
             await supabase.from('students').upsert(importedStudents);
           } catch (e) {
@@ -1467,7 +1467,7 @@ export function useMathFinggersDb() {
       if (importedGrades) {
         setGrades(importedGrades);
         saveLocalData('grades', importedGrades);
-        if (supabase && !isOfflineFallback) {
+        if (supabase) {
           try {
             await supabase.from('grades').upsert(importedGrades);
           } catch (e) {
@@ -1480,7 +1480,7 @@ export function useMathFinggersDb() {
       if (importedAttendance) {
         setAttendance(importedAttendance);
         saveLocalData('attendance', importedAttendance);
-        if (supabase && !isOfflineFallback) {
+        if (supabase) {
           try {
             await supabase.from('attendance').upsert(importedAttendance);
           } catch (e) {
@@ -1493,7 +1493,7 @@ export function useMathFinggersDb() {
       if (importedNotes) {
         setNotes(importedNotes);
         saveLocalData('notes', importedNotes);
-        if (supabase && !isOfflineFallback) {
+        if (supabase) {
           try {
             await supabase.from('notes').upsert(importedNotes);
           } catch (e) {
@@ -1506,7 +1506,7 @@ export function useMathFinggersDb() {
       if (importedInvoices) {
         setInvoices(importedInvoices);
         saveLocalData('invoices', importedInvoices);
-        if (supabase && !isOfflineFallback) {
+        if (supabase) {
           try {
             await supabase.from('invoices').upsert(importedInvoices);
           } catch (e) {
@@ -1525,7 +1525,7 @@ export function useMathFinggersDb() {
       if (importedBranches) {
         setBranches(importedBranches);
         saveLocalData('branches', importedBranches);
-        if (supabase && !isOfflineFallback) {
+        if (supabase) {
           try {
             await supabase.from('branches').upsert(importedBranches);
           } catch (e) {
@@ -1538,7 +1538,7 @@ export function useMathFinggersDb() {
       if (importedAdminUsers) {
         setAdminUsers(importedAdminUsers);
         saveLocalData('admin_users', importedAdminUsers);
-        if (supabase && !isOfflineFallback) {
+        if (supabase) {
           try {
             await supabase.from('admin_users').upsert(importedAdminUsers);
           } catch (e) {
@@ -1551,7 +1551,7 @@ export function useMathFinggersDb() {
       if (importedClasses) {
         setClasses(importedClasses);
         saveLocalData('classes', importedClasses);
-        if (supabase && !isOfflineFallback) {
+        if (supabase) {
           try {
             await supabase.from('classes').upsert(importedClasses);
           } catch (e) {

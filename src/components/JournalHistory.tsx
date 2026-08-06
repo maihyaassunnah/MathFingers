@@ -12,6 +12,7 @@ import {
   Clock,
   Sparkles
 } from 'lucide-react';
+import { CustomDropdown } from './CustomDropdown';
 
 interface JournalHistoryProps {
   students: Student[];
@@ -151,37 +152,31 @@ export function JournalHistory({ students, notes, theme = 'dark' }: JournalHisto
           </div>
 
           {/* Student Filter */}
-          <div className="relative">
-            <User className="absolute left-3 top-3.5 text-slate-400" size={16} />
-            <select
+          <div className="w-full">
+            <CustomDropdown
               value={selectedStudentId}
-              onChange={(e) => setSelectedStudentId(e.target.value)}
-              className={`w-full pl-9 pr-4 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-1 ${getAccentBorderClass()} ${
-                isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-slate-950 border-slate-850 text-white'
-              }`}
-            >
-              <option value="All">Semua Siswa</option>
-              {students.map(student => (
-                <option key={student.id} value={student.id}>{student.name}</option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedStudentId(val)}
+              options={[
+                { value: 'All', label: 'Semua Siswa' },
+                ...students.map(student => ({ value: student.id, label: student.name }))
+              ]}
+              theme={theme}
+              className="w-full"
+            />
           </div>
 
           {/* Month Filter */}
-          <div className="relative">
-            <Calendar className="absolute left-3 top-3.5 text-slate-400" size={16} />
-            <select
+          <div className="w-full">
+            <CustomDropdown
               value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className={`w-full pl-9 pr-4 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-1 ${getAccentBorderClass()} ${
-                isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-slate-950 border-slate-850 text-white'
-              }`}
-            >
-              <option value="All">Semua Bulan</option>
-              {availableMonths.map(m => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedMonth(val)}
+              options={[
+                { value: 'All', label: 'Semua Bulan' },
+                ...availableMonths.map(m => ({ value: m, label: m }))
+              ]}
+              theme={theme}
+              className="w-full"
+            />
           </div>
         </div>
       </div>

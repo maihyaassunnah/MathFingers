@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Branch, AdminUser } from '../types';
+import { CustomDropdown } from './CustomDropdown';
+import { OfflineIndicator } from './OfflineIndicator';
 import { Building, UserPlus, Users, Trash2, Edit2, ShieldAlert, Plus, Shield, Check, Lock, MapPin, Phone, RefreshCw, Upload, Link as LinkIcon, Camera, X, Image as ImageIcon } from 'lucide-react';
 import { getAdminAvatar, compressImageFile } from '../utils';
 
@@ -373,6 +375,7 @@ export function BranchesManager({
             </h3>
 
             <form onSubmit={handleBranchSubmit} className="space-y-4 mt-5">
+              <OfflineIndicator theme={theme} className="mb-2" />
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Nama Cabang</label>
                 <input
@@ -447,6 +450,7 @@ export function BranchesManager({
             </h3>
 
             <form onSubmit={handleAdminSubmit} className="space-y-4 mt-5">
+              <OfflineIndicator theme={theme} className="mb-2" />
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Nama Lengkap Administrator</label>
                 <input
@@ -609,31 +613,27 @@ export function BranchesManager({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Peran Hak Akses</label>
-                  <select
+                  <CustomDropdown
                     value={adminRole}
-                    onChange={(e) => setAdminRole(e.target.value as any)}
-                    className={`w-full px-4 py-3 rounded-xl border text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${
-                      isLight ? 'bg-slate-50 border-slate-200 text-slate-850' : 'bg-slate-950/50 border-slate-800 text-white'
-                    }`}
-                  >
-                    <option value="branch_admin">Admin Cabang</option>
-                    <option value="super_admin">Super Admin</option>
-                  </select>
+                    onChange={(val) => setAdminRole(val as any)}
+                    options={[
+                      { value: 'branch_admin', label: 'Admin Cabang' },
+                      { value: 'super_admin', label: 'Super Admin' }
+                    ]}
+                    theme={theme}
+                    className="w-full"
+                  />
                 </div>
 
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Cabang Penempatan</label>
-                  <select
+                  <CustomDropdown
                     value={adminBranch}
-                    onChange={(e) => setAdminBranch(e.target.value)}
-                    className={`w-full px-4 py-3 rounded-xl border text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${
-                      isLight ? 'bg-slate-50 border-slate-200 text-slate-850' : 'bg-slate-950/50 border-slate-800 text-white'
-                    }`}
-                  >
-                    {branches.map(b => (
-                      <option key={b.id} value={b.name}>{b.name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setAdminBranch(val)}
+                    options={branches.map(b => ({ value: b.name, label: b.name }))}
+                    theme={theme}
+                    className="w-full"
+                  />
                 </div>
               </div>
 

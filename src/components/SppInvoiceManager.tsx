@@ -21,6 +21,8 @@ import {
   BookOpen
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
+import { CustomDropdown } from './CustomDropdown';
+import { OfflineIndicator } from './OfflineIndicator';
 
 interface SppInvoiceManagerProps {
   students: Student[];
@@ -223,7 +225,7 @@ export function SppInvoiceManager({
 
     let message = '';
     if (invoice.status === 'unpaid') {
-      message = `Assalamu'alaikum warahmatullahi wabarakatuh. Ibu/Bapak *${student.parentName}*,\n\nSemoga sehat selalu. Kami menginfokan *Invoice SPP bimbingan Les Privat Math Fingers* ananda *${student.name}* untuk periode *${invoice.month}*:\n\n🧾 No Invoice: ${invoice.invoiceNo}\n💵 Jumlah Tagihan: *${formatRupiah(invoice.amount)}*\n📅 Tanggal Jatuh Tempo: ${invoice.dueDate}\n\n*Informasi Pembayaran:*\n🏦 Bank ${settings.bankName}: *${settings.bankAccountNo}*\n👤 Atas Nama: *${settings.bankAccountHolder}*\n\n_(Mohon kirimkan konfirmasi berupa foto bukti transfer jika pembayaran telah dilakukan. Terima kasih!_ 🙏)\n\n*Math Fingers* - Berhitung Cepat & Akurat Tanpa Alat! ✨`;
+      message = `Assalamu'alaikum warahmatullahi wabarakatuh. Ibu/Bapak *${student.parentName}*,\n\nSemoga sehat selalu. Kami menginfokan *Invoice SPP bimbel math finger* ananda *${student.name}* untuk periode *${invoice.month}*:\n\n🧾 No Invoice: ${invoice.invoiceNo}\n💵 Jumlah Tagihan: *${formatRupiah(invoice.amount)}*\n📅 Tanggal Jatuh Tempo: ${invoice.dueDate}\n\n*Informasi Pembayaran:*\n💸 Cash/Tunai\n🏦 Bank ${settings.bankName}: *${settings.bankAccountNo}*\n👤 Atas Nama: *${settings.bankAccountHolder}*\n\n_(Mohon kirimkan konfirmasi berupa foto bukti transfer jika pembayaran telah dilakukan. Terima kasih!_ 🙏)\n\n*Math Fingers* - Berhitung Cepat & Akurat Tanpa Alat! ✨`;
     } else {
       message = `Assalamu'alaikum warahmatullahi wabarakatuh. Ibu/Bapak *${student.parentName}*,\n\nTerima kasih! Kami telah menerima pembayaran SPP Les Privat *Math Fingers* ananda *${student.name}* periode *${invoice.month}*. Berikut kuitansi tanda terima digital:\n\n🧾 No Invoice: ${invoice.invoiceNo}\n💵 Jumlah Pembayaran: *${formatRupiah(invoice.amount)}*\n📅 Tanggal Bayar: ${invoice.paidAt || '-'}\n💳 Metode Pembayaran: *${invoice.paymentMethod || 'Transfer'}*\n📌 Status: *LUNAS (PAID)* ✅\n\nTerima kasih banyak atas dukungannya. Mari terus dukung motivasi belajar matematika ananda! ⚡\n\nSalam Hangat,\n*${settings.defaultTeacherName}*`;
     }
@@ -671,21 +673,19 @@ function angkaKeTerbilang(nominal: number): string {
           />
         </div>
 
-        <div className="w-full md:w-auto">
-          <select
+        <div className="w-full md:w-auto md:min-w-[180px]">
+          <CustomDropdown
             id="filter-invoice-status"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-              isLight 
-                ? 'bg-white border-slate-200 text-slate-700' 
-                : 'bg-slate-950/40 border-slate-800 text-slate-300'
-            }`}
-          >
-            <option value="All" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Semua Pembayaran</option>
-            <option value="unpaid" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Belum Lunas</option>
-            <option value="paid" className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>Lunas</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            options={[
+              { value: 'All', label: 'Semua Pembayaran' },
+              { value: 'unpaid', label: 'Belum Lunas' },
+              { value: 'paid', label: 'Lunas' }
+            ]}
+            theme={theme}
+            className="w-full"
+          />
         </div>
       </div>
 
@@ -703,6 +703,7 @@ function angkaKeTerbilang(nominal: number): string {
             </div>
 
             <form onSubmit={handleSubmitInvoice} className="p-6 space-y-4">
+              <OfflineIndicator theme={theme} className="mb-2" />
               <div>
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Pilih Kategori Pembayaran *</label>
                 <div className="grid grid-cols-3 gap-2">
@@ -745,20 +746,15 @@ function angkaKeTerbilang(nominal: number): string {
               <div>
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Pilih Siswa *</label>
                 {activeStudents.length === 0 ? (
-                  <p className="text-sm text-amber-500 flex items-center gap-1"><AlertCircle size={15} /> Tidak ada siswa aktif. Daftarkan siswa terlebih dahulu.</p>
+                   <p className="text-sm text-amber-500 flex items-center gap-1"><AlertCircle size={15} /> Tidak ada siswa aktif. Daftarkan siswa terlebih dahulu.</p>
                 ) : (
-                  <select
-                    required
+                  <CustomDropdown
                     value={selectedStudentId}
-                    onChange={(e) => setSelectedStudentId(e.target.value)}
-                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 ${getAccentBorderClass()} ${
-                      isLight ? 'bg-slate-100 border-slate-200 text-slate-750 font-semibold' : 'bg-slate-900 border-slate-800 text-slate-300'
-                    }`}
-                  >
-                    {activeStudents.map(s => (
-                      <option key={s.id} value={s.id} className={isLight ? 'bg-white text-slate-800' : 'bg-[#020617] text-white'}>{s.name} ({s.level})</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setSelectedStudentId(val)}
+                    options={activeStudents.map(s => ({ value: s.id, label: `${s.name} (${s.level})` }))}
+                    theme={theme}
+                    className="w-full"
+                  />
                 )}
               </div>
 
@@ -941,16 +937,16 @@ function angkaKeTerbilang(nominal: number): string {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Metode Bayar</label>
-                    <select
+                    <CustomDropdown
                       value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value as 'Transfer' | 'Tunai')}
-                      className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 text-xs font-medium ${getAccentBorderClass()} ${
-                        isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
-                      }`}
-                    >
-                      <option value="Transfer">Transfer Bank</option>
-                      <option value="Tunai">Tunai / Cash</option>
-                    </select>
+                      onChange={(val) => setPaymentMethod(val as 'Transfer' | 'Tunai')}
+                      options={[
+                        { value: 'Transfer', label: 'Transfer Bank' },
+                        { value: 'Tunai', label: 'Tunai / Cash' }
+                      ]}
+                      theme={theme}
+                      className="w-full"
+                    />
                   </div>
 
                   <div>

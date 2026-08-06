@@ -24,6 +24,8 @@ import {
 import { jsPDF } from 'jspdf';
 import * as XLSX from 'xlsx';
 import { Student, Invoice, FinanceIncome, FinanceExpense, Branch } from '../types';
+import { CustomDropdown } from './CustomDropdown';
+import { OfflineIndicator } from './OfflineIndicator';
 
 interface FinanceManagerProps {
   students: Student[];
@@ -702,7 +704,7 @@ export default function FinanceManager({
         {/* Branch & Month Filters & Quick Stats info */}
         <div className="grid grid-cols-2 gap-2 w-full md:flex md:w-auto md:items-center md:gap-3">
           {/* Month Filter */}
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs transition-colors justify-between md:justify-start ${
+          <div className={`flex items-center gap-2 px-3 py-1 rounded-xl border text-xs transition-colors justify-between md:justify-start ${
             isLight 
               ? 'bg-white border-slate-200 shadow-sm' 
               : 'bg-slate-900 border-slate-800'
@@ -711,22 +713,23 @@ export default function FinanceManager({
               <Calendar className="w-3.5 h-3.5 text-slate-400" />
               <span className={`hidden md:inline font-semibold ${isLight ? 'text-slate-500' : 'text-slate-300'}`}>Bulan:</span>
             </div>
-            <select
+            <CustomDropdown
               value={filterMonth}
-              onChange={(e) => setFilterMonth(e.target.value)}
-              className="bg-transparent border-none outline-none font-bold text-emerald-600 dark:text-emerald-400 cursor-pointer text-right md:text-left text-ellipsis overflow-hidden whitespace-nowrap max-w-[100px] sm:max-w-none"
-            >
-              <option value="all" className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>Semua Bulan</option>
-              {uniqueMonths.map(m => (
-                <option key={m} value={m} className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>
-                  {formatMonthYear(m)}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setFilterMonth(val)}
+              options={[
+                { value: 'all', label: 'Semua Bulan' },
+                ...uniqueMonths.map(m => ({
+                  value: m,
+                  label: formatMonthYear(m)
+                }))
+              ]}
+              theme={theme}
+              className="bg-transparent border-none outline-none font-bold text-emerald-600 dark:text-emerald-400 cursor-pointer min-w-[110px]"
+            />
           </div>
 
           {/* Branch Filter */}
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs transition-colors justify-between md:justify-start ${
+          <div className={`flex items-center gap-2 px-3 py-1 rounded-xl border text-xs transition-colors justify-between md:justify-start ${
             isLight 
               ? 'bg-white border-slate-200 shadow-sm' 
               : 'bg-slate-900 border-slate-800'
@@ -735,16 +738,19 @@ export default function FinanceManager({
               <Layers className="w-3.5 h-3.5 text-slate-400" />
               <span className={`hidden md:inline font-semibold ${isLight ? 'text-slate-500' : 'text-slate-300'}`}>Cabang:</span>
             </div>
-            <select
+            <CustomDropdown
               value={filterBranch}
-              onChange={(e) => setFilterBranch(e.target.value)}
-              className="bg-transparent border-none outline-none font-bold text-emerald-600 dark:text-emerald-400 cursor-pointer text-right md:text-left text-ellipsis overflow-hidden whitespace-nowrap max-w-[100px] sm:max-w-none"
-            >
-              <option value="all" className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>Semua Cabang</option>
-              {branches.map(b => (
-                <option key={b.id} value={b.name} className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>{b.name}</option>
-              ))}
-            </select>
+              onChange={(val) => setFilterBranch(val)}
+              options={[
+                { value: 'all', label: 'Semua Cabang' },
+                ...branches.map(b => ({
+                  value: b.name,
+                  label: b.name
+                }))
+              ]}
+              theme={theme}
+              className="bg-transparent border-none outline-none font-bold text-emerald-600 dark:text-emerald-400 cursor-pointer min-w-[110px]"
+            />
           </div>
         </div>
       </div>
@@ -1004,36 +1010,30 @@ export default function FinanceManager({
                 />
               </div>
 
-              <select
+              <CustomDropdown
                 value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                className={`px-3 py-2 text-xs rounded-xl border outline-none cursor-pointer transition-all ${
-                  isLight 
-                    ? 'border-slate-200 bg-white text-slate-800 shadow-sm' 
-                    : 'border-slate-800 bg-slate-900 text-slate-100'
-                }`}
-              >
-                <option value="all">Semua Kategori</option>
-                <option value="SPP">SPP</option>
-                <option value="Uang Pendaftaran">Uang Pendaftaran</option>
-                <option value="Penjualan Buku">Penjualan Buku</option>
-                <option value="Lainnya">Lainnya</option>
-              </select>
+                onChange={(val) => setFilterCategory(val)}
+                options={[
+                  { value: 'all', label: 'Semua Kategori' },
+                  { value: 'SPP', label: 'SPP' },
+                  { value: 'Uang Pendaftaran', label: 'Uang Pendaftaran' },
+                  { value: 'Penjualan Buku', label: 'Penjualan Buku' },
+                  { value: 'Lainnya', label: 'Lainnya' }
+                ]}
+                theme={theme}
+                className="w-40"
+              />
 
-              <select
+              <CustomDropdown
                 value={filterMonth}
-                onChange={(e) => setFilterMonth(e.target.value)}
-                className={`px-3 py-2 text-xs rounded-xl border outline-none cursor-pointer transition-all ${
-                  isLight 
-                    ? 'border-slate-200 bg-white text-slate-800 shadow-sm' 
-                    : 'border-slate-800 bg-slate-900 text-slate-100'
-                }`}
-              >
-                <option value="all">Semua Bulan</option>
-                {uniqueMonths.map(m => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
+                onChange={(val) => setFilterMonth(val)}
+                options={[
+                  { value: 'all', label: 'Semua Bulan' },
+                  ...uniqueMonths.map(m => ({ value: m, label: m }))
+                ]}
+                theme={theme}
+                className="w-40"
+              />
             </div>
 
             <button
@@ -1144,42 +1144,36 @@ export default function FinanceManager({
                 />
               </div>
 
-              <select
+              <CustomDropdown
                 value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                className={`px-3 py-2 text-xs rounded-xl border outline-none cursor-pointer transition-all ${
-                  isLight 
-                    ? 'border-slate-200 bg-white text-slate-800 shadow-sm' 
-                    : 'border-slate-800 bg-slate-900 text-slate-100'
-                }`}
-              >
-                <option value="all">Semua Kategori</option>
-                <option value="Gaji tutor">Gaji tutor</option>
-                <option value="Fee admin aplikasi">Fee admin aplikasi</option>
-                <option value="Cetak buku">Cetak buku</option>
-                <option value="ATK">ATK</option>
-                <option value="Reward siswa">Reward siswa</option>
-                <option value="Promosi">Promosi</option>
-                <option value="Listrik">Listrik</option>
-                <option value="Internet">Internet</option>
-                <option value="Transport">Transport</option>
-                <option value="Lainnya">Lainnya</option>
-              </select>
+                onChange={(val) => setFilterCategory(val)}
+                options={[
+                  { value: 'all', label: 'Semua Kategori' },
+                  { value: 'Gaji tutor', label: 'Gaji tutor' },
+                  { value: 'Fee admin aplikasi', label: 'Fee admin aplikasi' },
+                  { value: 'Cetak buku', label: 'Cetak buku' },
+                  { value: 'ATK', label: 'ATK' },
+                  { value: 'Reward siswa', label: 'Reward siswa' },
+                  { value: 'Promosi', label: 'Promosi' },
+                  { value: 'Listrik', label: 'Listrik' },
+                  { value: 'Internet', label: 'Internet' },
+                  { value: 'Transport', label: 'Transport' },
+                  { value: 'Lainnya', label: 'Lainnya' }
+                ]}
+                theme={theme}
+                className="w-40"
+              />
 
-              <select
+              <CustomDropdown
                 value={filterMonth}
-                onChange={(e) => setFilterMonth(e.target.value)}
-                className={`px-3 py-2 text-xs rounded-xl border outline-none cursor-pointer transition-all ${
-                  isLight 
-                    ? 'border-slate-200 bg-white text-slate-800 shadow-sm' 
-                    : 'border-slate-800 bg-slate-900 text-slate-100'
-                }`}
-              >
-                <option value="all">Semua Bulan</option>
-                {uniqueMonths.map(m => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
+                onChange={(val) => setFilterMonth(val)}
+                options={[
+                  { value: 'all', label: 'Semua Bulan' },
+                  ...uniqueMonths.map(m => ({ value: m, label: m }))
+                ]}
+                theme={theme}
+                className="w-40"
+              />
             </div>
 
             <button
@@ -1307,20 +1301,16 @@ export default function FinanceManager({
                 />
               </div>
 
-              <select
+              <CustomDropdown
                 value={filterMonth}
-                onChange={(e) => setFilterMonth(e.target.value)}
-                className={`px-3 py-2 text-xs rounded-xl border outline-none cursor-pointer transition-all ${
-                  isLight 
-                    ? 'border-slate-200 bg-white text-slate-800 shadow-sm' 
-                    : 'border-slate-800 bg-slate-900 text-slate-100'
-                }`}
-              >
-                <option value="all">Semua Bulan</option>
-                {uniqueMonths.map(m => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
+                onChange={(val) => setFilterMonth(val)}
+                options={[
+                  { value: 'all', label: 'Semua Bulan' },
+                  ...uniqueMonths.map(m => ({ value: m, label: m }))
+                ]}
+                theme={theme}
+                className="w-40"
+              />
             </div>
           </div>
 
@@ -1392,21 +1382,19 @@ export default function FinanceManager({
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
               <div>
                 <label className={`text-[11px] font-bold block mb-1.5 uppercase ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>Rentang Waktu</label>
-                <select
+                <CustomDropdown
                   value={reportFilterType}
-                  onChange={(e) => setReportFilterType(e.target.value as any)}
-                  className={`w-full px-3 py-2 text-xs rounded-xl border outline-none cursor-pointer ${
-                    isLight 
-                      ? 'border-slate-200 bg-white text-slate-800 shadow-sm' 
-                      : 'border-slate-800 bg-slate-900 text-slate-100'
-                  }`}
-                >
-                  <option value="harian">Hari Ini</option>
-                  <option value="mingguan">7 Hari Terakhir</option>
-                  <option value="bulanan">Bulan Ini</option>
-                  <option value="tahunan">Tahun Ini</option>
-                  <option value="custom">Atur Manual (Rentang)</option>
-                </select>
+                  onChange={(val) => setReportFilterType(val as any)}
+                  options={[
+                    { value: 'harian', label: 'Hari Ini' },
+                    { value: 'mingguan', label: '7 Hari Terakhir' },
+                    { value: 'bulanan', label: 'Bulan Ini' },
+                    { value: 'tahunan', label: 'Tahun Ini' },
+                    { value: 'custom', label: 'Atur Manual (Rentang)' }
+                  ]}
+                  theme={theme}
+                  className="w-full"
+                />
               </div>
 
               {reportFilterType === 'custom' && (
@@ -1567,6 +1555,7 @@ export default function FinanceManager({
             </div>
             
             <form onSubmit={handleAddManualIncomeSubmit} className="p-5 space-y-4 text-xs">
+              <OfflineIndicator theme={theme} className="mb-2" />
               <div>
                 <label className={`block text-[11px] font-bold mb-1.5 uppercase ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>Tanggal Transaksi</label>
                 <input
@@ -1582,18 +1571,18 @@ export default function FinanceManager({
 
               <div>
                 <label className={`block text-[11px] font-bold mb-1.5 uppercase ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>Kategori Pemasukan</label>
-                <select
+                <CustomDropdown
                   value={incomeCategory}
-                  onChange={(e) => setIncomeCategory(e.target.value as any)}
-                  className={`w-full px-3 py-2 rounded-xl border bg-transparent outline-none focus:ring-1 focus:ring-emerald-500 transition-all ${
-                    isLight ? 'border-slate-200 text-slate-800' : 'border-slate-800 text-slate-100'
-                  }`}
-                >
-                  <option value="Lainnya" className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>Lainnya (Sponsor, Jasa Lain)</option>
-                  <option value="SPP" className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>SPP</option>
-                  <option value="Uang Pendaftaran" className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>Uang Pendaftaran</option>
-                  <option value="Penjualan Buku" className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>Penjualan Buku</option>
-                </select>
+                  onChange={(val) => setIncomeCategory(val as any)}
+                  options={[
+                    { value: 'Lainnya', label: 'Lainnya (Sponsor, Jasa Lain)' },
+                    { value: 'SPP', label: 'SPP' },
+                    { value: 'Uang Pendaftaran', label: 'Uang Pendaftaran' },
+                    { value: 'Penjualan Buku', label: 'Penjualan Buku' }
+                  ]}
+                  theme={theme}
+                  className="w-full"
+                />
               </div>
 
               <div>
@@ -1639,17 +1628,13 @@ export default function FinanceManager({
 
               <div>
                 <label className={`block text-[11px] font-bold mb-1.5 uppercase ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>Cabang Alokasi</label>
-                <select
+                <CustomDropdown
                   value={incomeBranch}
-                  onChange={(e) => setIncomeBranch(e.target.value)}
-                  className={`w-full px-3 py-2 rounded-xl border bg-transparent outline-none focus:ring-1 focus:ring-emerald-500 transition-all ${
-                    isLight ? 'border-slate-200 text-slate-800' : 'border-slate-800 text-slate-100'
-                  }`}
-                >
-                  {branches.map(b => (
-                    <option key={b.id} value={b.name} className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>{b.name}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setIncomeBranch(val)}
+                  options={branches.map(b => ({ value: b.name, label: b.name }))}
+                  theme={theme}
+                  className="w-full"
+                />
               </div>
 
               <button
@@ -1685,6 +1670,7 @@ export default function FinanceManager({
             </div>
             
             <form onSubmit={handleAddExpenseSubmit} className="p-5 space-y-4 text-xs">
+              <OfflineIndicator theme={theme} className="mb-2" />
               <div>
                 <label className={`block text-[11px] font-bold mb-1.5 uppercase ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>Tanggal Transaksi</label>
                 <input
@@ -1700,24 +1686,24 @@ export default function FinanceManager({
 
               <div>
                 <label className={`block text-[11px] font-bold mb-1.5 uppercase ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>Kategori Pengeluaran</label>
-                <select
+                <CustomDropdown
                   value={expenseCategory}
-                  onChange={(e) => setExpenseCategory(e.target.value as any)}
-                  className={`w-full px-3 py-2 rounded-xl border bg-transparent outline-none focus:ring-1 focus:ring-rose-500 transition-all ${
-                    isLight ? 'border-slate-200 text-slate-800' : 'border-slate-800 text-slate-100'
-                  }`}
-                >
-                  <option value="Lainnya" className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>Lainnya</option>
-                  <option value="Gaji tutor" className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>Gaji tutor</option>
-                  <option value="Fee admin aplikasi" className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>Fee admin aplikasi</option>
-                  <option value="Cetak buku" className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>Cetak buku</option>
-                  <option value="ATK" className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>ATK</option>
-                  <option value="Reward siswa" className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>Reward siswa</option>
-                  <option value="Promosi" className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>Promosi</option>
-                  <option value="Listrik" className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>Listrik</option>
-                  <option value="Internet" className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>Internet</option>
-                  <option value="Transport" className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>Transport</option>
-                </select>
+                  onChange={(val) => setExpenseCategory(val as any)}
+                  options={[
+                    { value: 'Lainnya', label: 'Lainnya' },
+                    { value: 'Gaji tutor', label: 'Gaji tutor' },
+                    { value: 'Fee admin aplikasi', label: 'Fee admin aplikasi' },
+                    { value: 'Cetak buku', label: 'Cetak buku' },
+                    { value: 'ATK', label: 'ATK' },
+                    { value: 'Reward siswa', label: 'Reward siswa' },
+                    { value: 'Promosi', label: 'Promosi' },
+                    { value: 'Listrik', label: 'Listrik' },
+                    { value: 'Internet', label: 'Internet' },
+                    { value: 'Transport', label: 'Transport' }
+                  ]}
+                  theme={theme}
+                  className="w-full"
+                />
               </div>
 
               <div>
@@ -1736,16 +1722,16 @@ export default function FinanceManager({
 
               <div>
                 <label className={`block text-[11px] font-bold mb-1.5 uppercase ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>Metode Pembayaran</label>
-                <select
+                <CustomDropdown
                   value={expensePaymentMethod}
-                  onChange={(e) => setExpensePaymentMethod(e.target.value as any)}
-                  className={`w-full px-3 py-2 rounded-xl border bg-transparent outline-none focus:ring-1 focus:ring-rose-500 transition-all ${
-                    isLight ? 'border-slate-200 text-slate-800' : 'border-slate-800 text-slate-100'
-                  }`}
-                >
-                  <option value="Transfer" className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>Transfer Bank</option>
-                  <option value="Tunai" className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>Tunai / Cash</option>
-                </select>
+                  onChange={(val) => setExpensePaymentMethod(val as any)}
+                  options={[
+                    { value: 'Transfer', label: 'Transfer Bank' },
+                    { value: 'Tunai', label: 'Tunai / Cash' }
+                  ]}
+                  theme={theme}
+                  className="w-full"
+                />
               </div>
 
               <div>
@@ -1793,17 +1779,13 @@ export default function FinanceManager({
 
               <div>
                 <label className={`block text-[11px] font-bold mb-1.5 uppercase ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>Cabang Alokasi</label>
-                <select
+                <CustomDropdown
                   value={expenseBranch}
-                  onChange={(e) => setExpenseBranch(e.target.value)}
-                  className={`w-full px-3 py-2 rounded-xl border bg-transparent outline-none focus:ring-1 focus:ring-rose-500 transition-all ${
-                    isLight ? 'border-slate-200 text-slate-800' : 'border-slate-800 text-slate-100'
-                  }`}
-                >
-                  {branches.map(b => (
-                    <option key={b.id} value={b.name} className={isLight ? 'text-slate-800' : 'text-slate-100 bg-slate-900'}>{b.name}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setExpenseBranch(val)}
+                  options={branches.map(b => ({ value: b.name, label: b.name }))}
+                  theme={theme}
+                  className="w-full"
+                />
               </div>
 
               <button

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Student, ClassGroup, Branch } from '../types';
+import { CustomDropdown } from './CustomDropdown';
 import { getStudentUniqueCode } from '../utils';
 import jsQR from 'jsqr';
 import { 
@@ -1299,36 +1300,28 @@ export function StudentQrCards({
 
         <div className="flex flex-wrap gap-2 w-full md:w-auto">
           {/* Cabang Filter */}
-          <select
+          <CustomDropdown
             value={branchFilter}
-            onChange={(e) => setBranchFilter(e.target.value)}
-            className={`border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-              isLight 
-                ? 'bg-white border-slate-200 text-slate-700' 
-                : 'bg-slate-950/40 border-slate-800 text-slate-300'
-            }`}
-          >
-            <option value="All">Semua Cabang</option>
-            {availableBranches.map(b => (
-              <option key={b} value={b}>Cabang: {b}</option>
-            ))}
-          </select>
+            onChange={(val) => setBranchFilter(val)}
+            options={[
+              { value: 'All', label: 'Semua Cabang' },
+              ...availableBranches.map(b => ({ value: b, label: `Cabang: ${b}` }))
+            ]}
+            theme={theme}
+            className="min-w-[140px]"
+          />
 
           {/* Kelas Filter */}
-          <select
+          <CustomDropdown
             value={classFilter}
-            onChange={(e) => setClassFilter(e.target.value)}
-            className={`border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-              isLight 
-                ? 'bg-white border-slate-200 text-slate-700' 
-                : 'bg-slate-950/40 border-slate-800 text-slate-300'
-            }`}
-          >
-            <option value="All">Semua Kelas</option>
-            {availableClasses.map(k => (
-              <option key={k} value={k}>Kelas: {k}</option>
-            ))}
-          </select>
+            onChange={(val) => setClassFilter(val)}
+            options={[
+              { value: 'All', label: 'Semua Kelas' },
+              ...availableClasses.map(k => ({ value: k, label: `Kelas: ${k}` }))
+            ]}
+            theme={theme}
+            className="min-w-[140px]"
+          />
 
           {(searchQuery || branchFilter !== 'All' || classFilter !== 'All') && (
             <button
@@ -1876,19 +1869,16 @@ export function StudentQrCards({
                 {cameraDevices.length > 1 && (
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Ganti Kamera</label>
-                    <select
+                    <CustomDropdown
                       value={selectedDeviceId}
-                      onChange={(e) => setSelectedDeviceId(e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                        isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-                      }`}
-                    >
-                      {cameraDevices.map(device => (
-                        <option key={device.deviceId} value={device.deviceId}>
-                          {device.label || `Kamera ${cameraDevices.indexOf(device) + 1}`}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => setSelectedDeviceId(val)}
+                      options={cameraDevices.map(device => ({
+                        value: device.deviceId,
+                        label: device.label || `Kamera ${cameraDevices.indexOf(device) + 1}`
+                      }))}
+                      theme={theme}
+                      className="w-full"
+                    />
                   </div>
                 )}
               </div>

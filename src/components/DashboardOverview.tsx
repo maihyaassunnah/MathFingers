@@ -2,6 +2,18 @@ import React, { useState } from 'react';
 import { Student, Attendance, Invoice, Grade, AppSettings, DashboardTask, Branch, AdminUser } from '../types';
 import { formatRupiah, getWhatsAppLink, getStudentUniqueCode } from '../utils';
 import { MathFingerLogo } from './MathFingerLogo';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend
+} from 'recharts';
 import { 
   Users, 
   CheckSquare, 
@@ -201,6 +213,88 @@ export function DashboardOverview({
   const dueInvoices = unpaidInvoices.filter(inv => {
     return inv.dueDate <= todayStr;
   });
+
+  // Helper to group by week for Attendance Trends
+  const getWeeklyAttendanceData = () => {
+    const attendanceSource = allAttendance.length > 0 ? allAttendance : attendance;
+    if (attendanceSource.length === 0) return [];
+
+    const now = new Date();
+    const weeksData = [];
+    
+    for (let i = 5; i >= 0; i--) {
+      const startOfWeek = new Date();
+      startOfWeek.setDate(now.getDate() - (now.getDay() || 7) + 1 - (i * 7));
+      startOfWeek.setHours(0, 0, 0, 0);
+
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      endOfWeek.setHours(23, 59, 59, 999);
+
+      const startStr = startOfWeek.toISOString().slice(0, 10);
+      const endStr = endOfWeek.toISOString().slice(0, 10);
+
+      const weeklyRecords = attendanceSource.filter(a => a.date >= startStr && a.date <= endStr);
+      const present = weeklyRecords.filter(a => a.status === 'present').length;
+      const permission = weeklyRecords.filter(a => a.status === 'permission').length;
+      const absent = weeklyRecords.filter(a => a.status === 'absent').length;
+
+      const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' };
+      const label = `${startOfWeek.toLocaleDateString('id-ID', options)} - ${endOfWeek.toLocaleDateString('id-ID', options)}`;
+
+      weeksData.push({
+        weekLabel: label,
+        'Hadir': present,
+        'Izin': permission,
+        'Absen': absent,
+        'Total': weeklyRecords.length
+      });
+    }
+    return weeksData;
+  };
+
+  const getSppIncomeData = () => {
+    const invoicesSource = allInvoices.length > 0 ? allInvoices : invoices;
+    const actualBranchNames = branches.map(br => br.name);
+    const isPusatMissing = !actualBranchNames.includes('Pusat');
+
+    const getAssignedBranch = (recordBranch: string | undefined | null) => {
+      const b = recordBranch || 'Pusat';
+      if (isPusatMissing && (b === 'Pusat' || !actualBranchNames.includes(b))) {
+        return branches[0]?.name || 'Pusat';
+      }
+      return b;
+    };
+
+    return branches.map(branch => {
+      const branchInvoices = invoicesSource.filter(i => getAssignedBranch(i.branch) === branch.name && (i.category === 'spp' || !i.category));
+      
+      let totalPaid = 0;
+      let totalUnpaid = 0;
+
+      branchInvoices.forEach(inv => {
+        if (inv.status === 'paid') {
+          totalPaid += inv.amount;
+        } else if (inv.status === 'partially_paid') {
+          const paid = inv.amountPaid || 0;
+          totalPaid += paid;
+          totalUnpaid += Math.max(0, inv.amount - paid);
+        } else {
+          totalUnpaid += inv.amount;
+        }
+      });
+
+      return {
+        name: branch.name,
+        'Lunas': totalPaid,
+        'Tunggakan': totalUnpaid,
+        'Total': totalPaid + totalUnpaid
+      };
+    });
+  };
+
+  const weeklyAttendanceData = getWeeklyAttendanceData();
+  const sppIncomeData = getSppIncomeData();
 
   // Handle adding custom task
   const handleAddTaskSubmit = (e: React.FormEvent) => {
@@ -433,6 +527,205 @@ export function DashboardOverview({
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Visualisasi Data & Tren Analitik */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            
+            {/* Chart 1: Tren Kehadiran Siswa Mingguan */}
+            <div className={`p-5 rounded-2xl border ${isLight ? 'bg-slate-50/50 border-slate-200' : 'bg-[#0f172a] border-slate-800'} space-y-4`}>
+              <div className="flex items-center gap-2 border-b pb-3 border-slate-150 dark:border-slate-800/80">
+                <TrendingUp className="text-emerald-500" size={18} />
+                <div>
+                  <h4 className={`font-bold text-sm ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                    Tren Kehadiran Siswa Mingguan
+                  </h4>
+                  <p className="text-[11px] text-slate-500">Agregat jumlah status kehadiran (Hadir, Izin, Absen) 6 minggu terakhir</p>
+                </div>
+              </div>
+
+              <div className="w-full h-[280px]">
+                {weeklyAttendanceData.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-xs text-slate-500 italic">
+                    Belum ada data kehadiran mingguan
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={weeklyAttendanceData}
+                      margin={{ top: 10, right: 10, left: -25, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="colorHadir" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.25}/>
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorIzin" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.25}/>
+                          <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorAbsen" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.25}/>
+                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke={isLight ? '#e2e8f0' : '#1e293b'} />
+                      <XAxis 
+                        dataKey="weekLabel" 
+                        stroke="#64748b" 
+                        fontSize={10} 
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis 
+                        stroke="#64748b" 
+                        fontSize={10} 
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <Tooltip
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className={`p-3 rounded-xl border shadow-lg ${isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-950 border-slate-800 text-slate-200'} text-xs font-semibold space-y-1`}>
+                                <p className="font-extrabold mb-1">{label}</p>
+                                {payload.map((p: any) => (
+                                  <p key={p.name} style={{ color: p.color }}>
+                                    {p.name}: <span className="font-bold">{p.value} sesi</span>
+                                  </p>
+                                ))}
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Legend 
+                        verticalAlign="top" 
+                        height={36} 
+                        iconType="circle"
+                        iconSize={8}
+                        wrapperStyle={{ fontSize: 11, fontWeight: 'bold' }}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="Hadir" 
+                        stroke="#10b981" 
+                        fillOpacity={1} 
+                        fill="url(#colorHadir)" 
+                        strokeWidth={2}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="Izin" 
+                        stroke="#f59e0b" 
+                        fillOpacity={1} 
+                        fill="url(#colorIzin)" 
+                        strokeWidth={2}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="Absen" 
+                        stroke="#ef4444" 
+                        fillOpacity={1} 
+                        fill="url(#colorAbsen)" 
+                        strokeWidth={2}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
+
+            {/* Chart 2: Pendapatan SPP per Cabang */}
+            <div className={`p-5 rounded-2xl border ${isLight ? 'bg-slate-50/50 border-slate-200' : 'bg-[#0f172a] border-slate-800'} space-y-4`}>
+              <div className="flex items-center gap-2 border-b pb-3 border-slate-150 dark:border-slate-800/80">
+                <Receipt className="text-emerald-500" size={18} />
+                <div>
+                  <h4 className={`font-bold text-sm ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                    Pendapatan & Tunggakan SPP per Cabang
+                  </h4>
+                  <p className="text-[11px] text-slate-500">Perbandingan jumlah pembayaran lunas vs sisa tunggakan SPP per cabang</p>
+                </div>
+              </div>
+
+              <div className="w-full h-[280px]">
+                {sppIncomeData.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-xs text-slate-500 italic">
+                    Belum ada data cabang bimbingan
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={sppIncomeData}
+                      margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke={isLight ? '#e2e8f0' : '#1e293b'} />
+                      <XAxis 
+                        dataKey="name" 
+                        stroke="#64748b" 
+                        fontSize={10} 
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis 
+                        stroke="#64748b" 
+                        fontSize={10} 
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v) => v >= 1000000 ? `${(v/1000000).toFixed(1)}jt` : v >= 1000 ? `${(v/1000).toFixed(0)}rb` : v}
+                      />
+                      <Tooltip
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className={`p-3 rounded-xl border shadow-lg ${isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-950 border-slate-800 text-slate-200'} text-xs font-semibold space-y-1`}>
+                                <p className="font-extrabold mb-1">Cabang {label}</p>
+                                {payload.map((p: any) => (
+                                  <p key={p.name} style={{ color: p.color }}>
+                                    {p.name}: <span className="font-bold">{formatRupiah(p.value)}</span>
+                                  </p>
+                                ))}
+                                {payload.length > 1 && (
+                                  <p className="border-t pt-1 mt-1 text-[11px] opacity-80">
+                                    Total: <span className="font-bold text-slate-500 dark:text-slate-400">
+                                      {formatRupiah(payload.reduce((sum: number, p: any) => sum + (p.value || 0), 0))}
+                                    </span>
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Legend 
+                        verticalAlign="top" 
+                        height={36} 
+                        iconType="circle"
+                        iconSize={8}
+                        wrapperStyle={{ fontSize: 11, fontWeight: 'bold' }}
+                      />
+                      <Bar 
+                        dataKey="Lunas" 
+                        name="Lunas (Paid)" 
+                        fill="#10b981" 
+                        radius={[4, 4, 0, 0]} 
+                        maxBarSize={45}
+                      />
+                      <Bar 
+                        dataKey="Tunggakan" 
+                        name="Tunggakan (Unpaid)" 
+                        fill="#ef4444" 
+                        radius={[4, 4, 0, 0]} 
+                        maxBarSize={45}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
+
           </div>
         </div>
       )}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Student, Invoice, Installment } from '../types';
 import { formatRupiah } from '../utils';
+import { CustomDropdown } from './CustomDropdown';
 import { 
   History, 
   Search, 
@@ -447,35 +448,33 @@ export function SppHistory({ students, invoices, theme = 'dark' }: SppHistoryPro
 
               {/* Student Filter */}
               <div className="relative">
-                <User className="absolute left-3 top-3.5 text-slate-400" size={16} />
-                <select
+                <User className="absolute left-3 top-3.5 text-slate-400 z-10" size={16} />
+                <CustomDropdown
                   value={selectedStudentId}
-                  onChange={(e) => setSelectedStudentId(e.target.value)}
-                  className={`w-full pl-9 pr-4 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-1 ${getAccentBorderClass()} ${
-                    isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-slate-950 border-slate-850 text-white'
-                  }`}
-                >
-                  <option value="All">Semua Siswa</option>
-                  {students.map(student => (
-                    <option key={student.id} value={student.id}>{student.name}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedStudentId(val)}
+                  options={[
+                    { value: 'All', label: 'Semua Siswa' },
+                    ...students.map(student => ({ value: student.id, label: student.name }))
+                  ]}
+                  theme={theme}
+                  className="w-full pl-6"
+                />
               </div>
 
               {/* Payment Method Filter */}
               <div className="relative">
-                <CreditCard className="absolute left-3 top-3.5 text-slate-400" size={16} />
-                <select
+                <CreditCard className="absolute left-3 top-3.5 text-slate-400 z-10" size={16} />
+                <CustomDropdown
                   value={paymentMethodFilter}
-                  onChange={(e) => setPaymentMethodFilter(e.target.value)}
-                  className={`w-full pl-9 pr-4 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-1 ${getAccentBorderClass()} ${
-                    isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-slate-950 border-slate-850 text-white'
-                  }`}
-                >
-                  <option value="All">Semua Metode Pembayaran</option>
-                  <option value="Transfer">Transfer Bank</option>
-                  <option value="Tunai">Uang Tunai</option>
-                </select>
+                  onChange={(val) => setPaymentMethodFilter(val)}
+                  options={[
+                    { value: 'All', label: 'Semua Metode Pembayaran' },
+                    { value: 'Transfer', label: 'Transfer Bank' },
+                    { value: 'Tunai', label: 'Uang Tunai' }
+                  ]}
+                  theme={theme}
+                  className="w-full pl-6"
+                />
               </div>
             </div>
           </div>

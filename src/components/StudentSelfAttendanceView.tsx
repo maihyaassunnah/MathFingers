@@ -1,5 +1,7 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { Student, ClassGroup, Attendance } from '../types';
+import { CustomDropdown } from './CustomDropdown';
+import { OfflineIndicator } from './OfflineIndicator';
 import { getStudentUniqueCode } from '../utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { Check, ShieldAlert, Sparkles, User, Calendar, Award, ArrowLeft, RefreshCw, KeyRound, Building, Layers } from 'lucide-react';
@@ -167,6 +169,7 @@ export function StudentSelfAttendanceView({
 
               {/* Attendance Submission Form */}
               <form onSubmit={handleSubmit} className="space-y-5">
+                <OfflineIndicator theme={theme} className="mb-2" />
                 {/* Error Banner */}
                 {errorMessage && (
                   <div className="bg-rose-500/10 border border-rose-500/25 p-3.5 rounded-2xl flex items-start gap-2.5 text-rose-500 text-xs">
@@ -181,26 +184,22 @@ export function StudentSelfAttendanceView({
                     1. Pilih Nama Anda
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 z-10">
                       <User size={16} />
                     </div>
-                    <select
+                    <CustomDropdown
                       value={selectedStudentId}
-                      onChange={(e) => setSelectedStudentId(e.target.value)}
-                      required
-                      className={`w-full pl-10 pr-4 py-3 rounded-2xl text-sm font-semibold border transition focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer ${
-                        isLight 
-                          ? 'bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100' 
-                          : 'bg-slate-950/40 border-slate-800 text-white hover:bg-slate-950'
-                      }`}
-                    >
-                      <option value="">-- Cari & Pilih Nama Anda --</option>
-                      {filteredStudents.map(student => (
-                        <option key={student.id} value={student.id}>
-                          {student.name} (Level {student.level.match(/\d+/)?.[0] || 'Dasar'})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => setSelectedStudentId(val)}
+                      options={[
+                        { value: '', label: '-- Cari & Pilih Nama Anda --' },
+                        ...filteredStudents.map(student => ({
+                          value: student.id,
+                          label: `${student.name} (Level ${student.level.match(/\d+/)?.[0] || 'Dasar'})`
+                        }))
+                      ]}
+                      theme={theme}
+                      className="w-full pl-6"
+                    />
                   </div>
                 </div>
 

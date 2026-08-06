@@ -31,6 +31,8 @@ import {
   FileDown,
   Building
 } from 'lucide-react';
+import { CustomDropdown } from './CustomDropdown';
+import { OfflineIndicator } from './OfflineIndicator';
 
 interface SettingsManagerProps {
   settings: AppSettings;
@@ -748,27 +750,19 @@ export function SettingsManager({
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <select
+              <CustomDropdown
                 value={targetBranch}
-                onChange={(e) => setTargetBranch(e.target.value)}
+                onChange={(val) => setTargetBranch(val)}
                 disabled={currentUser?.role === 'branch_admin'}
-                className={`px-3 py-2 rounded-xl text-xs font-bold border focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                  isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-700 text-slate-100'
-                }`}
-              >
-                <option value="Semua">Semua Cabang (Global Default)</option>
-                {(branches || []).map((b) => (
-                  <option key={b.id} value={b.name}>
-                    Cabang {b.name}
-                  </option>
-                ))}
-                {!(branches || []).some(b => b.name.toLowerCase() === 'singkut') && (
-                  <option value="Singkut">Cabang Singkut</option>
-                )}
-                {!(branches || []).some(b => b.name.toLowerCase() === 'bangko') && (
-                  <option value="Bangko">Cabang Bangko</option>
-                )}
-              </select>
+                options={[
+                  { value: 'Semua', label: 'Semua Cabang (Global Default)' },
+                  ...(branches || []).map((b) => ({ value: b.name, label: `Cabang ${b.name}` })),
+                  ...(!(branches || []).some(b => b.name.toLowerCase() === 'singkut') ? [{ value: 'Singkut', label: 'Cabang Singkut' }] : []),
+                  ...(!(branches || []).some(b => b.name.toLowerCase() === 'bangko') ? [{ value: 'Bangko', label: 'Cabang Bangko' }] : [])
+                ]}
+                theme={theme}
+                className="w-full sm:w-[220px]"
+              />
             </div>
           </div>
           <div className="flex items-center gap-2 pt-1 border-t border-indigo-500/10">

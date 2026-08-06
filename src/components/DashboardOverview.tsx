@@ -293,8 +293,101 @@ export function DashboardOverview({
     });
   };
 
+  const getBranchSppMonthlyData = () => {
+    const invoicesSource = invoices;
+    if (invoicesSource.length === 0) return [];
+
+    const monthNamesId = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    const now = new Date();
+    const resultData = [];
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthName = monthNamesId[d.getMonth()];
+      const year = d.getFullYear();
+      const label = `${monthName.slice(0, 3)} ${year}`;
+
+      const matchedInvoices = invoicesSource.filter(inv => {
+        if (inv.month) {
+          const mLower = inv.month.toLowerCase();
+          return mLower.includes(monthName.toLowerCase()) || mLower.includes(monthName.slice(0, 3).toLowerCase());
+        }
+        return inv.dueDate && inv.dueDate.startsWith(`${year}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+      });
+
+      let lunas = 0;
+      let tunggakan = 0;
+
+      matchedInvoices.forEach(inv => {
+        if (inv.status === 'paid') {
+          lunas += inv.amount;
+        } else if (inv.status === 'partially_paid') {
+          const paid = inv.amountPaid || 0;
+          lunas += paid;
+          tunggakan += Math.max(0, inv.amount - paid);
+        } else {
+          tunggakan += inv.amount;
+        }
+      });
+
+      resultData.push({
+        name: label,
+        'Lunas': lunas,
+        'Tunggakan': tunggakan,
+        'Total': lunas + tunggakan
+      });
+    }
+
+    const hasMonthlyData = resultData.some(item => item.Total > 0);
+    if (!hasMonthlyData) {
+      const monthGroups: Record<string, { lunas: number; tunggakan: number }> = {};
+      invoicesSource.forEach(inv => {
+        const key = inv.month || 'Periode SPP';
+        if (!monthGroups[key]) monthGroups[key] = { lunas: 0, tunggakan: 0 };
+        if (inv.status === 'paid') {
+          monthGroups[key].lunas += inv.amount;
+        } else if (inv.status === 'partially_paid') {
+          const paid = inv.amountPaid || 0;
+          monthGroups[key].lunas += paid;
+          monthGroups[key].tunggakan += Math.max(0, inv.amount - paid);
+        } else {
+          monthGroups[key].tunggakan += inv.amount;
+        }
+      });
+
+      const groupedKeys = Object.keys(monthGroups);
+      if (groupedKeys.length > 0) {
+        return groupedKeys.map(k => ({
+          name: k,
+          'Lunas': monthGroups[k].lunas,
+          'Tunggakan': monthGroups[k].tunggakan,
+          'Total': monthGroups[k].lunas + monthGroups[k].tunggakan
+        }));
+      }
+    }
+
+    return resultData;
+  };
+
   const weeklyAttendanceData = getWeeklyAttendanceData();
   const sppIncomeData = getSppIncomeData();
+  const branchSppMonthlyData = getBranchSppMonthlyData();
+
+  let branchTotalPaid = 0;
+  let branchTotalUnpaid = 0;
+  invoices.forEach(inv => {
+    if (inv.status === 'paid') {
+      branchTotalPaid += inv.amount;
+    } else if (inv.status === 'partially_paid') {
+      const paid = inv.amountPaid || 0;
+      branchTotalPaid += paid;
+      branchTotalUnpaid += Math.max(0, inv.amount - paid);
+    } else {
+      branchTotalUnpaid += inv.amount;
+    }
+  });
+  const branchTotalSpp = branchTotalPaid + branchTotalUnpaid;
+  const branchPaidPercentage = branchTotalSpp > 0 ? Math.round((branchTotalPaid / branchTotalSpp) * 100) : 100;
 
   // Handle adding custom task
   const handleAddTaskSubmit = (e: React.FormEvent) => {
@@ -823,346 +916,516 @@ export function DashboardOverview({
 
       </div>
 
+      {/* Admin Cabang: Visualisasi Data & Tren Analitik */}
+      {!isSuperAdmin && (
+        <div className={`p-5 sm:p-6 rounded-3xl border shadow-sm space-y-6 backdrop-blur-md transition-all duration-300 ${
+          isLight 
+            ? 'bg-white/75 border-white/50 shadow-[0_8px_32px_rgba(148,163,184,0.05)]' 
+            : 'bg-slate-900/60 border-emerald-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.25)]'
+        }`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-4 gap-2 border-slate-150 dark:border-slate-800/80">
+            <div className="flex items-center gap-2">
+              <TrendingUp className={getAccentTextClass()} size={22} />
+              <div>
+                <h3 className={`text-lg font-bold font-sans ${isLight ? 'text-slate-800' : 'text-white'}`}>
+                  Grafik & Analitik Performa Cabang ({currentUser?.branch || 'Cabang'})
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  Tren kehadiran siswa mingguan serta statistik & pendapatan SPP
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15 text-xs font-semibold self-start sm:self-center">
+              <Sparkles size={12} className="animate-pulse text-emerald-500" />
+              <span>Analitik Real-time</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* Chart 1: Tren Kehadiran Siswa Mingguan */}
+            <div className={`p-5 rounded-2xl border ${isLight ? 'bg-slate-50/50 border-slate-200' : 'bg-[#0f172a] border-slate-800'} space-y-4`}>
+              <div className="flex items-center gap-2 border-b pb-3 border-slate-150 dark:border-slate-800/80">
+                <TrendingUp className="text-emerald-500" size={18} />
+                <div>
+                  <h4 className={`font-bold text-sm ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                    Grafik Tren Kehadiran Siswa Mingguan
+                  </h4>
+                  <p className="text-[11px] text-slate-500">Jumlah status kehadiran (Hadir, Izin, Absen) 6 minggu terakhir</p>
+                </div>
+              </div>
+
+              <div className="w-full h-[280px]">
+                {weeklyAttendanceData.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-xs text-slate-500 italic">
+                    Belum ada data presensi siswa
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={weeklyAttendanceData}
+                      margin={{ top: 10, right: 10, left: -25, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="colorHadirCabang" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.25}/>
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorIzinCabang" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.25}/>
+                          <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorAbsenCabang" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.25}/>
+                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke={isLight ? '#e2e8f0' : '#1e293b'} />
+                      <XAxis dataKey="weekLabel" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                      <Tooltip
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className={`p-3 rounded-xl border shadow-lg ${isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-950 border-slate-800 text-slate-200'} text-xs font-semibold space-y-1`}>
+                                <p className="font-extrabold mb-1">{label}</p>
+                                {payload.map((p: any) => (
+                                  <p key={p.name} style={{ color: p.color }}>
+                                    {p.name}: <span className="font-bold">{p.value} sesi</span>
+                                  </p>
+                                ))}
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Legend verticalAlign="top" height={36} iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, fontWeight: 'bold' }} />
+                      <Area type="monotone" dataKey="Hadir" stroke="#10b981" fillOpacity={1} fill="url(#colorHadirCabang)" strokeWidth={2} />
+                      <Area type="monotone" dataKey="Izin" stroke="#f59e0b" fillOpacity={1} fill="url(#colorIzinCabang)" strokeWidth={2} />
+                      <Area type="monotone" dataKey="Absen" stroke="#ef4444" fillOpacity={1} fill="url(#colorAbsenCabang)" strokeWidth={2} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
+
+            {/* Chart 2: Grafik & Statistik Pendapatan dan Tunggakan SPP */}
+            <div className={`p-5 rounded-2xl border ${isLight ? 'bg-slate-50/50 border-slate-200' : 'bg-[#0f172a] border-slate-800'} space-y-4`}>
+              <div className="flex items-center justify-between border-b pb-3 border-slate-150 dark:border-slate-800/80">
+                <div className="flex items-center gap-2">
+                  <Receipt className="text-emerald-500" size={18} />
+                  <div>
+                    <h4 className={`font-bold text-sm ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                      Grafik & Statistik Pendapatan & Tunggakan SPP
+                    </h4>
+                    <p className="text-[11px] text-slate-500">Perbandingan pembayaran Lunas vs Tunggakan cabang ini</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mini SPP Stat Badges */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className={`p-2.5 rounded-xl border text-center ${isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'}`}>
+                  <span className="text-[10px] font-bold text-slate-400 block">LUNAS</span>
+                  <span className="text-xs font-extrabold text-emerald-500 truncate block">{formatRupiah(branchTotalPaid)}</span>
+                </div>
+                <div className={`p-2.5 rounded-xl border text-center ${isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'}`}>
+                  <span className="text-[10px] font-bold text-slate-400 block">TUNGGAKAN</span>
+                  <span className="text-xs font-extrabold text-rose-500 truncate block">{formatRupiah(branchTotalUnpaid)}</span>
+                </div>
+                <div className={`p-2.5 rounded-xl border text-center ${isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'}`}>
+                  <span className="text-[10px] font-bold text-slate-400 block">PELUNASAN</span>
+                  <span className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 block">{branchPaidPercentage}%</span>
+                </div>
+              </div>
+
+              <div className="w-full h-[210px]">
+                {branchSppMonthlyData.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-xs text-slate-500 italic">
+                    Belum ada data tagihan SPP
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={branchSppMonthlyData}
+                      margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke={isLight ? '#e2e8f0' : '#1e293b'} />
+                      <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1000000 ? `${(v/1000000).toFixed(1)}jt` : v >= 1000 ? `${(v/1000).toFixed(0)}rb` : v} />
+                      <Tooltip
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className={`p-3 rounded-xl border shadow-lg ${isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-950 border-slate-800 text-slate-200'} text-xs font-semibold space-y-1`}>
+                                <p className="font-extrabold mb-1">Periode {label}</p>
+                                {payload.map((p: any) => (
+                                  <p key={p.name} style={{ color: p.color }}>
+                                    {p.name}: <span className="font-bold">{formatRupiah(p.value)}</span>
+                                  </p>
+                                ))}
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Legend verticalAlign="top" height={30} iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, fontWeight: 'bold' }} />
+                      <Bar dataKey="Lunas" name="Lunas (Paid)" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                      <Bar dataKey="Tunggakan" name="Tunggakan (Unpaid)" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
       {/* SECTION: KEGIATAN & AGENDA HARI INI */}
       <div className={`p-5 sm:p-6 rounded-3xl border shadow-sm backdrop-blur-md transition-all duration-300 ${
         isLight 
           ? 'bg-white/75 border-white/50 shadow-[0_8px_32px_rgba(148,163,184,0.05)]' 
           : 'bg-slate-900/60 border-emerald-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.25)]'
       }`}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-4 mb-5 gap-3">
-          <div className="flex items-center gap-2">
-            <CalendarDays className={getAccentTextClass()} size={22} />
-            <h3 className={`text-lg font-bold font-sans ${isLight ? 'text-slate-800' : 'text-white'}`}>
-              Kegiatan & Agenda Hari Ini
-            </h3>
-          </div>
-          <span className={`text-xs font-semibold px-3 py-1 rounded-lg ${isLight ? 'bg-slate-100 text-slate-600' : 'bg-slate-950/60 text-slate-400'}`}>
-            {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          
-          {/* Panel 1: Sesi Belajar & Absensi */}
-          <div className="space-y-4">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span>Presensi Siswa Hari Ini</span>
-            </h4>
-            
-            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-              {learningSessions.length === 0 ? (
-                <p className="text-xs text-slate-500 italic">Tidak ada siswa aktif terdaftar.</p>
-              ) : (
-                learningSessions.map(({ student, marked, status, notes: sNotes }) => (
-                  <div 
-                    key={student.id} 
-                    className={`p-3 border rounded-xl flex items-center justify-between text-xs transition ${
-                      isLight ? 'bg-slate-50 border-slate-150' : 'bg-slate-950/20 border-slate-800/80'
-                    }`}
-                  >
-                    <div className="min-w-0 flex-1 pr-2">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className={`font-bold truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</span>
-                        <span className="text-[9px] font-mono font-bold px-1 py-0.2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15 rounded shrink-0">
-                          #{getStudentUniqueCode(student)}
-                        </span>
-                      </div>
-                      <div className="text-[10px] text-slate-400 truncate mt-0.5">{student.level}</div>
-                    </div>
-                    
-                    <div>
-                      {marked ? (
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          status === 'present' 
-                            ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' 
-                            : status === 'absent'
-                              ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
-                              : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                        }`}>
-                          {status === 'present' ? 'Hadir' : status === 'absent' ? 'Absen' : 'Izin'}
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => onNavigate('attendance')}
-                          className={`px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/20 rounded font-bold text-[10px] transition`}
-                        >
-                          Catat Absen
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Panel 2: SPP Jatuh Tempo */}
-          <div className="space-y-4">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-              <span>Tagihan Jatuh Tempo & Overdue</span>
-            </h4>
-
-            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-              {dueInvoices.length === 0 ? (
-                <div className={`p-4 text-center rounded-xl border border-dashed ${
-                  isLight ? 'border-slate-200 bg-slate-50/50 text-slate-400' : 'border-slate-800 bg-slate-950/10 text-slate-500'
-                }`}>
-                  <CheckCircle size={22} className="mx-auto text-emerald-500/70 mb-1.5" />
-                  <p className="text-[11px] font-medium">Semua tagihan lunas/aman!</p>
-                </div>
-              ) : (
-                dueInvoices.map((inv) => (
-                  <div 
-                    key={inv.id} 
-                    className={`p-3 border rounded-xl flex items-center justify-between text-xs transition ${
-                      isLight ? 'bg-slate-50 border-slate-150' : 'bg-slate-950/20 border-slate-800/80'
-                    }`}
-                  >
-                    <div className="min-w-0 flex-1 pr-2">
-                      <div className={`font-bold truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>{inv.studentName}</div>
-                      <div className="text-[10px] text-rose-500 font-semibold mt-0.5">Tempo: {inv.dueDate}</div>
-                    </div>
-                    
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-mono text-[10px] font-bold text-slate-400">
-                        {formatRupiah(inv.amount)}
-                      </span>
-                      <button
-                        onClick={() => sendInvoiceReminder(inv)}
-                        className="p-1 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition"
-                        title="Kirim Pengingat WA"
-                      >
-                        <Send size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Panel 3: Agenda Kegiatan Mandiri Guru */}
-          <div className="space-y-4">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-              <span>Agenda Mandiri Pengajar</span>
-            </h4>
-
-            <div className="space-y-3">
-              {/* Simple inline task creator */}
-              <form onSubmit={handleAddTaskSubmit} className="flex gap-1.5">
-                <input
-                  type="text"
-                  required
-                  placeholder="Ketik tugas mandiri hari ini..."
-                  value={newTaskText}
-                  onChange={(e) => setNewTaskText(e.target.value)}
-                  className={`flex-1 px-3 py-1.5 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
-                    isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
-                  }`}
-                />
-                <button
-                  type="submit"
-                  className={`px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition`}
-                >
-                  <Plus size={14} />
-                </button>
-              </form>
-
-              {/* Task list */}
-              <div className="space-y-1.5 max-h-[170px] overflow-y-auto pr-1">
-                {dashboardTasks.length === 0 ? (
-                  <p className="text-[11px] text-slate-500 italic text-center py-4">Belum ada agenda mandiri dicatat.</p>
-                ) : (
-                  dashboardTasks.map((task) => (
-                    <div 
-                      key={task.id} 
-                      className={`px-3 py-2 border rounded-xl flex items-center justify-between gap-2 transition ${
-                        task.completed 
-                          ? 'opacity-60 bg-slate-100/10 border-slate-800/40' 
-                          : isLight ? 'bg-slate-50 border-slate-150' : 'bg-slate-950/20 border-slate-800/80'
-                      }`}
-                    >
-                      <label className="flex items-center gap-2.5 min-w-0 cursor-pointer flex-1">
-                        <input
-                          type="checkbox"
-                          checked={task.completed}
-                          onChange={() => onToggleDashboardTask(task.id)}
-                          className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
-                        />
-                        <span className={`text-xs truncate font-semibold select-none ${
-                          task.completed 
-                            ? 'line-through text-slate-500' 
-                            : isLight ? 'text-slate-700' : 'text-slate-300'
-                        }`}>
-                          {task.text}
-                        </span>
-                      </label>
-                      
-                      <button
-                        onClick={() => onDeleteDashboardTask(task.id)}
-                        className="text-slate-500 hover:text-rose-500 p-0.5 rounded transition"
-                        title="Hapus Agenda"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  ))
-                )}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-4 mb-5 gap-3">
+              <div className="flex items-center gap-2">
+                <CalendarDays className={getAccentTextClass()} size={22} />
+                <h3 className={`text-lg font-bold font-sans ${isLight ? 'text-slate-800' : 'text-white'}`}>
+                  Kegiatan & Agenda Hari Ini
+                </h3>
               </div>
+              <span className={`text-xs font-semibold px-3 py-1 rounded-lg ${isLight ? 'bg-slate-100 text-slate-600' : 'bg-slate-950/60 text-slate-400'}`}>
+                {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </span>
             </div>
-          </div>
 
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Left column: Action shortcuts */}
-        {!isSuperAdmin && (
-          <div className={`hidden md:block p-5 rounded-2xl border shadow-sm space-y-4 lg:col-span-1 backdrop-blur-md transition-all duration-300 ${
-            isLight 
-              ? 'bg-white/75 border-white/50 shadow-[0_8px_32px_rgba(148,163,184,0.05)]' 
-              : 'bg-slate-900/60 border-emerald-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.25)]'
-          }`}>
-            <h3 className={`font-bold text-base ${isLight ? 'text-slate-850' : 'text-white'}`}>Menu Navigasi Pintar</h3>
-            <div className="grid grid-cols-1 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               
-              <button
-                onClick={() => onNavigate('students')}
-                className={`flex items-center justify-between p-3 rounded-xl border transition text-left group ${
-                  isLight ? 'border-slate-100 bg-slate-50 hover:bg-slate-100/70' : 'border-slate-800/80 bg-slate-950/30 hover:bg-slate-800/40'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-8 h-8 border text-emerald-500 rounded-lg flex items-center justify-center font-bold text-xs ${
-                    isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-                  }`}>1</div>
-                  <div>
-                    <div className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Kelola Data Siswa</div>
-                    <div className="text-[10px] text-slate-400">Pendaftaran & info wali murid</div>
-                  </div>
-                </div>
-                <Play size={12} className="text-slate-550 group-hover:text-emerald-550" />
-              </button>
-
-              <button
-                onClick={() => onNavigate('attendance')}
-                className={`flex items-center justify-between p-3 rounded-xl border transition text-left group ${
-                  isLight ? 'border-slate-100 bg-slate-50 hover:bg-slate-100/70' : 'border-slate-800/80 bg-slate-950/30 hover:bg-slate-800/40'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-8 h-8 border text-emerald-500 rounded-lg flex items-center justify-center font-bold text-xs ${
-                    isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-                  }`}>2</div>
-                  <div>
-                    <div className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Cetak Presensi Hari Ini</div>
-                    <div className="text-[10px] text-slate-400">Absen & kirim report harian</div>
-                  </div>
-                </div>
-                <Play size={12} className="text-slate-550 group-hover:text-emerald-550" />
-              </button>
-
-              <button
-                onClick={() => onNavigate('spp')}
-                className={`flex items-center justify-between p-3 rounded-xl border transition text-left group ${
-                  isLight ? 'border-slate-100 bg-slate-50 hover:bg-slate-100/70' : 'border-slate-800/80 bg-slate-950/30 hover:bg-slate-800/40'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-8 h-8 border text-emerald-500 rounded-lg flex items-center justify-center font-bold text-xs ${
-                    isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-                  }`}>3</div>
-                  <div>
-                    <div className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Keuangan & Tagihan SPP</div>
-                    <div className="text-[10px] text-slate-400">Lunas/Belum bayar & kuitansi</div>
-                  </div>
-                </div>
-                <Play size={12} className="text-slate-550 group-hover:text-emerald-550" />
-              </button>
-
-              <button
-                onClick={() => onNavigate('grades')}
-                className={`flex items-center justify-between p-3 rounded-xl border transition text-left group ${
-                  isLight ? 'border-slate-100 bg-slate-50 hover:bg-slate-100/70' : 'border-slate-800/80 bg-slate-950/30 hover:bg-slate-800/40'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-8 h-8 border text-emerald-500 rounded-lg flex items-center justify-center font-bold text-xs ${
-                    isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-                  }`}>4</div>
-                  <div>
-                    <div className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Input Hasil Evaluasi & Nilai</div>
-                    <div className="text-[10px] text-slate-400">Kecepatan refleks & akurasi uji</div>
-                  </div>
-                </div>
-                <Play size={12} className="text-slate-550 group-hover:text-emerald-550" />
-              </button>
-
-            </div>
-          </div>
-        )}
-
-        {/* Right column: Recent activity feed */}
-        <div className={`p-5 rounded-2xl border shadow-sm ${
-          isSuperAdmin ? 'lg:col-span-3' : 'lg:col-span-2'
-        } flex flex-col justify-between backdrop-blur-md transition-all duration-300 ${
-          isLight 
-            ? 'bg-white/75 border-white/50 shadow-[0_8px_32px_rgba(148,163,184,0.05)]' 
-            : 'bg-slate-900/60 border-emerald-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.25)]'
-        }`}>
-          <div>
-            <h3 className={`font-bold text-base mb-3 ${isLight ? 'text-slate-800' : 'text-white'}`}>Aktivitas Uji Kompetensi Terakhir</h3>
-            {recentGrades.length === 0 ? (
-              <div className={`p-8 text-center text-slate-500 border border-dashed rounded-xl ${
-                isLight ? 'border-slate-200 bg-slate-50/50' : 'border-slate-800 bg-slate-950/10'
-              }`}>
-                <AlertTriangle size={32} className="mx-auto text-slate-600 mb-2" />
-                <p className="text-xs font-medium">Belum ada nilai kuis berhitung diinput</p>
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {recentGrades.map((g) => (
-                  <div key={g.id} className={`p-3.5 border rounded-xl flex items-center justify-between gap-3 ${
-                    isLight ? 'bg-slate-50 border-slate-100' : 'bg-slate-950/30 border-slate-800'
-                  }`}>
-                    <div className="min-w-0">
-                      <div className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>{g.studentName}</div>
-                      <div className="text-[11px] text-slate-400 truncate flex items-center gap-1 mt-0.5">
-                        <BookOpen size={12} className="text-slate-550" />
-                        <span>Materi: {g.topic}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="text-right font-mono">
-                        <div className="text-xs font-bold text-emerald-500">Skor {g.score}</div>
-                        <div className="text-[10px] text-slate-500 flex items-center gap-0.5 justify-end">
-                          <Clock size={10} />
-                          <span>{g.speedSeconds}s</span>
+              {/* Panel 1: Sesi Belajar & Absensi */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span>Presensi Siswa Hari Ini</span>
+                </h4>
+                
+                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                  {learningSessions.length === 0 ? (
+                    <p className="text-xs text-slate-500 italic">Tidak ada siswa aktif terdaftar.</p>
+                  ) : (
+                    learningSessions.map(({ student, marked, status, notes: sNotes }) => (
+                      <div 
+                        key={student.id} 
+                        className={`p-3 border rounded-xl flex items-center justify-between text-xs transition ${
+                          isLight ? 'bg-slate-50 border-slate-150' : 'bg-slate-950/20 border-slate-800/80'
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1 pr-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className={`font-bold truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</span>
+                            <span className="text-[9px] font-mono font-bold px-1 py-0.2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15 rounded shrink-0">
+                              #{getStudentUniqueCode(student)}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 truncate mt-0.5">{student.level}</div>
+                        </div>
+                        
+                        <div>
+                          {marked ? (
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              status === 'present' 
+                                ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' 
+                                : status === 'absent'
+                                  ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                                  : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                            }`}>
+                              {status === 'present' ? 'Hadir' : status === 'absent' ? 'Absen' : 'Izin'}
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => onNavigate('attendance')}
+                              className={`px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/20 rounded font-bold text-[10px] transition`}
+                            >
+                              Catat Absen
+                            </button>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
+                    ))
+                  )}
+                </div>
               </div>
-            )}
+
+              {/* Panel 2: SPP Jatuh Tempo */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                  <span>Tagihan Jatuh Tempo & Overdue</span>
+                </h4>
+
+                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                  {dueInvoices.length === 0 ? (
+                    <div className={`p-4 text-center rounded-xl border border-dashed ${
+                      isLight ? 'border-slate-200 bg-slate-50/50 text-slate-400' : 'border-slate-800 bg-slate-950/10 text-slate-500'
+                    }`}>
+                      <CheckCircle size={22} className="mx-auto text-emerald-500/70 mb-1.5" />
+                      <p className="text-[11px] font-medium">Semua tagihan lunas/aman!</p>
+                    </div>
+                  ) : (
+                    dueInvoices.map((inv) => (
+                      <div 
+                        key={inv.id} 
+                        className={`p-3 border rounded-xl flex items-center justify-between text-xs transition ${
+                          isLight ? 'bg-slate-50 border-slate-150' : 'bg-slate-950/20 border-slate-800/80'
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1 pr-2">
+                          <div className={`font-bold truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>{inv.studentName}</div>
+                          <div className="text-[10px] text-rose-500 font-semibold mt-0.5">Tempo: {inv.dueDate}</div>
+                        </div>
+                        
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono text-[10px] font-bold text-slate-400">
+                            {formatRupiah(inv.amount)}
+                          </span>
+                          <button
+                            onClick={() => sendInvoiceReminder(inv)}
+                            className="p-1 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition"
+                            title="Kirim Pengingat WA"
+                          >
+                            <Send size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Panel 3: Agenda Kegiatan Mandiri Guru */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                  <span>Agenda Mandiri Pengajar</span>
+                </h4>
+
+                <div className="space-y-3">
+                  {/* Simple inline task creator */}
+                  <form onSubmit={handleAddTaskSubmit} className="flex gap-1.5">
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ketik tugas mandiri hari ini..."
+                      value={newTaskText}
+                      onChange={(e) => setNewTaskText(e.target.value)}
+                      className={`flex-1 px-3 py-1.5 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
+                        isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
+                      }`}
+                    />
+                    <button
+                      type="submit"
+                      className={`px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition`}
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </form>
+
+                  {/* Task list */}
+                  <div className="space-y-1.5 max-h-[170px] overflow-y-auto pr-1">
+                    {dashboardTasks.length === 0 ? (
+                      <p className="text-[11px] text-slate-500 italic text-center py-4">Belum ada agenda mandiri dicatat.</p>
+                    ) : (
+                      dashboardTasks.map((task) => (
+                        <div 
+                          key={task.id} 
+                          className={`px-3 py-2 border rounded-xl flex items-center justify-between gap-2 transition ${
+                            task.completed 
+                              ? 'opacity-60 bg-slate-100/10 border-slate-800/40' 
+                              : isLight ? 'bg-slate-50 border-slate-150' : 'bg-slate-950/20 border-slate-800/80'
+                          }`}
+                        >
+                          <label className="flex items-center gap-2.5 min-w-0 cursor-pointer flex-1">
+                            <input
+                              type="checkbox"
+                              checked={task.completed}
+                              onChange={() => onToggleDashboardTask(task.id)}
+                              className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
+                            />
+                            <span className={`text-xs truncate font-semibold select-none ${
+                              task.completed 
+                                ? 'line-through text-slate-500' 
+                                : isLight ? 'text-slate-700' : 'text-slate-300'
+                            }`}>
+                              {task.text}
+                            </span>
+                          </label>
+                          
+                          <button
+                            onClick={() => onDeleteDashboardTask(task.id)}
+                            className="text-slate-500 hover:text-rose-500 p-0.5 rounded transition"
+                            title="Hapus Agenda"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+
+            </div>
           </div>
 
-          <button
-            onClick={() => onNavigate('report')}
-            className={`w-full text-center py-2.5 font-bold text-xs rounded-xl border transition mt-4 ${
-              isLight ? 'bg-slate-100 hover:bg-slate-200 text-emerald-600 border-slate-200' : 'bg-slate-800 hover:bg-slate-700 text-emerald-400 border-slate-700'
-            }`}
-          >
-            Tampilkan Laporan Rapor Perkembangan Lengkap
-          </button>
-        </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Left column: Action shortcuts */}
+            {!isSuperAdmin && (
+              <div className={`hidden md:block p-5 rounded-2xl border shadow-sm space-y-4 lg:col-span-1 backdrop-blur-md transition-all duration-300 ${
+                isLight 
+                  ? 'bg-white/75 border-white/50 shadow-[0_8px_32px_rgba(148,163,184,0.05)]' 
+                  : 'bg-slate-900/60 border-emerald-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.25)]'
+              }`}>
+                <h3 className={`font-bold text-base ${isLight ? 'text-slate-850' : 'text-white'}`}>Menu Navigasi Pintar</h3>
+                <div className="grid grid-cols-1 gap-2">
+                  
+                  <button
+                    onClick={() => onNavigate('students')}
+                    className={`flex items-center justify-between p-3 rounded-xl border transition text-left group ${
+                      isLight ? 'border-slate-100 bg-slate-50 hover:bg-slate-100/70' : 'border-slate-800/80 bg-slate-950/30 hover:bg-slate-800/40'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-8 h-8 border text-emerald-500 rounded-lg flex items-center justify-center font-bold text-xs ${
+                        isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+                      }`}>1</div>
+                      <div>
+                        <div className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Kelola Data Siswa</div>
+                        <div className="text-[10px] text-slate-400">Pendaftaran & info wali murid</div>
+                      </div>
+                    </div>
+                    <Play size={12} className="text-slate-550 group-hover:text-emerald-550" />
+                  </button>
 
-      </div>
+                  <button
+                    onClick={() => onNavigate('attendance')}
+                    className={`flex items-center justify-between p-3 rounded-xl border transition text-left group ${
+                      isLight ? 'border-slate-100 bg-slate-50 hover:bg-slate-100/70' : 'border-slate-800/80 bg-slate-950/30 hover:bg-slate-800/40'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-8 h-8 border text-emerald-500 rounded-lg flex items-center justify-center font-bold text-xs ${
+                        isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+                      }`}>2</div>
+                      <div>
+                        <div className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Cetak Presensi Hari Ini</div>
+                        <div className="text-[10px] text-slate-400">Absen & kirim report harian</div>
+                      </div>
+                    </div>
+                    <Play size={12} className="text-slate-550 group-hover:text-emerald-550" />
+                  </button>
+
+                  <button
+                    onClick={() => onNavigate('spp')}
+                    className={`flex items-center justify-between p-3 rounded-xl border transition text-left group ${
+                      isLight ? 'border-slate-100 bg-slate-50 hover:bg-slate-100/70' : 'border-slate-800/80 bg-slate-950/30 hover:bg-slate-800/40'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-8 h-8 border text-emerald-500 rounded-lg flex items-center justify-center font-bold text-xs ${
+                        isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+                      }`}>3</div>
+                      <div>
+                        <div className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Keuangan & Tagihan SPP</div>
+                        <div className="text-[10px] text-slate-400">Lunas/Belum bayar & kuitansi</div>
+                      </div>
+                    </div>
+                    <Play size={12} className="text-slate-550 group-hover:text-emerald-550" />
+                  </button>
+
+                  <button
+                    onClick={() => onNavigate('grades')}
+                    className={`flex items-center justify-between p-3 rounded-xl border transition text-left group ${
+                      isLight ? 'border-slate-100 bg-slate-50 hover:bg-slate-100/70' : 'border-slate-800/80 bg-slate-950/30 hover:bg-slate-800/40'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-8 h-8 border text-emerald-500 rounded-lg flex items-center justify-center font-bold text-xs ${
+                        isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+                      }`}>4</div>
+                      <div>
+                        <div className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Input Hasil Evaluasi & Nilai</div>
+                        <div className="text-[10px] text-slate-400">Kecepatan refleks & akurasi uji</div>
+                      </div>
+                    </div>
+                    <Play size={12} className="text-slate-550 group-hover:text-emerald-550" />
+                  </button>
+
+                </div>
+              </div>
+            )}
+
+            {/* Right column: Recent activity feed */}
+            <div className={`p-5 rounded-2xl border shadow-sm ${
+              isSuperAdmin ? 'lg:col-span-3' : 'lg:col-span-2'
+            } flex flex-col justify-between backdrop-blur-md transition-all duration-300 ${
+              isLight 
+                ? 'bg-white/75 border-white/50 shadow-[0_8px_32px_rgba(148,163,184,0.05)]' 
+                : 'bg-slate-900/60 border-emerald-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.25)]'
+            }`}>
+              <div>
+                <h3 className={`font-bold text-base mb-3 ${isLight ? 'text-slate-800' : 'text-white'}`}>Aktivitas Uji Kompetensi Terakhir</h3>
+                {recentGrades.length === 0 ? (
+                  <div className={`p-8 text-center text-slate-500 border border-dashed rounded-xl ${
+                    isLight ? 'border-slate-200 bg-slate-50/50' : 'border-slate-800 bg-slate-950/10'
+                  }`}>
+                    <AlertTriangle size={32} className="mx-auto text-slate-600 mb-2" />
+                    <p className="text-xs font-medium">Belum ada nilai kuis berhitung diinput</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {recentGrades.map((g) => (
+                      <div key={g.id} className={`p-3.5 border rounded-xl flex items-center justify-between gap-3 ${
+                        isLight ? 'bg-slate-50 border-slate-100' : 'bg-slate-950/30 border-slate-800'
+                      }`}>
+                        <div className="min-w-0">
+                          <div className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>{g.studentName}</div>
+                          <div className="text-[11px] text-slate-400 truncate flex items-center gap-1 mt-0.5">
+                            <BookOpen size={12} className="text-slate-550" />
+                            <span>Materi: {g.topic}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                          <div className="text-right font-mono">
+                            <div className="text-xs font-bold text-emerald-500">Skor {g.score}</div>
+                            <div className="text-[10px] text-slate-500 flex items-center gap-0.5 justify-end">
+                              <Clock size={10} />
+                              <span>{g.speedSeconds}s</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={() => onNavigate('report')}
+                className={`w-full text-center py-2.5 font-bold text-xs rounded-xl border transition mt-4 ${
+                  isLight ? 'bg-slate-100 hover:bg-slate-200 text-emerald-600 border-slate-200' : 'bg-slate-800 hover:bg-slate-700 text-emerald-400 border-slate-700'
+                }`}
+              >
+                Tampilkan Laporan Rapor Perkembangan Lengkap
+              </button>
+            </div>
+
+          </div>
+
     </div>
   );
 }

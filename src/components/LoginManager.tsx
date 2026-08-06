@@ -169,7 +169,7 @@ export function LoginManager({
   };
 
   return (
-    <div className={`min-h-screen flex flex-col justify-between p-3 sm:p-6 md:p-8 transition-colors duration-300 relative overflow-x-hidden ${
+    <div className={`min-h-screen flex flex-col justify-between pt-12 sm:pt-6 pb-4 sm:pb-6 px-3.5 sm:px-6 md:p-8 transition-colors duration-300 relative overflow-x-hidden ${
       isLight ? 'bg-[#fcfbf7] math-pattern-light text-slate-800' : 'bg-[#0f172a] math-pattern-dark text-slate-100'
     }`}>
       

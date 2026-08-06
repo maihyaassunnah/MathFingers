@@ -807,7 +807,7 @@ export default function App() {
     <div className={`min-h-screen flex flex-col md:flex-row transition-colors duration-150 relative ${theme === 'dark' ? 'bg-[#0f172a] math-pattern-dark text-slate-300' : 'bg-[#fdfcf2] math-pattern-light text-slate-700'}`}>
       
       {/* 1. TOP NAVBAR (MOBILE ONLY) */}
-      <header className={`md:hidden px-4 py-3 flex items-center justify-between sticky top-0 z-40 shadow-sm border-b transition-colors duration-150 ${
+      <header className={`md:hidden px-4 pt-7 pb-3 flex items-center justify-between sticky top-0 z-40 shadow-sm border-b transition-colors duration-150 ${
         theme === 'dark' ? 'bg-[#020617] border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-800'
       }`}>
         <MathFingerLogo size={36} textSize="sm" theme={theme} />

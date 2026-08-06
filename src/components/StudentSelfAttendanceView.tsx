@@ -109,7 +109,7 @@ export function StudentSelfAttendanceView({
   const selectedClassObj = classes.find(c => c.name === targetClass);
 
   return (
-    <div className={`min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden transition-colors duration-200 ${
+    <div className={`min-h-screen flex flex-col items-center justify-center pt-12 sm:pt-4 pb-4 px-4 relative overflow-hidden transition-colors duration-200 ${
       isLight ? 'bg-gradient-to-br from-slate-50 to-emerald-50/30 text-slate-800' : 'bg-gradient-to-br from-slate-950 to-emerald-950/20 text-slate-100'
     }`}>
       {/* Decorative background grid and shapes */}

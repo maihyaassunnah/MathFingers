@@ -16,8 +16,11 @@ export default defineConfig(() => {
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
     build: {
+      outDir: 'dist',
+      emptyOutDir: true,
       cssMinify: true,
       minify: 'esbuild',
+      chunkSizeWarningLimit: 2000,
       rollupOptions: {
         output: {
           manualChunks(id) {

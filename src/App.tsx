@@ -796,7 +796,9 @@ export default function App() {
         }} 
         adminUsers={adminUsers}
         branches={branches}
-        theme={theme} 
+        theme={theme}
+        onToggleTheme={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
+        onOpenSelfAttendance={() => setIsSelfAttendanceMode(true)}
       />
     );
   }

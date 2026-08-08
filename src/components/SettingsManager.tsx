@@ -50,6 +50,7 @@ interface SettingsManagerProps {
   branches?: Branch[];
   allSettingsMap?: Record<string, AppSettings>;
   getBranchSettings?: (branchName?: string) => AppSettings;
+  onOpenUpdateModal?: () => void;
 }
 
 const ACCENT_COLORS = [
@@ -76,7 +77,8 @@ export function SettingsManager({
   activeBranch = 'all',
   branches = [],
   allSettingsMap = {},
-  getBranchSettings
+  getBranchSettings,
+  onOpenUpdateModal
 }: SettingsManagerProps) {
   const [targetBranch, setTargetBranch] = useState<string>(
     currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : 'Semua')
@@ -1461,6 +1463,58 @@ export function SettingsManager({
               <FileText size={14} />
               <span>Unduh PDF Konsolidasi</span>
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* App Update Status & Pop-Up Trigger Card */}
+      <div className={`p-6 rounded-2xl border shadow-sm space-y-4 ${
+        isLight ? 'bg-gradient-to-br from-amber-500/5 via-white to-amber-500/5 border-amber-300/60' : 'bg-gradient-to-br from-amber-950/20 via-slate-900 to-emerald-950/20 border-amber-500/30'
+      }`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4 border-amber-500/20">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-amber-500 text-slate-950 font-black shrink-0">
+              <Sparkles size={22} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold tracking-tight uppercase">Status & Pembaruan Aplikasi Cabang</h3>
+                <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-extrabold text-[10px]">
+                  v3.2.0
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Periksa dan atur pembaruan aplikasi untuk memastikan seluruh modul cabang ter-update.
+              </p>
+            </div>
+          </div>
+          
+          {onOpenUpdateModal && (
+            <button
+              type="button"
+              onClick={onOpenUpdateModal}
+              className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow-md transition flex items-center justify-center gap-2 shrink-0"
+            >
+              <Download size={14} />
+              <span>Cek / Buka Pop Up Update</span>
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div className={`p-3 rounded-xl border ${isLight ? 'bg-white border-slate-200' : 'bg-slate-950/40 border-slate-800'}`}>
+            <span className="text-slate-400 text-[10px] block font-bold">VERSI LATEST</span>
+            <span className="font-extrabold text-amber-500">v3.2.0</span>
+          </div>
+          <div className={`p-3 rounded-xl border ${isLight ? 'bg-white border-slate-200' : 'bg-slate-950/40 border-slate-800'}`}>
+            <span className="text-slate-400 text-[10px] block font-bold">CABANG SAAT INI</span>
+            <span className="font-bold text-slate-300">{currentUser?.branch || targetBranch || 'Pusat'}</span>
+          </div>
+          <div className={`p-3 rounded-xl border ${isLight ? 'bg-white border-slate-200' : 'bg-slate-950/40 border-slate-800'}`}>
+            <span className="text-slate-400 text-[10px] block font-bold">DOKUMEN & CACHE</span>
+            <span className="font-bold text-emerald-500 flex items-center gap-1">
+              ✓ Terverifikasi Siap
+            </span>
           </div>
         </div>
       </div>

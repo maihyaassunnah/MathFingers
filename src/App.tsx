@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useMathFinggersDb } from './hooks/useMathFinggersDb';
 import { supabase } from './supabase';
 import { DashboardOverview } from './components/DashboardOverview';
@@ -21,6 +22,7 @@ import { ClassManager } from './components/ClassManager';
 import FinanceManager from './components/FinanceManager';
 import { StudentSelfAttendanceView } from './components/StudentSelfAttendanceView';
 import { StudentQrCards } from './components/StudentQrCards';
+import { AppUpdateModal, LATEST_APP_VERSION } from './components/AppUpdateModal';
 import { AdminUser, Branch } from './types';
 import { getAdminAvatar, updateDynamicPwaIcon, getStudentUniqueCode } from './utils';
 
@@ -51,6 +53,7 @@ import {
   Wallet,
   QrCode,
   CheckCircle,
+  CheckCircle2,
   AlertCircle
 } from 'lucide-react';
 
@@ -147,6 +150,11 @@ export default function App() {
     return (localStorage.getItem('math_finggers_theme') as 'light' | 'dark') || 'dark';
   });
 
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState<boolean>(false);
+  const [installedVersion, setInstalledVersion] = useState<string>(() => {
+    return localStorage.getItem('math_finggers_installed_version') || 'v2.5.0';
+  });
+
   const toggleTheme = () => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
@@ -159,6 +167,13 @@ export default function App() {
         setActiveBranch(currentUser.branch);
       } else {
         setActiveBranch('all');
+      }
+
+      // Check if installed version is older than latest release
+      const savedVersion = localStorage.getItem('math_finggers_installed_version');
+      if (!savedVersion || savedVersion !== LATEST_APP_VERSION) {
+        // Automatically pop-up update modal for branch admin or super admin
+        setIsUpdateModalOpen(true);
       }
       
       // Ensure activeTab is always one of the valid tabs for the role
@@ -528,6 +543,8 @@ export default function App() {
             allInvoices={invoices}
             allGrades={grades}
             currentUser={currentUser}
+            onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
+            isUpdateAvailable={installedVersion !== LATEST_APP_VERSION}
           />
         );
       case 'students':
@@ -717,6 +734,7 @@ export default function App() {
             branches={branches}
             allSettingsMap={allSettingsMap}
             getBranchSettings={getBranchSettings}
+            onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
           />
         );
       case 'supabase_sql':
@@ -752,6 +770,8 @@ export default function App() {
             allInvoices={invoices}
             allGrades={grades}
             currentUser={currentUser}
+            onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
+            isUpdateAvailable={installedVersion !== LATEST_APP_VERSION}
           />
         );
     }
@@ -907,9 +927,32 @@ export default function App() {
           )}
         </div>
 
-
-
-        {/* Desktop Navigation Links */}
+        {/* App Version / Update Status in Sidebar */}
+        <div className={`px-5 py-2 border-b flex items-center justify-between text-xs ${theme === 'dark' ? 'bg-slate-950/60 border-slate-800/60' : 'bg-slate-100/70 border-slate-200'}`}>
+          <span className="text-slate-400 font-medium text-[11px]">Versi App:</span>
+          <button
+            type="button"
+            onClick={() => setIsUpdateModalOpen(true)}
+            className={`inline-flex items-center gap-1 font-bold text-[10px] px-2 py-0.5 rounded-lg border transition cursor-pointer ${
+              installedVersion === LATEST_APP_VERSION
+                ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/25'
+                : 'bg-amber-500/15 text-amber-500 border-amber-500/30 hover:bg-amber-500/25'
+            }`}
+            title="Klik untuk membuka rincian rilis aplikasi"
+          >
+            {installedVersion === LATEST_APP_VERSION ? (
+              <>
+                <CheckCircle2 size={10} className="text-emerald-500" />
+                <span>{LATEST_APP_VERSION} (Terbaru)</span>
+              </>
+            ) : (
+              <>
+                <Sparkles size={10} className="animate-pulse text-amber-500" />
+                <span>{LATEST_APP_VERSION} (Update!)</span>
+              </>
+            )}
+          </button>
+        </div>
         <nav className="flex-1 p-4 space-y-1">
           {navigationItems.map((item) => {
             const IconComponent = item.icon;
@@ -1118,9 +1161,17 @@ export default function App() {
 
       {/* 4. MAIN WORKSPACE CONTENT WINDOW */}
       <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-24 md:pb-8 overflow-y-auto max-w-7xl mx-auto w-full">
-        <div key={activeTab} className="animate-page-fade-in">
-          {renderContent()}
-        </div>
+        <AnimatePresence mode="wait">
+          <motion.div 
+            key={activeTab} 
+            initial={{ opacity: 0, scale: 0.995, y: 4 }} 
+            animate={{ opacity: 1, scale: 1, y: 0 }} 
+            exit={{ opacity: 0, scale: 0.995, y: -4 }} 
+            transition={{ duration: 0.18, ease: "easeInOut" }}
+          >
+            {renderContent()}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* 5. MOBILE BOTTOM NAVIGATION */}
@@ -1438,6 +1489,17 @@ export default function App() {
           </div>
         );
       })()}
+
+      {/* App Update Modal */}
+      <AppUpdateModal
+        isOpen={isUpdateModalOpen}
+        onClose={() => setIsUpdateModalOpen(false)}
+        currentUser={currentUser}
+        theme={theme}
+        onUpdateSuccess={() => {
+          setInstalledVersion(LATEST_APP_VERSION);
+        }}
+      />
 
     </div>
   );

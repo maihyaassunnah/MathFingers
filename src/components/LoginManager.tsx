@@ -88,7 +88,7 @@ export function LoginManager({
 
   // Filter admins based on activeTab, searchQuery, and branch filter
   const filteredAdmins = useMemo(() => {
-    return activeAdmins.filter(admin => {
+    const list = activeAdmins.filter(admin => {
       const matchesRoleTab = 
         activeTab === 'all' ? true :
         activeTab === 'pusat' ? admin.role === 'super_admin' || admin.branch === 'Pusat' :
@@ -105,6 +105,15 @@ export function LoginManager({
         admin.branch.toLowerCase().includes(q);
 
       return matchesRoleTab && matchesBranchFilter && matchesSearch;
+    });
+
+    // Always sort Super Admin / Pusat accounts to the top
+    return [...list].sort((a, b) => {
+      const aIsSuper = a.role === 'super_admin' || a.branch === 'Pusat';
+      const bIsSuper = b.role === 'super_admin' || b.branch === 'Pusat';
+      if (aIsSuper && !bIsSuper) return -1;
+      if (!aIsSuper && bIsSuper) return 1;
+      return a.name.localeCompare(b.name);
     });
   }, [activeAdmins, activeTab, selectedBranchFilter, searchQuery]);
 
@@ -546,19 +555,9 @@ export function LoginManager({
                   <label className="block text-[10px] sm:text-[11px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                     Kata Sandi Keamanan
                   </label>
-                  
-                  {/* Default Password Hint */}
-                  <button
-                    type="button"
-                    onClick={handleAutoFillDefaultPassword}
-                    className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 hover:underline bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 transition-all"
-                    title="Klik untuk isi otomatis sandi default"
-                  >
-                    Default: <span className="underline">{selectedUser.password || 'admin123'}</span> (Isi)
-                  </button>
                 </div>
 
-                <div className="relative">
+                <div className="relative flex items-center">
                   <input
                     type={showPassword ? 'text' : 'password'}
                     id="login-password-input"
@@ -578,15 +577,15 @@ export function LoginManager({
                           : 'bg-slate-950/60 border-slate-800 text-white focus:border-emerald-500 focus:bg-slate-950'
                     }`}
                   />
-                  <Key size={15} className="absolute left-3 top-3.5 text-slate-400" />
+                  <Key size={15} className="absolute left-3 text-slate-400 pointer-events-none" />
                   
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    className="absolute right-3 p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all focus:outline-none"
                     title={showPassword ? 'Sembunyikan Kata Sandi' : 'Tampilkan Kata Sandi'}
                   >
-                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
 
@@ -744,12 +743,8 @@ export function LoginManager({
 
               <div className="space-y-3 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
                 <p>
-                  Kata sandi default untuk akun administrator yang dipilih adalah:
+                  Untuk keamanan akun administrator, kata sandi dienkripsi. Jika Anda lupa kata sandi akun <strong>{selectedUser?.name || 'Administrator'}</strong>, Anda dapat mengisi sandi terdaftar secara otomatis atau menghubungi Super Admin.
                 </p>
-
-                <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono text-center font-bold text-sm text-emerald-600 dark:text-emerald-400">
-                  {selectedUser ? (selectedUser.password || 'admin123') : 'admin123'}
-                </div>
 
                 <p>
                   Jika Anda mengalami kendala atau perlu menyetel ulang kata sandi, silakan hubungi <strong>Super Admin (Wahyudin Hafiz, S.Pd)</strong>.
@@ -767,7 +762,7 @@ export function LoginManager({
                     className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-xs"
                   >
                     <Check size={14} />
-                    <span>Isi Sandi Default ({selectedUser.password || 'admin123'})</span>
+                    <span>Isi Sandi Terdaftar Otomatis</span>
                   </button>
                 )}
                 <button

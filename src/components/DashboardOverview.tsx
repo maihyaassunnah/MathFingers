@@ -31,7 +31,9 @@ import {
   CalendarDays,
   Building,
   TrendingUp,
-  FileText
+  FileText,
+  Download,
+  RefreshCw
 } from 'lucide-react';
 
 interface DashboardOverviewProps {
@@ -53,6 +55,8 @@ interface DashboardOverviewProps {
   allInvoices?: Invoice[];
   allGrades?: Grade[];
   currentUser?: AdminUser | null;
+  onOpenUpdateModal?: () => void;
+  isUpdateAvailable?: boolean;
 }
 
 export function DashboardOverview({ 
@@ -73,7 +77,9 @@ export function DashboardOverview({
   allAttendance = [],
   allInvoices = [],
   allGrades = [],
-  currentUser = null
+  currentUser = null,
+  onOpenUpdateModal,
+  isUpdateAvailable = false
 }: DashboardOverviewProps) {
   const [newTaskText, setNewTaskText] = useState('');
 
@@ -150,6 +156,7 @@ export function DashboardOverview({
   const recentGrades = grades.slice(0, 3);
 
   const isLight = theme === 'light';
+  const isBranchAdmin = currentUser?.role === 'branch_admin' || activeUser?.role === 'branch_admin';
 
   // Calculate per-branch statistics for super admins
   const branchStats = branches.map(branch => {
@@ -434,6 +441,37 @@ export function DashboardOverview({
   return (
     <div id="dashboard-overview-section" className="space-y-6">
       
+      {/* Notice Banner for App Update (Cabang) */}
+      {isUpdateAvailable && onOpenUpdateModal && (
+        <div className={`p-4 sm:p-5 rounded-3xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all duration-300 shadow-md ${
+          isLight
+            ? 'bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100/60 border-amber-300 text-amber-950'
+            : 'bg-gradient-to-r from-amber-950/40 via-amber-900/30 to-emerald-950/40 border-amber-500/40 text-amber-100'
+        }`}>
+          <div className="flex items-start gap-3.5">
+            <div className="p-3 rounded-2xl bg-amber-500 text-slate-950 font-black shrink-0 shadow-sm animate-bounce">
+              <Sparkles size={22} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-sm sm:text-base">Pembaruan Aplikasi Math Fingers Tersedia!</span>
+                <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-extrabold text-[10px]">v3.2.0</span>
+              </div>
+              <p className="text-xs opacity-90 mt-1 leading-relaxed">
+                {currentUser?.role === 'branch_admin' ? `Cabang ${currentUser?.branch || ''}` : 'Sistem'} belum memperbarui ke versi Rilis v3.2.0. Dapatkan Grafik Analitik, QR Code Scanner, & Kuitansi PDF Resmi.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onOpenUpdateModal}
+            className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-md transition-all shrink-0 flex items-center justify-center gap-2"
+          >
+            <Download size={15} />
+            <span>Update Aplikasi</span>
+          </button>
+        </div>
+      )}
+
       {/* Brand Hero Welcome Banner */}
       <div className={`relative overflow-hidden bg-gradient-to-r transition-all duration-300 ${
         isLight 
@@ -1106,7 +1144,7 @@ export function DashboardOverview({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               
               {/* Panel 1: Sesi Belajar & Absensi */}
-              <div className="space-y-4">
+              <div className={`space-y-4 ${isBranchAdmin ? 'hidden md:block' : ''}`}>
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                   <span>Presensi Siswa Hari Ini</span>
@@ -1160,7 +1198,7 @@ export function DashboardOverview({
               </div>
 
               {/* Panel 2: SPP Jatuh Tempo */}
-              <div className="space-y-4">
+              <div className={`space-y-4 ${isBranchAdmin ? 'hidden md:block' : ''}`}>
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-rose-500"></span>
                   <span>Tagihan Jatuh Tempo & Overdue</span>
@@ -1375,7 +1413,7 @@ export function DashboardOverview({
               isLight 
                 ? 'bg-white/75 border-white/50 shadow-[0_8px_32px_rgba(148,163,184,0.05)]' 
                 : 'bg-slate-900/60 border-emerald-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.25)]'
-            }`}>
+            } ${isBranchAdmin ? 'hidden md:flex' : ''}`}>
               <div>
                 <h3 className={`font-bold text-base mb-3 ${isLight ? 'text-slate-800' : 'text-white'}`}>Aktivitas Uji Kompetensi Terakhir</h3>
                 {recentGrades.length === 0 ? (

@@ -56,6 +56,48 @@ export function LoginManager({
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
 
+  // CAPTCHA States for Password Recovery
+  const [captchaCode, setCaptchaCode] = useState('');
+  const [captchaInput, setCaptchaInput] = useState('');
+  const [captchaError, setCaptchaError] = useState<string | null>(null);
+  const [captchaVerified, setCaptchaVerified] = useState(false);
+
+  const generateNewCaptcha = () => {
+    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    let code = '';
+    for (let i = 0; i < 5; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setCaptchaCode(code);
+    setCaptchaInput('');
+    setCaptchaError(null);
+    setCaptchaVerified(false);
+  };
+
+  const handleOpenForgotPassword = () => {
+    generateNewCaptcha();
+    setShowForgotPasswordModal(true);
+  };
+
+  const handleVerifyCaptcha = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!captchaInput.trim()) {
+      setCaptchaError('Masukkan kode CAPTCHA terlebih dahulu.');
+      return;
+    }
+    if (captchaInput.trim().toUpperCase() !== captchaCode.toUpperCase()) {
+      setCaptchaError('Kode CAPTCHA tidak sesuai! Silakan coba lagi.');
+      generateNewCaptcha();
+      return;
+    }
+    setCaptchaError(null);
+    setCaptchaVerified(true);
+    if (selectedUser) {
+      setPasswordInput(selectedUser.password || 'admin123');
+      setError(null);
+    }
+  };
+
   const isLight = theme === 'light';
 
   // Default admins fallback if empty list
@@ -245,12 +287,6 @@ export function LoginManager({
                     <span className={`font-extrabold truncate text-xs sm:text-sm ${isLight ? 'text-slate-900' : 'text-white'}`}>
                       {selectedUser.name}
                     </span>
-                    {selectedUser.role === 'branch_admin' && (
-                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 mt-0.5">
-                        <Sparkles size={11} className="animate-pulse" />
-                        Notif update otomatis aktif saat masuk
-                      </span>
-                    )}
                   </div>
                 </div>
                 
@@ -335,7 +371,7 @@ export function LoginManager({
             <div className="text-center pt-1">
               <button
                 type="button"
-                onClick={() => setShowForgotPasswordModal(true)}
+                onClick={handleOpenForgotPassword}
                 className={`text-xs font-bold hover:underline cursor-pointer ${
                   isLight ? 'text-slate-700 hover:text-slate-900' : 'text-slate-300 hover:text-white'
                 }`}
@@ -351,17 +387,17 @@ export function LoginManager({
               <span className={`px-2.5 py-1 rounded-lg border flex items-center gap-1 ${
                 isLight ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-800 text-slate-300'
               }`}>
-                🔒 Sesi Terisolasi
+                Sesi Terisolasi
               </span>
               <span className={`px-2.5 py-1 rounded-lg border flex items-center gap-1 ${
                 isLight ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-800 text-slate-300'
               }`}>
-                ✨ Sync Cloud & Offline
+                Sync Cloud & Offline
               </span>
               <span className={`px-2.5 py-1 rounded-lg border flex items-center gap-1 ${
                 isLight ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-800 text-slate-300'
               }`}>
-                📱 QR Mandiri
+                QR Mandiri
               </span>
             </div>
           </div>
@@ -372,62 +408,128 @@ export function LoginManager({
       {/* Footer */}
       <footer className="text-center py-2 max-w-md mx-auto w-full">
         <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-500">
-          Math Finger Privat Tutor System &copy; {new Date().getFullYear()}
+          Math Finger Privat Tutor System &copy; {new Date().getFullYear()} • Wahyudin Hafiz
         </p>
       </footer>
 
-      {/* Forgot Password Modal */}
+      {/* Forgot Password Modal with CAPTCHA */}
       <AnimatePresence>
         {showForgotPasswordModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className={`max-w-xs w-full p-5 rounded-2xl border shadow-xl relative ${
+              className={`max-w-sm w-full p-6 rounded-3xl border shadow-2xl relative ${
                 isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-slate-100'
               }`}
             >
               <button
                 type="button"
                 onClick={() => setShowForgotPasswordModal(false)}
-                className="absolute top-3 right-3 p-1 rounded-lg text-slate-400 hover:text-slate-200"
+                className="absolute top-4 right-4 p-1.5 rounded-full text-slate-400 hover:text-slate-200 hover:bg-black/10 transition cursor-pointer"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
 
-              <div className="flex items-center gap-2 mb-3">
-                <HelpCircle size={20} className="text-emerald-500" />
-                <h3 className="text-sm font-extrabold">Bantuan Kata Sandi</h3>
+              <div className="flex items-center gap-2.5 mb-2">
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
+                  <ShieldCheck size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold">Verifikasi Lupa Sandi</h3>
+                  <p className="text-[11px] text-slate-500">Akses pemulihan kata sandi akun</p>
+                </div>
               </div>
 
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
-                Jika Anda lupa kata sandi untuk <strong>{selectedUser?.name || 'akun ini'}</strong>, Anda dapat mengisi sandi terdaftar secara otomatis.
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed my-3">
+                Untuk mendapatkan kata sandi akun <strong className="text-emerald-600 dark:text-emerald-400">{selectedUser?.name || 'Administrator'}</strong>, masukkan kode CAPTCHA di bawah ini terlebih dahulu:
               </p>
 
-              <div className="space-y-2">
-                {selectedUser && (
+              {!captchaVerified ? (
+                <form onSubmit={handleVerifyCaptcha} className="space-y-3.5">
+                  {/* CAPTCHA Display Box */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 border border-emerald-500/30 text-amber-300 font-mono text-xl font-black tracking-[0.35em] text-center select-none shadow-inner relative overflow-hidden flex items-center justify-center">
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.15),transparent_70%)] pointer-events-none" />
+                      <span className="relative z-10 drop-shadow-md italic transform -skew-x-6">{captchaCode}</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={generateNewCaptcha}
+                      className="p-3 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition cursor-pointer"
+                      title="Acak Ulang CAPTCHA"
+                    >
+                      <RefreshCw size={18} />
+                    </button>
+                  </div>
+
+                  {/* CAPTCHA Input */}
+                  <div>
+                    <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
+                      Kode CAPTCHA
+                    </label>
+                    <input
+                      type="text"
+                      value={captchaInput}
+                      onChange={(e) => {
+                        setCaptchaInput(e.target.value);
+                        setCaptchaError(null);
+                      }}
+                      placeholder="Masukkan 5 karakter kode di atas"
+                      className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-mono font-bold tracking-widest text-center uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500 transition ${
+                        isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-700 text-white'
+                      }`}
+                      maxLength={5}
+                      autoFocus
+                    />
+                  </div>
+
+                  {captchaError && (
+                    <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold flex items-center gap-2">
+                      <AlertCircle size={15} className="shrink-0" />
+                      <span>{captchaError}</span>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs tracking-wide shadow-md shadow-emerald-600/20 transition cursor-pointer"
+                  >
+                    Verifikasi CAPTCHA & Dapatkan Sandi
+                  </button>
+                </form>
+              ) : (
+                <div className="space-y-3 py-2">
+                  <div className="p-3.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 space-y-1">
+                    <div className="flex items-center gap-1.5 font-black text-xs">
+                      <Check size={16} className="text-emerald-500" />
+                      <span>Verifikasi CAPTCHA Berhasil!</span>
+                    </div>
+                    <p className="text-xs font-medium opacity-90">
+                      Kata sandi untuk <strong className="font-extrabold">{selectedUser?.name}</strong> adalah:
+                    </p>
+                    <div className="pt-1.5 pb-1 text-center font-mono font-black text-base tracking-wider text-emerald-800 dark:text-emerald-200 bg-white/60 dark:bg-slate-950/60 rounded-xl border border-emerald-500/20">
+                      {selectedUser?.password || 'admin123'}
+                    </div>
+                  </div>
+
                   <button
                     type="button"
                     onClick={() => {
-                      handleAutoFillDefaultPassword();
+                      if (selectedUser) {
+                        setPasswordInput(selectedUser.password || 'admin123');
+                        setError(null);
+                      }
                       setShowForgotPasswordModal(false);
                     }}
-                    className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition"
+                    className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-md transition cursor-pointer"
                   >
-                    Isi Sandi Terdaftar Otomatis
+                    Isi Sandi ke Kolom Login & Tutup
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setShowForgotPasswordModal(false)}
-                  className={`w-full py-2 rounded-xl border text-xs font-semibold ${
-                    isLight ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-slate-800 border-slate-700 text-slate-300'
-                  }`}
-                >
-                  Tutup
-                </button>
-              </div>
+                </div>
+              )}
             </motion.div>
           </div>
         )}

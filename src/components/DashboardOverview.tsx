@@ -497,8 +497,8 @@ export function DashboardOverview({
 
         <div className="relative z-10 flex flex-col items-center justify-center space-y-3.5 max-w-2xl mx-auto">
           {/* Logo mathfinger kecil di tengah paling atas dashboard */}
-          <div className="flex justify-center p-2 rounded-2xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 shadow-sm">
-            <MathFingerLogo size={36} textSize="md" theme={theme === 'dark' ? 'dark' : 'light'} />
+          <div className="flex justify-center px-4 py-2 rounded-2xl bg-white border border-slate-200/90 shadow-sm">
+            <MathFingerLogo size={36} textSize="md" theme="light" />
           </div>
 
           {/* Role and Date Badges */}

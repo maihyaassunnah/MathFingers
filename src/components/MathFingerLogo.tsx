@@ -22,15 +22,15 @@ export function MathFingerLogo({
   const mathLetters = [
     { char: 'M', color: 'text-rose-500' },
     { char: 'a', color: 'text-amber-500' },
-    { char: 't', color: 'text-sky-400' },
+    { char: 't', color: 'text-sky-500' },
     { char: 'h', color: 'text-emerald-500' },
   ];
 
   const fingerLetters = [
     { char: 'F', color: 'text-emerald-500' },
-    { char: 'i', color: 'text-sky-400' },
-    { char: 'n', color: 'text-indigo-400' },
-    { char: 'g', color: 'text-teal-400' },
+    { char: 'i', color: 'text-sky-500' },
+    { char: 'n', color: 'text-indigo-500' },
+    { char: 'g', color: 'text-teal-500' },
     { char: 'e', color: 'text-amber-500' },
     { char: 'r', color: 'text-purple-500' },
   ];
@@ -65,8 +65,8 @@ export function MathFingerLogo({
           className="transform transition-transform hover:scale-110 duration-200 cursor-pointer"
           style={{ minWidth: size }}
         >
-          {/* Soft yellow circle background */}
-          <circle cx="130" cy="130" r="120" fill="#faf7e9" stroke="#81c784" strokeWidth="3" strokeDasharray="6 6" />
+          {/* Soft white circle background */}
+          <circle cx="130" cy="130" r="120" fill="#ffffff" stroke="#81c784" strokeWidth="3" strokeDasharray="6 6" />
 
           {/* Plus signs / Stars decor */}
           <path d="M40 50 L43 58 L52 58 L45 63 L47 72 L40 67 L33 72 L35 63 L28 58 L37 58 Z" fill="#ffca28" />

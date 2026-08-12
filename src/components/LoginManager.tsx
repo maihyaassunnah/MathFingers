@@ -21,7 +21,8 @@ import {
   X,
   ShieldCheck,
   HelpCircle,
-  ChevronDown
+  ChevronDown,
+  Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AdminUser, Branch } from '../types';
@@ -240,9 +241,17 @@ export function LoginManager({
                     referrerPolicy="no-referrer"
                     className="w-7 h-7 rounded-lg object-cover shrink-0 border border-black/10"
                   />
-                  <span className={`font-extrabold truncate text-xs sm:text-sm ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                    {selectedUser.name}
-                  </span>
+                  <div className="flex flex-col min-w-0">
+                    <span className={`font-extrabold truncate text-xs sm:text-sm ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                      {selectedUser.name}
+                    </span>
+                    {selectedUser.role === 'branch_admin' && (
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 mt-0.5">
+                        <Sparkles size={11} className="animate-pulse" />
+                        Notif update otomatis aktif saat masuk
+                      </span>
+                    )}
+                  </div>
                 </div>
                 
                 <span className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-lg shrink-0 shadow-xs border ${

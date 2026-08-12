@@ -173,17 +173,24 @@ export default function App() {
     if (currentUser) {
       if (currentUser.role === 'branch_admin') {
         setActiveBranch(currentUser.branch);
+        // Check version specifically for this branch account
+        const branchKey = `math_finggers_installed_version_branch_${currentUser.branch}`;
+        const userKey = `math_finggers_installed_version_user_${currentUser.username}`;
+        const savedBranchVersion = localStorage.getItem(branchKey) || localStorage.getItem(userKey) || 'v2.5.0';
+        setInstalledVersion(savedBranchVersion);
+        if (savedBranchVersion !== LATEST_APP_VERSION) {
+          setIsUpdateModalOpen(true);
+        }
       } else {
         setActiveBranch('all');
+        const userKey = `math_finggers_installed_version_user_${currentUser.username}`;
+        const savedVersion = localStorage.getItem(userKey) || localStorage.getItem('math_finggers_installed_version') || 'v2.5.0';
+        setInstalledVersion(savedVersion);
+        if (savedVersion !== LATEST_APP_VERSION) {
+          setIsUpdateModalOpen(true);
+        }
       }
 
-      // Check if installed version is older than latest release
-      const savedVersion = localStorage.getItem('math_finggers_installed_version');
-      if (!savedVersion || savedVersion !== LATEST_APP_VERSION) {
-        // Automatically pop-up update modal for branch admin or super admin
-        setIsUpdateModalOpen(true);
-      }
-      
       // Ensure activeTab is always one of the valid tabs for the role
       const validTabIds = currentUser.role === 'super_admin'
         ? ['overview', 'students', 'classes', 'qr_cards', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'finance', 'grades', 'report', 'branches_mgmt', 'supabase_sql', 'settings', 'simulator']
@@ -192,7 +199,7 @@ export default function App() {
         setActiveTab('overview');
       }
     }
-  }, [currentUser, activeTab]);
+  }, [currentUser]);
 
   const {
     students,
@@ -1501,6 +1508,19 @@ export default function App() {
         );
       })()}
 
+      {/* Floating Update Notification Trigger for Branch Accounts */}
+      {currentUser && installedVersion !== LATEST_APP_VERSION && !isUpdateModalOpen && (
+        <div className="fixed bottom-5 right-5 z-40 animate-bounce">
+          <button
+            onClick={() => setIsUpdateModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs rounded-2xl shadow-xl border border-amber-300 transition-all cursor-pointer"
+          >
+            <Sparkles size={16} className="text-slate-950" />
+            <span>Update Versi Cabang ({currentUser.role === 'branch_admin' ? currentUser.branch : 'Sistem'})</span>
+          </button>
+        </div>
+      )}
+
       {/* App Update Modal */}
       <AppUpdateModal
         isOpen={isUpdateModalOpen}
@@ -1511,6 +1531,13 @@ export default function App() {
         installedVersion={installedVersion}
         onUpdateSuccess={() => {
           setInstalledVersion(LATEST_APP_VERSION);
+          localStorage.setItem('math_finggers_installed_version', LATEST_APP_VERSION);
+          if (currentUser?.branch) {
+            localStorage.setItem(`math_finggers_installed_version_branch_${currentUser.branch}`, LATEST_APP_VERSION);
+          }
+          if (currentUser?.username) {
+            localStorage.setItem(`math_finggers_installed_version_user_${currentUser.username}`, LATEST_APP_VERSION);
+          }
           setIsUpdateModalOpen(false);
         }}
       />

@@ -20,7 +20,9 @@ import {
   Check,
   Sliders,
   Scissors,
-  CheckCircle2
+  CheckCircle2,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 
 interface StudentQrCardsProps {
@@ -88,6 +90,41 @@ export function StudentQrCards({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const videoContainerRef = useRef<HTMLDivElement | null>(null);
+  const [isFullscreenVideo, setIsFullscreenVideo] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreenVideo(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleVideoFullscreen = () => {
+    if (!videoContainerRef.current) return;
+    if (!document.fullscreenElement) {
+      if (videoContainerRef.current.requestFullscreen) {
+        videoContainerRef.current.requestFullscreen().catch((err) => {
+          console.error("Error entering fullscreen:", err);
+        });
+      } else if ((videoContainerRef.current as any).webkitRequestFullscreen) {
+        (videoContainerRef.current as any).webkitRequestFullscreen();
+      }
+      setIsFullscreenVideo(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      }
+      setIsFullscreenVideo(false);
+    }
+  };
 
   // Auto-focus physical/keyboard scanner hidden input when scanner modal is open
   useEffect(() => {
@@ -1715,174 +1752,185 @@ export function StudentQrCards({
         </div>
       )}
 
-      {/* SCAN QR PRESENSI INTERACTIVE MODAL */}
+      {/* SCAN QR PRESENSI INTERACTIVE FULLSCREEN MODAL */}
       {isScannerOpen && (
-        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-start justify-center p-2 pt-2 sm:p-4 sm:pt-4 md:pt-6 overflow-y-auto">
-          <div className={`rounded-3xl w-full max-w-lg shadow-2xl border p-4 sm:p-5 relative animate-page-fade-in ${
-            isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#090d16] border-slate-850 text-white'
-          }`}>
-            <button
-              onClick={() => {
-                setIsScannerOpen(false);
-                stopCamera();
-              }}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-200 transition"
-            >
-              <X size={20} />
-            </button>
-
-            {/* Invisible form for keyboard-emulated physical USB/Bluetooth scanners to capture inputs at any time */}
-            <form onSubmit={handleHiddenScannerSubmit} className="absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden">
-              <input
-                ref={hiddenInputRef}
-                type="text"
-                value={hiddenScannerValue}
-                onChange={(e) => setHiddenScannerValue(e.target.value)}
-                className="w-0 h-0 opacity-0 pointer-events-none"
-                autoComplete="off"
-              />
-            </form>
-
-            {/* Real-time scanning feedback overlay */}
-            {scanNotification && (
-              <div className="absolute inset-x-4 top-[70px] bottom-4 z-20 flex items-center justify-center p-2 animate-page-fade-in">
-                <div className={`w-full h-full rounded-2xl shadow-2xl p-6 border flex flex-col items-center justify-center text-center transition ${
-                  isLight ? 'bg-white border-slate-200' : 'bg-[#090d16] border-slate-800'
-                }`}>
-                  {scanNotification.type === 'success' ? (
-                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 flex items-center justify-center mb-4 animate-bounce">
-                      <CheckCircle2 size={32} />
-                    </div>
-                  ) : scanNotification.type === 'warning' ? (
-                    <div className="w-16 h-16 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/30 flex items-center justify-center mb-4 animate-bounce">
-                      <AlertCircle size={32} />
-                    </div>
-                  ) : (
-                    <div className="w-16 h-16 rounded-full bg-red-500/10 text-red-500 border border-red-500/30 flex items-center justify-center mb-4 animate-bounce">
-                      <AlertCircle size={32} />
-                    </div>
-                  )}
-                  <div className="text-[10px] uppercase tracking-widest font-extrabold opacity-70 mb-1.5">
-                    {scanNotification.type === 'success' 
-                      ? 'PRESENSI BERHASIL' 
-                      : scanNotification.type === 'warning' 
-                        ? 'DUPLIKAT SCAN' 
-                        : 'PRESENSI GAGAL'}
-                  </div>
-                  <h4 className={`font-black text-xl tracking-tight line-clamp-2 mb-2 ${
-                    isLight ? 'text-slate-800' : 'text-white'
-                  }`}>
-                    {scanNotification.name}
-                  </h4>
-                  <p className={`text-sm font-bold ${
-                    scanNotification.type === 'success' 
-                      ? 'text-emerald-500' 
-                      : scanNotification.type === 'warning' 
-                        ? 'text-amber-500' 
-                        : 'text-red-500'
-                  }`}>
-                    {scanNotification.message}
-                  </p>
-                  
-                  {/* Auto-standby text and progress dot */}
-                  <div className="mt-6 flex items-center gap-1.5 text-xs text-slate-400 font-medium">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                    <span>Kembali standby untuk scan berikutnya...</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center gap-2.5 mb-3 pb-2 border-b border-slate-850">
-              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
-                <QrCode size={20} />
+        <div className="fixed inset-0 z-[100] w-screen h-screen bg-slate-950 text-white flex flex-col justify-between p-3 sm:p-5 md:p-6 overflow-hidden animate-page-fade-in">
+          {/* Header section */}
+          <div className="w-full flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-800 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-2xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                <QrCode size={24} />
               </div>
               <div>
-                <h3 className="font-extrabold text-sm sm:text-base">Scan QR Absensi Masuk</h3>
-                <p className="text-[10px] sm:text-xs text-slate-400">Gunakan Kamera, Unggah Berkas Gambar, atau Scanner Fisik.</p>
+                <h3 className="font-black text-base sm:text-xl tracking-tight text-white">Scan QR Absensi Masuk</h3>
+                <p className="text-xs text-slate-400">Pindai kartu siswa menggunakan kamera, scanner USB, atau berkas gambar.</p>
               </div>
             </div>
 
-            {/* Tab selection for scanner modes */}
-            <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-slate-950/40 border border-slate-850 mb-3">
-              {[
-                { id: 'camera', label: 'Kamera Aktif', icon: Camera },
-                { id: 'upload', label: 'Unggah Gambar', icon: Upload },
-                { id: 'manual', label: 'Input Scanner', icon: Search }
-              ].map(tab => {
-                const isSel = selectedTab === tab.id;
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setSelectedTab(tab.id as any)}
-                    className={`py-2 px-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                      isSel 
-                        ? 'bg-emerald-600 text-white' 
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
-                    }`}
-                  >
-                    <Icon size={13} />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {/* Mode selection tabs & Close button */}
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+              <div className="flex gap-1 p-1 rounded-xl bg-slate-900 border border-slate-800">
+                {[
+                  { id: 'camera', label: 'Kamera', icon: Camera },
+                  { id: 'upload', label: 'Unggah', icon: Upload },
+                  { id: 'manual', label: 'Input Manual', icon: Search }
+                ].map(tab => {
+                  const isSel = selectedTab === tab.id;
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setSelectedTab(tab.id as any)}
+                      className={`py-1.5 px-3 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+                        isSel 
+                          ? 'bg-emerald-600 text-white shadow-md' 
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                      }`}
+                    >
+                      <Icon size={14} />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
 
+              <button
+                type="button"
+                onClick={() => {
+                  setIsScannerOpen(false);
+                  stopCamera();
+                }}
+                className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 transition cursor-pointer shrink-0"
+                title="Tutup Scanner"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+
+          {/* Invisible form for keyboard-emulated physical USB/Bluetooth scanners */}
+          <form onSubmit={handleHiddenScannerSubmit} className="absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden">
+            <input
+              ref={hiddenInputRef}
+              type="text"
+              value={hiddenScannerValue}
+              onChange={(e) => setHiddenScannerValue(e.target.value)}
+              className="w-0 h-0 opacity-0 pointer-events-none"
+              autoComplete="off"
+            />
+          </form>
+
+          {/* Real-time scanning feedback overlay */}
+          {scanNotification && (
+            <div className="fixed inset-0 z-[110] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 animate-page-fade-in">
+              <div className="w-full max-w-md rounded-3xl shadow-2xl p-8 border border-slate-800 bg-slate-900 flex flex-col items-center justify-center text-center">
+                {scanNotification.type === 'success' ? (
+                  <div className="w-20 h-20 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center mb-4 animate-bounce">
+                    <CheckCircle2 size={40} />
+                  </div>
+                ) : scanNotification.type === 'warning' ? (
+                  <div className="w-20 h-20 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center mb-4 animate-bounce">
+                    <AlertCircle size={40} />
+                  </div>
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-red-500/15 text-red-400 border border-red-500/30 flex items-center justify-center mb-4 animate-bounce">
+                    <AlertCircle size={40} />
+                  </div>
+                )}
+                <div className="text-xs uppercase tracking-widest font-extrabold text-slate-400 mb-1.5">
+                  {scanNotification.type === 'success' 
+                    ? 'PRESENSI BERHASIL' 
+                    : scanNotification.type === 'warning' 
+                      ? 'DUPLIKAT SCAN' 
+                      : 'PRESENSI GAGAL'}
+                </div>
+                <h4 className="font-black text-2xl tracking-tight text-white mb-2">
+                  {scanNotification.name}
+                </h4>
+                <p className={`text-base font-bold ${
+                  scanNotification.type === 'success' 
+                    ? 'text-emerald-400' 
+                    : scanNotification.type === 'warning' 
+                      ? 'text-amber-400' 
+                      : 'text-red-400'
+                }`}>
+                  {scanNotification.message}
+                </p>
+                
+                {/* Auto-standby text and progress dot */}
+                <div className="mt-8 flex items-center gap-2 text-xs text-slate-400 font-medium bg-slate-950 px-4 py-2 rounded-full border border-slate-800">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                  <span>Kembali standby untuk scan berikutnya...</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Body Section: Expands fully on desktop/tablet/mobile */}
+          <div className="flex-1 flex flex-col justify-center items-center my-3 relative overflow-hidden w-full">
             {/* TAB: CAMERA ACTIVE STREAM SCAN */}
             {selectedTab === 'camera' && (
-              <div className="space-y-3">
+              <div className="w-full h-full flex flex-col items-center justify-center">
                 {scanError ? (
-                  <div className="p-4 rounded-xl border border-red-500/15 bg-red-500/5 text-red-500 text-xs flex gap-2.5 items-start">
-                    <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                  <div className="p-6 rounded-2xl border border-red-500/20 bg-red-500/10 text-red-400 text-sm flex gap-3 items-center max-w-lg">
+                    <AlertCircle size={24} className="shrink-0" />
                     <div>{scanError}</div>
                   </div>
                 ) : (
-                  <div className="relative w-full aspect-video max-w-xs sm:max-w-sm mx-auto overflow-hidden rounded-2xl border border-slate-800 bg-black flex items-center justify-center">
-                    
+                  <div ref={videoContainerRef} className="relative w-full h-full max-h-[calc(100vh-180px)] max-w-5xl mx-auto overflow-hidden rounded-3xl border border-slate-800 bg-black flex items-center justify-center shadow-2xl">
                     {/* Hidden canvas for decoder */}
                     <canvas ref={canvasRef} className="hidden" />
 
                     {/* Video Camera Stream */}
                     <video
                       ref={videoRef}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain sm:object-cover"
                       playsInline
                       muted
                     />
 
+                    {/* Full Screen Toggle Button */}
+                    <button
+                      type="button"
+                      onClick={toggleVideoFullscreen}
+                      className="absolute top-4 left-4 z-20 bg-slate-900/90 hover:bg-slate-800 active:scale-95 backdrop-blur-md px-3.5 py-2 rounded-xl text-xs font-black text-white flex items-center gap-2 border border-slate-700 shadow-2xl transition cursor-pointer"
+                      title={isFullscreenVideo ? "Keluar Layar Penuh" : "Tampilan Layar Penuh (Full Screen)"}
+                    >
+                      {isFullscreenVideo ? <Minimize2 size={16} className="text-emerald-400" /> : <Maximize2 size={16} className="text-emerald-400" />}
+                      <span>{isFullscreenVideo ? "Layar Normal" : "Full Screen"}</span>
+                    </button>
+
                     {/* Scanning overlay frame lines */}
-                    <div className="absolute inset-0 border-2 border-emerald-500/10 pointer-events-none flex items-center justify-center">
-                      <div className="w-48 h-48 border-2 border-dashed border-emerald-500/80 rounded-2xl relative">
+                    <div className="absolute inset-0 border-2 border-emerald-500/10 pointer-events-none flex items-center justify-center p-4">
+                      <div className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 border-2 border-dashed border-emerald-500/80 rounded-3xl relative shadow-[0_0_50px_rgba(16,185,129,0.15)]">
                         {/* Glowing/pulsing green light line bar */}
-                        <div className="absolute left-0 right-0 h-0.5 bg-emerald-500/70 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse" style={{
+                        <div className="absolute left-0 right-0 h-1 bg-emerald-400 shadow-[0_0_15px_rgba(16,185,129,1)] animate-pulse" style={{
                           animation: 'scanBar 2s infinite linear'
                         }} />
                       </div>
                     </div>
 
-                    <div className="absolute bottom-3 left-3 bg-black/60 px-2.5 py-1.5 rounded-md text-[10px] text-slate-300 font-medium flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                      Mendeteksi QR otomatis...
+                    <div className="absolute bottom-4 left-4 bg-slate-950/80 backdrop-blur-md px-3.5 py-2 rounded-xl text-xs text-slate-200 font-bold flex items-center gap-2 border border-slate-800 shadow-lg">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                      <span>Mendeteksi Kode QR Otomatis...</span>
                     </div>
-                  </div>
-                )}
 
-                {/* Camera Selection Dropdown */}
-                {cameraDevices.length > 1 && (
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Ganti Kamera</label>
-                    <CustomDropdown
-                      value={selectedDeviceId}
-                      onChange={(val) => setSelectedDeviceId(val)}
-                      options={cameraDevices.map(device => ({
-                        value: device.deviceId,
-                        label: device.label || `Kamera ${cameraDevices.indexOf(device) + 1}`
-                      }))}
-                      theme={theme}
-                      className="w-full"
-                    />
+                    {/* Camera Switcher inside Video overlay if multiple */}
+                    {cameraDevices.length > 1 && (
+                      <div className="absolute top-4 right-4 z-10 max-w-xs">
+                        <CustomDropdown
+                          value={selectedDeviceId}
+                          onChange={(val) => setSelectedDeviceId(val)}
+                          options={cameraDevices.map(device => ({
+                            value: device.deviceId,
+                            label: device.label || `Kamera ${cameraDevices.indexOf(device) + 1}`
+                          }))}
+                          theme="dark"
+                          className="w-full"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1890,15 +1938,15 @@ export function StudentQrCards({
 
             {/* TAB: UPLOAD PICTURE WITH QR CODE */}
             {selectedTab === 'upload' && (
-              <div className="space-y-4 text-center py-6">
-                <div className="border-2 border-dashed border-slate-800 rounded-3xl p-8 max-w-sm mx-auto hover:border-emerald-500/40 transition">
-                  <FileImage size={40} className="mx-auto text-slate-600 mb-3" />
-                  <div className="text-sm font-bold">Pilih Berkas Gambar QR</div>
-                  <p className="text-[11px] text-slate-400 mt-1 mb-5">
-                    Unggah foto kartu atau gambar modul yang memuat kode QR siswa.
+              <div className="w-full h-full flex flex-col items-center justify-center">
+                <div className="border-2 border-dashed border-slate-800 rounded-3xl p-10 max-w-lg w-full text-center bg-slate-900/60 hover:border-emerald-500/40 transition">
+                  <FileImage size={56} className="mx-auto text-emerald-500 mb-4" />
+                  <h4 className="text-lg font-black text-white">Unggah Berkas Gambar QR</h4>
+                  <p className="text-xs text-slate-400 mt-1 mb-6 leading-relaxed">
+                    Pilih foto kartu atau gambar modul dari peranti Anda yang memuat kode QR siswa.
                   </p>
-                  <label className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold px-4.5 py-2 rounded-xl text-xs cursor-pointer inline-block transition shadow-md">
-                    <span>Cari Gambar...</span>
+                  <label className="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-6 py-3 rounded-xl text-xs cursor-pointer inline-block transition shadow-lg shadow-emerald-600/20">
+                    <span>Pilih Berkas Gambar...</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -1912,55 +1960,56 @@ export function StudentQrCards({
 
             {/* TAB: PHYSICAL BARCODE SCANNER / MANUAL LOOKUP ENTRY */}
             {selectedTab === 'manual' && (
-              <div className="space-y-4 max-w-sm mx-auto">
-                <form onSubmit={handleManualSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Kode / ID Siswa</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="Scan kartu dengan alat scan atau ketik ID..."
-                        value={manualCode}
-                        onChange={(e) => setManualCode(e.target.value)}
-                        className={`flex-1 px-3 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-500 ${
-                          isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-850 text-white'
-                        }`}
-                        autoFocus
-                      />
-                      <button
-                        type="submit"
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold px-4.5 py-2.5 rounded-xl text-xs shadow-md cursor-pointer transition"
-                      >
-                        Temukan
-                      </button>
+              <div className="w-full h-full flex flex-col items-center justify-center max-w-md mx-auto space-y-6">
+                <div className="w-full p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
+                  <form onSubmit={handleManualSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Kode / ID Siswa</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Scan kartu dengan alat scan atau ketik ID..."
+                          value={manualCode}
+                          onChange={(e) => setManualCode(e.target.value)}
+                          className="flex-1 px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-slate-600 font-mono font-bold"
+                          autoFocus
+                        />
+                        <button
+                          type="submit"
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold px-5 py-3 rounded-xl text-xs shadow-md cursor-pointer transition"
+                        >
+                          Temukan
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </form>
+                  </form>
 
-                <div className="p-3.5 rounded-2xl border border-slate-850 bg-slate-950/20 text-[10px] text-slate-400 leading-relaxed flex items-start gap-2">
-                  <ShieldCheck size={16} className="text-emerald-500 shrink-0 mt-0.5" />
-                  <div>
-                    <strong>Saran Penggunaan:</strong> Alat scan kartu USB (Barcode/QR USB Scanner) dapat dipasang langsung ke Laptop. Hubungkan kabelnya, buka tab ini, arahkan kursor ke kolom di atas, lalu scan kartu QR fisik siswa. Kehadiran akan terdeteksi instan!
+                  <div className="p-4 rounded-2xl border border-slate-800 bg-slate-950 text-xs text-slate-400 leading-relaxed flex items-start gap-3">
+                    <ShieldCheck size={20} className="text-emerald-500 shrink-0 mt-0.5" />
+                    <div>
+                      <strong>Saran Penggunaan:</strong> Alat scan kartu USB (Barcode/QR USB Scanner) dapat dipasang langsung ke Laptop atau Tablet. Hubungkan kabelnya, lalu scan kartu QR fisik siswa. Kehadiran akan terdeteksi instan!
+                    </div>
                   </div>
                 </div>
               </div>
             )}
+          </div>
 
-            {/* Cancel Actions */}
-            <div className="mt-4 pt-3 border-t border-slate-850 text-right">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsScannerOpen(false);
-                  stopCamera();
-                }}
-                className={`py-2 px-5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' : 'bg-slate-900 hover:bg-slate-850 text-slate-450'
-                }`}
-              >
-                Tutup Scanner
-              </button>
+          {/* Footer Actions */}
+          <div className="w-full flex items-center justify-between pt-3 border-t border-slate-800 shrink-0">
+            <div className="text-xs text-slate-500 hidden sm:block font-medium">
+              Mode Layar Penuh • Pindai Otomatis Active
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsScannerOpen(false);
+                stopCamera();
+              }}
+              className="w-full sm:w-auto py-2.5 px-8 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs border border-slate-800 transition cursor-pointer text-center"
+            >
+              Tutup Scanner
+            </button>
           </div>
         </div>
       )}

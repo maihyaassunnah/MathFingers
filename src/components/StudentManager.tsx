@@ -750,9 +750,33 @@ export function StudentManager({
                         </a>
                       </td>
                       <td className="p-4 hidden sm:table-cell">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                          {student.level || 'Dasar'}
-                        </span>
+                        {(() => {
+                          const rawLevel = student.level || 'Level Dasar: Pengenalan Simbol Jari';
+                          let line1 = rawLevel;
+                          let line2 = '';
+
+                          if (rawLevel.includes(':')) {
+                            const idx = rawLevel.indexOf(':');
+                            line1 = `${rawLevel.substring(0, idx).trim()}:`;
+                            line2 = rawLevel.substring(idx + 1).trim();
+                          } else {
+                            const words = rawLevel.trim().split(' ');
+                            if (words.length >= 2 && words[0].toLowerCase() === 'level') {
+                              line1 = `${words[0]} ${words[1]}`;
+                              line2 = words.slice(2).join(' ');
+                            } else if (words.length >= 2) {
+                              line1 = words[0];
+                              line2 = words.slice(1).join(' ');
+                            }
+                          }
+
+                          return (
+                            <div className={`text-xs leading-snug ${isLight ? 'text-black' : 'text-slate-100'}`}>
+                              <div className="font-bold">{line1}</div>
+                              {line2 && <div className="font-medium mt-0.5">{line2}</div>}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="p-4 hidden sm:table-cell">
                         {(() => {

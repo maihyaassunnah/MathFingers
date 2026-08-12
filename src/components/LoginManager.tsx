@@ -121,20 +121,24 @@ export function LoginManager({
 
   return (
     <div className={`min-h-screen flex flex-col justify-between p-4 sm:p-6 md:p-8 transition-colors duration-300 relative overflow-x-hidden ${
-      isLight ? 'bg-slate-50 text-slate-900' : 'bg-[#0b1320] text-slate-100'
+      isLight ? 'bg-[#fdfcf2] math-pattern-light text-slate-900' : 'bg-[#0f172a] math-pattern-dark text-slate-100'
     }`}>
       
+      {/* Background Ambient Decorative Elements */}
+      <div className="fixed -top-20 -left-20 w-80 h-80 bg-emerald-500/10 dark:bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="fixed -bottom-20 -right-20 w-80 h-80 bg-teal-500/10 dark:bg-teal-500/15 rounded-full blur-3xl pointer-events-none" />
+
       {/* Sleek Top Header Actions */}
-      <header className="max-w-md mx-auto w-full flex items-center justify-between py-2 px-1">
+      <header className="max-w-md mx-auto w-full flex items-center justify-between py-2 px-1 relative z-10">
         <div className="flex items-center gap-2">
           {onToggleTheme && (
             <button
               type="button"
               onClick={onToggleTheme}
-              className={`p-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 ${
+              className={`p-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer ${
                 isLight 
-                  ? 'bg-white border-slate-200 text-slate-700 shadow-xs' 
-                  : 'bg-slate-900 border-slate-800 text-slate-300'
+                  ? 'bg-white border-slate-300 text-slate-800 shadow-xs hover:bg-slate-50' 
+                  : 'bg-slate-900 border-slate-700 text-slate-200'
               }`}
             >
               {isLight ? <Moon size={15} /> : <Sun size={15} />}
@@ -147,7 +151,7 @@ export function LoginManager({
           <button
             type="button"
             onClick={onOpenSelfAttendance}
-            className="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold transition flex items-center gap-1.5 active:scale-95"
+            className="px-3 py-1.5 rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-xs font-bold transition flex items-center gap-1.5 active:scale-95 cursor-pointer"
           >
             <QrCode size={14} />
             <span>Presensi QR</span>
@@ -156,27 +160,27 @@ export function LoginManager({
       </header>
 
       {/* Main Login Card - Instagram/Meta Mobile Style */}
-      <main className="max-w-md mx-auto w-full my-auto py-6">
+      <main className="max-w-md mx-auto w-full my-auto py-6 relative z-10">
         <motion.div 
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
           className={`p-6 sm:p-8 rounded-3xl border transition-all duration-300 ${
             isLight 
-              ? 'bg-white border-slate-200 shadow-xl shadow-slate-200/60' 
-              : 'bg-slate-900/90 border-slate-800 shadow-2xl shadow-emerald-950/20'
+              ? 'bg-white/95 border-slate-200 shadow-xl shadow-slate-200/80 backdrop-blur-md' 
+              : 'bg-slate-900/90 border-slate-800 shadow-2xl shadow-emerald-950/30 backdrop-blur-md'
           }`}
         >
           {/* Instagram-style Centered Logo at Top */}
-          <div className="flex flex-col items-center justify-center text-center mb-7">
+          <div className="flex flex-col items-center justify-center text-center mb-6">
             <div className="mb-3">
-              <MathFingerLogo size={64} showText={false} theme={theme} />
+              <MathFingerLogo size={68} showText={false} theme={theme} />
             </div>
             
             <h1 className={`text-2xl font-black tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
               Math Finger
             </h1>
-            <p className={`text-xs font-semibold mt-1 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+            <p className={`text-xs font-bold mt-0.5 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
               Portal Masuk Administrator
             </p>
           </div>
@@ -184,8 +188,8 @@ export function LoginManager({
           <form onSubmit={handleLoginSubmit} className="space-y-4">
             
             {/* Input 1: Account Selector Dropdown (Instagram Outline Input Style) */}
-            <div className="space-y-1">
-              <label className={`block text-[11px] font-bold uppercase tracking-wider ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+            <div className="space-y-1.5">
+              <label className={`block text-center text-[11px] font-extrabold uppercase tracking-wider ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                 Pilih Akun Administrator
               </label>
               <div className="relative">
@@ -199,7 +203,7 @@ export function LoginManager({
                       setError(null);
                     }
                   }}
-                  className={`w-full pl-3.5 pr-10 py-3.5 rounded-xl border text-xs sm:text-sm font-semibold outline-none appearance-none cursor-pointer transition ${
+                  className={`w-full pl-3.5 pr-10 py-3.5 rounded-xl border text-xs sm:text-sm font-bold outline-none appearance-none cursor-pointer transition ${
                     isLight 
                       ? 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-600 focus:bg-white' 
                       : 'bg-slate-950 border-slate-700 text-white focus:border-emerald-500 focus:bg-slate-900'
@@ -214,35 +218,50 @@ export function LoginManager({
                     );
                   })}
                 </select>
-                <ChevronDown size={16} className="absolute right-3.5 top-4 text-slate-400 pointer-events-none" />
+                <ChevronDown size={16} className="absolute right-3.5 top-4 text-slate-500 pointer-events-none" />
               </div>
             </div>
 
             {/* Selected Account Info Tag */}
             {selectedUser && (
-              <div className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
+              <div className={`p-3 rounded-xl border flex items-center justify-between text-xs gap-2 ${
                 selectedUser.role === 'super_admin'
-                  ? isLight ? 'bg-indigo-50 border-indigo-200 text-indigo-900' : 'bg-indigo-950/40 border-indigo-900/60 text-indigo-200'
-                  : isLight ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-emerald-950/40 border-emerald-900/60 text-emerald-200'
+                  ? isLight 
+                    ? 'bg-indigo-50/90 border-indigo-200 text-indigo-950' 
+                    : 'bg-indigo-950/60 border-indigo-800/80 text-indigo-200'
+                  : isLight 
+                    ? 'bg-emerald-50/90 border-emerald-200 text-emerald-950' 
+                    : 'bg-emerald-950/60 border-emerald-800/80 text-emerald-200'
               }`}>
-                <div className="flex items-center gap-2 truncate">
+                <div className="flex items-center gap-2.5 min-w-0">
                   <img
                     src={getAdminAvatar(selectedUser)}
                     alt={selectedUser.name}
                     referrerPolicy="no-referrer"
-                    className="w-6 h-6 rounded-lg object-cover shrink-0"
+                    className="w-7 h-7 rounded-lg object-cover shrink-0 border border-black/10"
                   />
-                  <span className="font-bold truncate">{selectedUser.name}</span>
+                  <span className={`font-extrabold truncate text-xs sm:text-sm ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                    {selectedUser.name}
+                  </span>
                 </div>
-                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-white/60 dark:bg-slate-800/80 shrink-0">
-                  {selectedUser.role === 'super_admin' ? 'PUSAT' : selectedUser.branch}
+                
+                <span className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-lg shrink-0 shadow-xs border ${
+                  selectedUser.role === 'super_admin'
+                    ? isLight 
+                      ? 'bg-indigo-600 text-white border-indigo-700' 
+                      : 'bg-indigo-500 text-white border-indigo-400'
+                    : isLight 
+                      ? 'bg-emerald-700 text-white border-emerald-800' 
+                      : 'bg-emerald-600 text-white border-emerald-500'
+                }`}>
+                  {selectedUser.role === 'super_admin' ? 'PUSAT' : `CABANG ${selectedUser.branch}`}
                 </span>
               </div>
             )}
 
             {/* Input 2: Password Input (Instagram Outline Input Style) */}
-            <div className="space-y-1">
-              <label className={`block text-[11px] font-bold uppercase tracking-wider ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+            <div className="space-y-1.5">
+              <label className={`block text-[11px] font-extrabold uppercase tracking-wider ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                 Kata Sandi
               </label>
               <div className="relative flex items-center">
@@ -266,7 +285,7 @@ export function LoginManager({
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 p-1 text-slate-400 hover:text-slate-200"
+                  className="absolute right-3.5 p-1 text-slate-400 hover:text-slate-200 cursor-pointer"
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -275,7 +294,7 @@ export function LoginManager({
 
             {/* Error Banner */}
             {error && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-semibold flex items-center gap-2">
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold flex items-center gap-2">
                 <AlertCircle size={15} className="shrink-0" />
                 <span>{error}</span>
               </div>
@@ -308,8 +327,8 @@ export function LoginManager({
               <button
                 type="button"
                 onClick={() => setShowForgotPasswordModal(true)}
-                className={`text-xs font-semibold hover:underline cursor-pointer ${
-                  isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'
+                className={`text-xs font-bold hover:underline cursor-pointer ${
+                  isLight ? 'text-slate-700 hover:text-slate-900' : 'text-slate-300 hover:text-white'
                 }`}
               >
                 Lupa kata sandi?
@@ -317,14 +336,24 @@ export function LoginManager({
             </div>
           </form>
 
-          {/* Keunggulan: Tampilkan Secara Ringkas Dalam Satu Baris Saja */}
-          <div className="mt-8 pt-4 border-t border-slate-200 dark:border-slate-800">
-            <div className="flex items-center justify-center gap-2 text-[11px] font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap overflow-x-auto no-scrollbar">
-              <span>🔒 Sesi Terisolasi</span>
-              <span className="text-slate-300 dark:text-slate-700">•</span>
-              <span>✨ Sync Cloud & Offline</span>
-              <span className="text-slate-300 dark:text-slate-700">•</span>
-              <span>📱 QR Mandiri</span>
+          {/* Keunggulan: Ringkas dan Nampak Semua di Mobile */}
+          <div className="mt-7 pt-4 border-t border-slate-200/80 dark:border-slate-800">
+            <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] font-bold">
+              <span className={`px-2.5 py-1 rounded-lg border flex items-center gap-1 ${
+                isLight ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-800 text-slate-300'
+              }`}>
+                🔒 Sesi Terisolasi
+              </span>
+              <span className={`px-2.5 py-1 rounded-lg border flex items-center gap-1 ${
+                isLight ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-800 text-slate-300'
+              }`}>
+                ✨ Sync Cloud & Offline
+              </span>
+              <span className={`px-2.5 py-1 rounded-lg border flex items-center gap-1 ${
+                isLight ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-800 text-slate-300'
+              }`}>
+                📱 QR Mandiri
+              </span>
             </div>
           </div>
 

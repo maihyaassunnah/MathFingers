@@ -27,6 +27,8 @@ interface AppUpdateModalProps {
   currentUser: AdminUser | null;
   theme: 'light' | 'dark';
   onUpdateSuccess?: () => void;
+  isMandatory?: boolean;
+  installedVersion?: string;
 }
 
 export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
@@ -34,7 +36,9 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
   onClose,
   currentUser,
   theme,
-  onUpdateSuccess
+  onUpdateSuccess,
+  isMandatory = true,
+  installedVersion = 'v2.5.0'
 }) => {
   const [updateStatus, setUpdateStatus] = useState<'prompt' | 'updating' | 'success'>('prompt');
   const [progress, setProgress] = useState<number>(0);
@@ -81,10 +85,18 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
     }, 250);
   };
 
-  const branchName = currentUser?.role === 'branch_admin' ? currentUser.branch : (currentUser?.branch || 'Cabang');
+  const branchName = currentUser?.role === 'branch_admin' ? currentUser.branch : (currentUser?.branch || 'Pusat');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-fadeIn">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn"
+      onClick={(e) => {
+        // Prevent closing backdrop click if mandatory
+        if (isMandatory && updateStatus !== 'success') {
+          e.stopPropagation();
+        }
+      }}
+    >
       <div 
         className={`relative w-full max-w-2xl rounded-3xl border shadow-2xl overflow-hidden transition-all duration-300 ${
           isLight 
@@ -96,32 +108,39 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
         <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 opacity-90" />
         <div className="absolute top-0 left-0 right-0 h-32 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.2),transparent_70%)]" />
 
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-10 p-2 text-white/80 hover:text-white bg-black/20 hover:bg-black/40 rounded-full transition-all"
-          title="Tutup Modal"
-        >
-          <X size={18} />
-        </button>
+        {/* Close Button - Only show if not mandatory or update succeeds */}
+        {(!isMandatory || updateStatus === 'success') && (
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 z-10 p-2 text-white/80 hover:text-white bg-black/20 hover:bg-black/40 rounded-full transition-all cursor-pointer"
+            title="Tutup Modal"
+          >
+            <X size={18} />
+          </button>
+        )}
 
         {/* Modal Header Content */}
         <div className="relative pt-6 px-6 sm:px-8 pb-4 text-white">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-black tracking-wider uppercase border border-white/30">
               <Sparkles size={13} className="text-amber-300 animate-pulse" />
-              <span>Update Aplikasi Cabang</span>
+              <span>Update Aplikasi System</span>
             </span>
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-400 text-slate-950 text-xs font-extrabold">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-400 text-slate-950 text-xs font-black shadow-xs">
               {LATEST_APP_VERSION}
             </span>
+            {isMandatory && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-600 text-white text-[10px] font-black uppercase tracking-wider animate-pulse">
+                Pembaruan Wajib
+              </span>
+            )}
           </div>
 
           <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white drop-shadow-sm">
             Pembaruan Sistem Math Fingers Terbaru
           </h2>
           <p className="text-xs sm:text-sm text-emerald-100/90 font-medium mt-1">
-            Khusus untuk <span className="font-extrabold underline decoration-amber-300 decoration-2">{branchName}</span> — Tingkatkan performa & aktifkan modul fitur terbaru.
+            Khusus untuk <span className="font-extrabold underline decoration-amber-300 decoration-2">{branchName}</span> — Wajib perbarui untuk melanjutkan akses.
           </p>
         </div>
 
@@ -131,26 +150,42 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
             <>
               {/* Alert notice for outdated branch */}
               <div className={`p-4 rounded-2xl border flex items-start gap-3.5 ${
-                isLight 
-                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-900' 
-                  : 'bg-amber-500/15 border-amber-500/30 text-amber-200'
+                isMandatory
+                  ? isLight 
+                    ? 'bg-red-500/10 border-red-500/30 text-red-950' 
+                    : 'bg-red-500/15 border-red-500/40 text-red-200'
+                  : isLight 
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-900' 
+                    : 'bg-amber-500/15 border-amber-500/30 text-amber-200'
               }`}>
-                <div className="p-2 rounded-xl bg-amber-500 text-slate-950 shrink-0 font-bold">
+                <div className={`p-2 rounded-xl text-white shrink-0 font-bold ${isMandatory ? 'bg-red-600' : 'bg-amber-500 text-slate-950'}`}>
                   <AlertTriangle size={20} />
                 </div>
                 <div className="text-xs space-y-1">
-                  <h4 className="font-extrabold text-sm">Status: Perlu Diperbarui ({LATEST_APP_VERSION})</h4>
-                  <p className="opacity-90 leading-relaxed">
-                    Aplikasi di cabang Anda belum menggunakan versi Rilis Terbaru ({LATEST_APP_VERSION}). Melakukan pembaruan akan mengaktifkan fitur visualisasi grafik keuangan, QR Code scanner, serta perbaikan sinkronisasi data otomatis.
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-extrabold text-sm">
+                      Status: {isMandatory ? 'Versi Lama Terdeteksi - Wajib Update' : `Perlu Diperbarui (${LATEST_APP_VERSION})`}
+                    </h4>
+                  </div>
+                  <p className="opacity-95 leading-relaxed font-medium">
+                    {isMandatory ? (
+                      <>
+                        Anda sedang menggunakan aplikasi versi lama (<strong>{installedVersion}</strong>). Anda <strong>tidak dapat melanjutkan</strong> penggunaan aplikasi sebelum melakukan pembaruan ke versi terbaru <strong>{LATEST_APP_VERSION}</strong>.
+                      </>
+                    ) : (
+                      <>
+                        Aplikasi di cabang Anda belum menggunakan versi Rilis Terbaru ({LATEST_APP_VERSION}). Melakukan pembaruan akan mengaktifkan fitur visualisasi grafik keuangan, QR Code scanner, serta perbaikan sinkronisasi data otomatis.
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
 
               {/* Changelog & Feature List */}
               <div className="space-y-3">
-                <h3 className={`text-xs font-black uppercase tracking-wider ${isLight ? 'text-slate-500' : 'text-slate-400'} flex items-center justify-between`}>
+                <h3 className={`text-xs font-black uppercase tracking-wider ${isLight ? 'text-slate-600' : 'text-slate-400'} flex items-center justify-between`}>
                   <span>Fitur & Peningkatan Terbaru di Versi {LATEST_APP_VERSION}:</span>
-                  <span className="text-[10px] text-emerald-500 font-bold">Terverifikasi Bebas Bug</span>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">Terverifikasi Stabil</span>
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -226,7 +261,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
 
               {/* Guarantee badge */}
               <div className="flex items-center justify-between pt-2 border-t border-slate-150 dark:border-slate-800/80 text-[11px] text-slate-500">
-                <span className="flex items-center gap-1.5 font-medium">
+                <span className="flex items-center gap-1.5 font-semibold">
                   <ShieldCheck size={14} className="text-emerald-500" />
                   Pembaruan aman, data siswa & transaksi tidak akan hilang.
                 </span>
@@ -239,23 +274,25 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button
                   onClick={handleStartUpdate}
-                  className="flex-1 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/25 hover:shadow-emerald-600/40 transition-all flex items-center justify-center gap-2 group"
+                  className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm shadow-xl shadow-emerald-600/30 hover:shadow-emerald-600/50 transition-all flex items-center justify-center gap-2 group cursor-pointer"
                 >
                   <Download size={18} className="group-hover:translate-y-0.5 transition-transform" />
                   <span>Update Aplikasi Sekarang</span>
                   <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
                 </button>
 
-                <button
-                  onClick={onClose}
-                  className={`py-3.5 px-5 rounded-2xl font-bold text-xs border transition-all ${
-                    isLight 
-                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200' 
-                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
-                  }`}
-                >
-                  Ingatkan Nanti
-                </button>
+                {!isMandatory && (
+                  <button
+                    onClick={onClose}
+                    className={`py-3.5 px-5 rounded-2xl font-bold text-xs border transition-all cursor-pointer ${
+                      isLight 
+                        ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200' 
+                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                    }`}
+                  >
+                    Ingatkan Nanti
+                  </button>
+                )}
               </div>
             </>
           )}

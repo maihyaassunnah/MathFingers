@@ -1507,8 +1507,11 @@ export default function App() {
         onClose={() => setIsUpdateModalOpen(false)}
         currentUser={currentUser}
         theme={theme}
+        isMandatory={installedVersion !== LATEST_APP_VERSION}
+        installedVersion={installedVersion}
         onUpdateSuccess={() => {
           setInstalledVersion(LATEST_APP_VERSION);
+          setIsUpdateModalOpen(false);
         }}
       />
 

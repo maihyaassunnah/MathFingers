@@ -67,6 +67,7 @@ export function StudentManager({
   // Curriculum overlay modal states
   const [selectedCurriculumMat, setSelectedCurriculumMat] = useState<LearningMaterial | null>(null);
   const [selectedCurriculumFullImg, setSelectedCurriculumFullImg] = useState<string | null>(null);
+  const [selectedDetailStudent, setSelectedDetailStudent] = useState<Student | null>(null);
 
   const levels = [
     'Level Dasar: Pengenalan Simbol Jari',
@@ -231,10 +232,10 @@ export function StudentManager({
       </div>
 
       {/* Filter and Search Bar */}
-      <div className={`p-4 rounded-2xl shadow-sm border flex flex-col md:flex-row gap-4 items-center ${
+      <div className={`p-3.5 sm:p-4 rounded-2xl shadow-sm border flex flex-col lg:flex-row gap-3 items-stretch lg:items-center ${
         isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
       }`}>
-        <div className="relative w-full md:flex-1">
+        <div className="relative w-full lg:flex-1">
           <Search className="absolute left-3.5 top-3 text-slate-500" size={18} />
           <input
             id="student-search-input"
@@ -250,7 +251,8 @@ export function StudentManager({
           />
         </div>
         
-        <div className="flex flex-wrap gap-2.5 w-full md:w-auto items-center">
+        {/* Filter Dropdowns Layout: 2 kolom di mobile/tablet agar hemat ruang */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-wrap gap-2.5 items-center w-full lg:w-auto">
           {/* Urutan Abjad */}
           <CustomDropdown
             id="sort-student-alphabetical"
@@ -261,21 +263,23 @@ export function StudentManager({
               { value: 'desc', label: 'Nama: Z - A' }
             ]}
             theme={theme}
-            className="w-full sm:w-auto sm:min-w-[140px]"
+            className="w-full min-w-0 lg:w-auto lg:min-w-[130px]"
           />
 
-          {/* Cabang Filter */}
-          <CustomDropdown
-            id="filter-student-branch"
-            value={branchFilter}
-            onChange={(val) => setBranchFilter(val)}
-            options={[
-              { value: 'All', label: 'Semua Cabang' },
-              ...availableBranches.map(b => ({ value: b, label: `Cabang: ${b}` }))
-            ]}
-            theme={theme}
-            className="w-full sm:w-auto sm:min-w-[150px]"
-          />
+          {/* Cabang Filter - Hanya jika Super Admin */}
+          {isSuperAdmin && (
+            <CustomDropdown
+              id="filter-student-branch"
+              value={branchFilter}
+              onChange={(val) => setBranchFilter(val)}
+              options={[
+                { value: 'All', label: 'Semua Cabang' },
+                ...availableBranches.map(b => ({ value: b, label: `Cabang: ${b}` }))
+              ]}
+              theme={theme}
+              className="w-full min-w-0 lg:w-auto lg:min-w-[140px]"
+            />
+          )}
 
           {/* Kelas Filter */}
           <CustomDropdown
@@ -287,7 +291,7 @@ export function StudentManager({
               ...availableClasses.map(k => ({ value: k, label: `Kelas: ${k}` }))
             ]}
             theme={theme}
-            className="w-full sm:w-auto sm:min-w-[150px]"
+            className="w-full min-w-0 lg:w-auto lg:min-w-[140px]"
           />
 
           {/* Gender Filter */}
@@ -301,7 +305,7 @@ export function StudentManager({
               { value: 'Perempuan', label: 'Perempuan' }
             ]}
             theme={theme}
-            className="w-full sm:w-auto sm:min-w-[140px]"
+            className="w-full min-w-0 lg:w-auto lg:min-w-[130px]"
           />
 
           {/* Status Filter */}
@@ -315,7 +319,7 @@ export function StudentManager({
               { value: 'inactive', label: 'Nonaktif' }
             ]}
             theme={theme}
-            className="w-full sm:w-auto sm:min-w-[145px]"
+            className="w-full min-w-0 lg:w-auto lg:min-w-[130px]"
           />
 
           {/* Reset Filter Button */}
@@ -329,7 +333,7 @@ export function StudentManager({
                 setBranchFilter('All');
                 setKelasFilter('All');
               }}
-              className="px-3 py-2.5 rounded-xl text-xs font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 transition flex items-center gap-1 h-[38px] cursor-pointer"
+              className="w-full lg:w-auto px-3 py-2.5 rounded-xl text-xs font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 transition flex items-center justify-center gap-1 h-[38px] cursor-pointer col-span-2 sm:col-span-1"
               title="Reset Semua Filter"
             >
               <X size={14} />
@@ -656,11 +660,11 @@ export function StudentManager({
                 }`}>
                   <th className="p-4 w-12 text-center">NO</th>
                   <th className="p-4">Nama Siswa</th>
-                  <th className="p-4">Orang Tua / HP</th>
+                  <th className="p-4 hidden sm:table-cell">Orang Tua / HP</th>
                   <th className="p-4 hidden sm:table-cell">Level</th>
                   <th className="p-4 hidden sm:table-cell">Materi Aktif</th>
-                  <th className="p-4">Gabung Sejak</th>
-                  <th className="p-4">Status</th>
+                  <th className="p-4 hidden sm:table-cell">Gabung Sejak</th>
+                  <th className="p-4 hidden sm:table-cell">Status</th>
                   <th className="p-4 text-center">Aksi</th>
                 </tr>
               </thead>
@@ -675,13 +679,13 @@ export function StudentManager({
                         {index + 1}
                       </td>
                       <td className="p-4">
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-nowrap whitespace-nowrap overflow-x-auto no-scrollbar">
                           <span className={`font-semibold text-sm sm:text-base ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</span>
-                          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15" title="Nomor Unik Siswa">
+                          <span className="hidden sm:inline-block text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15 shrink-0" title="Nomor Unik Siswa">
                             #{getStudentUniqueCode(student)}
                           </span>
                           {student.jenisKelamin && (
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                            <span className={`hidden sm:inline-block text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${
                               student.jenisKelamin === 'Laki-laki' 
                                 ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/15'
                                 : 'bg-rose-500/10 text-rose-600 dark:text-rose-450 border border-rose-500/15'
@@ -690,23 +694,23 @@ export function StudentManager({
                             </span>
                           )}
                           {student.jenisPaket && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/15">
+                            <span className="hidden sm:inline-block text-[10px] px-1.5 py-0.5 rounded font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/15 shrink-0">
                               {student.jenisPaket}
                             </span>
                           )}
-                          <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 border border-fuchsia-500/15" title="Cabang Bimbingan">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 border border-fuchsia-500/15 shrink-0" title="Cabang Bimbingan">
                             🏢 {student.branch || 'Pusat'}
                           </span>
                           {student.kelas && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/15" title="Kelas Bimbingan">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/15 shrink-0" title="Kelas Bimbingan">
                               🏫 {student.kelas}
                             </span>
                           )}
                         </div>
 
-                        {/* Lahir & Alamat Sejajar */}
+                        {/* Lahir & Alamat Sejajar - Hidden on mobile */}
                         {((student.tempatLahir || student.tanggalLahir) || student.alamat) && (
-                          <div className={`text-xs mt-1 flex flex-wrap gap-x-2 items-center leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                          <div className={`hidden sm:flex text-xs mt-1 flex-wrap gap-x-2 items-center leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
                             {(student.tempatLahir || student.tanggalLahir) && (
                               <span>
                                 <span className="opacity-70">Lahir:</span> {student.tempatLahir || '-'}{student.tanggalLahir ? `, ${student.tanggalLahir}` : ''}
@@ -724,7 +728,7 @@ export function StudentManager({
                         )}
 
                         {student.keterangan && (
-                          <div className={`text-xs mt-1.5 px-2 py-0.5 rounded-md border inline-block max-w-[220px] truncate ${
+                          <div className={`hidden sm:inline-block text-xs mt-1.5 px-2 py-0.5 rounded-md border max-w-[220px] truncate ${
                             isLight 
                               ? 'bg-amber-500/5 border-amber-500/20 text-amber-700' 
                               : 'bg-amber-500/10 border-amber-500/10 text-amber-300'
@@ -733,7 +737,7 @@ export function StudentManager({
                           </div>
                         )}
                       </td>
-                      <td className="p-4 space-y-1">
+                      <td className="p-4 space-y-1 hidden sm:table-cell">
                         <div className={`text-sm font-medium ${isLight ? 'text-slate-700' : 'text-slate-305'}`}>{student.parentName}</div>
                         <a 
                           href={waLink} 
@@ -779,13 +783,13 @@ export function StudentManager({
                           );
                         })()}
                       </td>
-                      <td className={`p-4 text-xs ${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>
+                      <td className={`p-4 text-xs hidden sm:table-cell ${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>
                         <div className="flex items-center gap-1">
                           <Calendar size={12} />
                           <span>{student.joinDate}</span>
                         </div>
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 hidden sm:table-cell">
                         {student.status === 'active' ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-md">
                             <CheckCircle size={10} />
@@ -831,6 +835,14 @@ export function StudentManager({
                             title="Luluskan Siswa (Jadi Alumni)"
                           >
                             <Award size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDetailStudent(student)}
+                            className="p-1.5 text-slate-500 hover:text-sky-500 dark:hover:text-sky-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                            title="Lihat Detail Profil Siswa"
+                          >
+                            <Eye size={16} />
                           </button>
                           <button
                             onClick={() => handleDelete(student.id, student.name)}
@@ -1051,6 +1063,150 @@ export function StudentManager({
             className="max-w-full max-h-[90vh] rounded-xl shadow-2xl object-contain"
             referrerPolicy="no-referrer"
           />
+        </div>
+      )}
+
+      {/* Pop-up Modal Detail Siswa */}
+      {selectedDetailStudent && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`rounded-2xl w-full max-w-lg shadow-2xl border flex flex-col max-h-[90vh] overflow-hidden ${
+            isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+          }`}>
+            {/* Header Modal */}
+            <div className={`p-5 border-b flex items-center justify-between ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className={`text-lg font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>
+                    {selectedDetailStudent.name}
+                  </h3>
+                  <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    #{getStudentUniqueCode(selectedDetailStudent)}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Detail Lengkap Profil Siswa</p>
+              </div>
+              <button 
+                onClick={() => setSelectedDetailStudent(null)}
+                className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-red-500 hover:text-white transition flex items-center justify-center text-slate-400 font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Body Modal Detail */}
+            <div className="p-5 overflow-y-auto space-y-3.5 text-xs sm:text-sm">
+              <div className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
+                isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/50 border-slate-800'
+              }`}>
+                <div>
+                  <span className="text-[11px] text-slate-500 block">Status Keaktifan</span>
+                  <span className={`font-bold ${
+                    selectedDetailStudent.status === 'active' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'
+                  }`}>
+                    {selectedDetailStudent.status === 'active' ? 'Aktif' : selectedDetailStudent.status === 'alumni' ? 'Alumni (Lulus)' : 'Nonaktif'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                  <span className="px-2 py-1 rounded-lg text-xs font-bold bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 border border-fuchsia-500/20">
+                    🏢 {selectedDetailStudent.branch || 'Pusat'}
+                  </span>
+                  {selectedDetailStudent.kelas && (
+                    <span className="px-2 py-1 rounded-lg text-xs font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                      🏫 {selectedDetailStudent.kelas}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className={`p-3 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/30 border-slate-800'}`}>
+                  <span className="text-[11px] text-slate-500 block">Orang Tua / Wali</span>
+                  <span className="font-bold">{selectedDetailStudent.parentName || '-'}</span>
+                </div>
+                <div className={`p-3 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/30 border-slate-800'}`}>
+                  <span className="text-[11px] text-slate-500 block mb-0.5">WhatsApp Orang Tua</span>
+                  <a 
+                    href={getWhatsAppLink(selectedDetailStudent.parentPhone, `Halo Ibu/Bapak ${selectedDetailStudent.parentName}, salam dari Math Fingers. Ada informasi terkait ${selectedDetailStudent.name}.`)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+                  >
+                    <Phone size={13} />
+                    <span>{selectedDetailStudent.parentPhone || '-'}</span>
+                  </a>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className={`p-3 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/30 border-slate-800'}`}>
+                  <span className="text-[11px] text-slate-500 block">Jenis Kelamin</span>
+                  <span className="font-semibold">{selectedDetailStudent.jenisKelamin || '-'}</span>
+                </div>
+                <div className={`p-3 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/30 border-slate-800'}`}>
+                  <span className="text-[11px] text-slate-500 block">Jenis Paket</span>
+                  <span className="font-semibold">{selectedDetailStudent.jenisPaket || '-'}</span>
+                </div>
+              </div>
+
+              <div className={`p-3 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/30 border-slate-800'}`}>
+                <span className="text-[11px] text-slate-500 block">Level Bimbingan</span>
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">{selectedDetailStudent.level || '-'}</span>
+              </div>
+
+              <div className={`p-3 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/30 border-slate-800'}`}>
+                <span className="text-[11px] text-slate-500 block">Tempat, Tanggal Lahir</span>
+                <span className="font-semibold">
+                  {selectedDetailStudent.tempatLahir || '-'}{selectedDetailStudent.tanggalLahir ? `, ${selectedDetailStudent.tanggalLahir}` : ''}
+                </span>
+              </div>
+
+              <div className={`p-3 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/30 border-slate-800'}`}>
+                <span className="text-[11px] text-slate-500 block">Alamat</span>
+                <span className="font-semibold">{selectedDetailStudent.alamat || '-'}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className={`p-3 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/30 border-slate-800'}`}>
+                  <span className="text-[11px] text-slate-500 block">Tanggal Bergabung</span>
+                  <span className="font-semibold">{selectedDetailStudent.joinDate || '-'}</span>
+                </div>
+                <div className={`p-3 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/30 border-slate-800'}`}>
+                  <span className="text-[11px] text-slate-500 block">Hari Les</span>
+                  <span className="font-semibold">{selectedDetailStudent.hariLes || '-'}</span>
+                </div>
+              </div>
+
+              {selectedDetailStudent.keterangan && (
+                <div className={`p-3 rounded-xl border ${isLight ? 'bg-amber-500/5 border-amber-500/20 text-amber-800' : 'bg-amber-500/10 border-amber-500/20 text-amber-300'}`}>
+                  <span className="text-[11px] font-bold block mb-0.5">Keterangan:</span>
+                  <span>{selectedDetailStudent.keterangan}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Modal */}
+            <div className={`p-4 border-t flex items-center justify-between gap-2 ${isLight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-slate-950/50'}`}>
+              <button
+                type="button"
+                onClick={() => {
+                  const st = selectedDetailStudent;
+                  setSelectedDetailStudent(null);
+                  handleOpenEdit(st);
+                }}
+                className="px-3.5 py-2 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-xl hover:bg-emerald-500/20 transition flex items-center gap-1.5"
+              >
+                <Edit2 size={14} />
+                <span>Edit Profil</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedDetailStudent(null)}
+                className="px-5 py-2 text-xs font-bold text-white bg-slate-700 hover:bg-slate-600 rounded-xl transition shadow-sm"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

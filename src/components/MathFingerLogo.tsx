@@ -140,9 +140,6 @@ export function MathFingerLogo({
               ))}
             </span>
           </div>
-          <span className="text-[10px] text-emerald-500 font-bold block leading-none mt-1 tracking-tight">
-            Berhitung Cepat & Akurat Tanpa Alat
-          </span>
         </div>
       )}
     </div>

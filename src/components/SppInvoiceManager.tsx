@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Student, Invoice, AppSettings, Installment } from '../types';
 import { formatRupiah, getWhatsAppLink } from '../utils';
 import { 
@@ -18,11 +19,102 @@ import {
   ChevronUp,
   History,
   UserPlus,
-  BookOpen
+  BookOpen,
+  Bell,
+  MessageSquare,
+  Edit3,
+  Sparkles,
+  Copy,
+  Check,
+  RotateCcw,
+  Eye,
+  Phone,
+  X
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { CustomDropdown } from './CustomDropdown';
 import { OfflineIndicator } from './OfflineIndicator';
+
+export const DEFAULT_REMINDER_TEMPLATE = `Assalamu'alaikum Wr. Wb. Ibu/Bapak *{parentName}*,
+
+Semoga Ibu/Bapak dan keluarga senantiasa dalam keadaan sehat wal'afiat.
+
+Melalui pesan ini, kami ingin menginformasikan pengingat tagihan SPP Bimbingan Belajar Math Fingers ananda *{studentName}* periode *{month}*:
+
+🧾 No. Invoice: {invoiceNo}
+💵 Jumlah Tagihan: *{amount}*
+📅 Tanggal Jatuh Tempo: *{dueDate}* ({diffStatus})
+
+*Informasi Rekening Pembayaran:*
+🏦 Bank {bankName}: *{bankAccountNo}*
+👤 Atas Nama: *{bankAccountHolder}*
+
+Mohon konfirmasi dengan mengirimkan foto bukti transfer jika pembayaran telah dilakukan. *(Abaikan pesan pengingat ini apabila telah melunasi)*.
+
+Terima kasih banyak atas perhatian, kepercayaan, dan dukungannya. 🙏✨
+
+Salam Hangat,
+*Math Fingers - {teacherName}*`;
+
+export function getInvoiceDueDateInfo(dueDateStr: string) {
+  if (!dueDateStr) {
+    return { diffDays: 99, isOverdue: false, isDueSoon: false, isH2OrOverdue: false, label: 'Tanpa Tanggal Tempo' };
+  }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [year, month, day] = dueDateStr.split('-').map(Number);
+  const due = new Date(year, (month || 1) - 1, day || 1);
+  due.setHours(0, 0, 0, 0);
+
+  const diffTime = due.getTime() - today.getTime();
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+  const isOverdue = diffDays < 0;
+  const isDueSoon = diffDays >= 0 && diffDays <= 2;
+  const isH2OrOverdue = diffDays <= 2;
+
+  let label = '';
+  if (diffDays < 0) {
+    label = `Terlambat ${Math.abs(diffDays)} Hari`;
+  } else if (diffDays === 0) {
+    label = 'Jatuh Tempo HARI INI!';
+  } else if (diffDays === 1) {
+    label = 'Jatuh Tempo Besok (H-1)';
+  } else if (diffDays === 2) {
+    label = 'Jatuh Tempo Lusa (H-2)';
+  } else {
+    label = `${diffDays} Hari Lagi`;
+  }
+
+  return { diffDays, isOverdue, isDueSoon, isH2OrOverdue, label };
+}
+
+export function formatReminderMessage(
+  invoice: Invoice,
+  student: Student | undefined,
+  template: string,
+  settings: AppSettings
+) {
+  const dueInfo = getInvoiceDueDateInfo(invoice.dueDate);
+  const currentPaid = invoice.amountPaid || 0;
+  const remainingAmount = invoice.status === 'partially_paid' ? (invoice.amount - currentPaid) : invoice.amount;
+  const parentName = student?.parentName || 'Wali Siswa';
+  const studentName = invoice.studentName || student?.name || 'Siswa';
+
+  return template
+    .replace(/\{parentName\}/g, parentName)
+    .replace(/\{studentName\}/g, studentName)
+    .replace(/\{month\}/g, invoice.month)
+    .replace(/\{amount\}/g, formatRupiah(remainingAmount))
+    .replace(/\{invoiceNo\}/g, invoice.invoiceNo)
+    .replace(/\{dueDate\}/g, invoice.dueDate)
+    .replace(/\{diffStatus\}/g, dueInfo.label)
+    .replace(/\{bankName\}/g, settings.bankName)
+    .replace(/\{bankAccountNo\}/g, settings.bankAccountNo)
+    .replace(/\{bankAccountHolder\}/g, settings.bankAccountHolder)
+    .replace(/\{teacherName\}/g, settings.defaultTeacherName);
+}
 
 interface SppInvoiceManagerProps {
   students: Student[];
@@ -78,6 +170,17 @@ export function SppInvoiceManager({
   const [month, setMonth] = useState('');
   const [dueDate, setDueDate] = useState('');
 
+  // Reminder Modal & Custom Template States
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+  const [activeReminderTab, setActiveReminderTab] = useState<'list' | 'template'>('list');
+  const [reminderTemplate, setReminderTemplate] = useState<string>(() => {
+    return localStorage.getItem('spp_reminder_template') || DEFAULT_REMINDER_TEMPLATE;
+  });
+  const [copiedNotification, setCopiedNotification] = useState<string | null>(null);
+  const [previewInvoiceId, setPreviewInvoiceId] = useState<string | null>(null);
+  const [modalSearch, setModalSearch] = useState('');
+  const [filterH2Type, setFilterH2Type] = useState<'all' | 'due_soon' | 'overdue'>('all');
+
   const months = [
     'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
@@ -86,6 +189,43 @@ export function SppInvoiceManager({
   const currentYear = new Date().getFullYear();
 
   const activeStudents = students.filter(s => s.status === 'active');
+
+  // Filter H-2 and Overdue unpaid/partially_paid invoices
+  const h2AndOverdueInvoices = invoices.filter(inv => {
+    if (inv.status === 'paid') return false;
+    const cat = inv.category || 'spp';
+    if (cat !== activeCategory) return false;
+    const dueInfo = getInvoiceDueDateInfo(inv.dueDate);
+    return dueInfo.isH2OrOverdue;
+  });
+
+  const handleSaveTemplate = (newTpl: string) => {
+    setReminderTemplate(newTpl);
+    localStorage.setItem('spp_reminder_template', newTpl);
+    setCopiedNotification('Template berhasil disimpan!');
+    setTimeout(() => setCopiedNotification(null), 3000);
+  };
+
+  const handleResetTemplate = () => {
+    if (confirm('Apakah Anda yakin ingin mengembalikan kata-kata pesan ke template standar?')) {
+      setReminderTemplate(DEFAULT_REMINDER_TEMPLATE);
+      localStorage.setItem('spp_reminder_template', DEFAULT_REMINDER_TEMPLATE);
+      setCopiedNotification('Template dikembalikan ke standar.');
+      setTimeout(() => setCopiedNotification(null), 3000);
+    }
+  };
+
+  const insertPlaceholder = (ph: string) => {
+    setReminderTemplate(prev => prev + ` ${ph} `);
+  };
+
+  const sendH2ReminderWA = (invoice: Invoice) => {
+    const student = students.find(s => s.id === invoice.studentId);
+    const msg = formatReminderMessage(invoice, student, reminderTemplate, settings);
+    const phone = student?.parentPhone || '';
+    const waLink = getWhatsAppLink(phone, msg);
+    window.open(waLink, '_blank', 'noreferrer');
+  };
 
   const handleInvoiceCategoryChange = (cat: 'spp' | 'pendaftaran' | 'buku') => {
     setInvoiceCategory(cat);
@@ -636,22 +776,107 @@ function angkaKeTerbilang(nominal: number): string {
             {activeCategory === 'pendaftaran' 
               ? 'Kelola pembayaran pendaftaran siswa baru, terbitkan invoice pendaftaran, dan cetak kuitansi resmi.'
               : activeCategory === 'spp'
-              ? 'Terbitkan tagihan SPP bulanan, catat pembayaran lunas/cicilan, dan ekspor kuitansi PDF serta kirim via WhatsApp.'
+              ? 'Terbitkan tagihan SPP bulanan, catat pembayaran lunas/cicilan, pengingat otomatis H-2, dan ekspor kuitansi PDF.'
               : 'Kelola pembayaran pembelian paket buku materi siswa, catat pelunasan, dan buat kuitansi digital.'}
           </p>
         </div>
         
-        <button
-          id="btn-create-invoice"
-          onClick={handleOpenForm}
-          className={`flex items-center justify-center gap-2 ${getAccentBgClass()} text-white font-medium px-4 py-2.5 rounded-xl transition duration-150 shadow-sm`}
-        >
-          {activeCategory === 'pendaftaran' ? <UserPlus size={18} /> : activeCategory === 'spp' ? <Receipt size={18} /> : <BookOpen size={18} />}
-          <span>
-            {activeCategory === 'pendaftaran' ? 'Buat Tagihan Baru' : activeCategory === 'spp' ? 'Buat Invoice Baru' : 'Buat Tagihan Buku'}
-          </span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          {activeCategory === 'spp' && (
+            <button
+              type="button"
+              onClick={() => {
+                setActiveReminderTab('list');
+                setIsReminderModalOpen(true);
+              }}
+              className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-xs font-bold transition shadow-sm relative ${
+                h2AndOverdueInvoices.length > 0
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20'
+                  : isLight ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50' : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800'
+              }`}
+            >
+              <Bell size={16} className={h2AndOverdueInvoices.length > 0 ? 'text-emerald-500 animate-bounce' : 'text-slate-400'} />
+              <span>Pengingat SPP H-2</span>
+              {h2AndOverdueInvoices.length > 0 && (
+                <span className="px-1.5 py-0.5 text-[10px] bg-emerald-600 text-white font-black rounded-full">
+                  {h2AndOverdueInvoices.length}
+                </span>
+              )}
+            </button>
+          )}
+
+          <button
+            id="btn-create-invoice"
+            onClick={handleOpenForm}
+            className={`flex items-center justify-center gap-2 ${getAccentBgClass()} text-white font-medium px-4 py-2.5 rounded-xl transition duration-150 shadow-sm`}
+          >
+            {activeCategory === 'pendaftaran' ? <UserPlus size={18} /> : activeCategory === 'spp' ? <Receipt size={18} /> : <BookOpen size={18} />}
+            <span>
+              {activeCategory === 'pendaftaran' ? 'Buat Tagihan Baru' : activeCategory === 'spp' ? 'Buat Invoice Baru' : 'Buat Tagihan Buku'}
+            </span>
+          </button>
+        </div>
       </div>
+
+      {/* Prominent Clean Alert Banner for H-2 / Overdue SPP Tagihan */}
+      {activeCategory === 'spp' && h2AndOverdueInvoices.length > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`p-3.5 sm:p-4 rounded-2xl border backdrop-blur-md relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 ${
+            isLight 
+              ? 'bg-gradient-to-r from-emerald-50/90 via-teal-50/50 to-emerald-50/90 border-emerald-200/90 text-emerald-950 shadow-xs' 
+              : 'bg-gradient-to-r from-emerald-950/40 via-teal-900/20 to-emerald-950/30 border-emerald-800/40 text-emerald-100'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <Bell size={18} className="animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-extrabold text-xs sm:text-sm text-emerald-950 dark:text-emerald-100 flex items-center gap-1.5">
+                  <span>⚡</span>
+                  <span>{h2AndOverdueInvoices.length} Tagihan SPP Menjelang / Melewati Jatuh Tempo (H-2)</span>
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-600 text-white uppercase tracking-wider">
+                  Siswa Perlu Diingatkan
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveReminderTab('template');
+                setIsReminderModalOpen(true);
+              }}
+              className={`px-3 py-2 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 ${
+                isLight 
+                  ? 'bg-white border-emerald-300 text-emerald-800 hover:bg-emerald-100/60 shadow-2xs' 
+                  : 'bg-emerald-950/60 border-emerald-800 text-emerald-200 hover:bg-emerald-900/80'
+              }`}
+            >
+              <Edit3 size={14} />
+              <span>Custom Kata-Kata</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveReminderTab('list');
+                setIsReminderModalOpen(true);
+              }}
+              className="px-4 py-2 rounded-xl text-xs font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-sm flex items-center gap-1.5"
+            >
+              <Send size={14} />
+              <span>Kirim WA ({h2AndOverdueInvoices.length})</span>
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       {/* Filter panel */}
       <div className={`p-4 rounded-2xl shadow-sm border flex flex-col md:flex-row gap-4 items-center ${
@@ -1198,6 +1423,494 @@ function angkaKeTerbilang(nominal: number): string {
           </div>
         )}
       </div>
+
+      {/* MODAL PENGINGAT SPP H-2 & CUSTOM TEMPLATE */}
+      <AnimatePresence>
+        {isReminderModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto bg-slate-950/70 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className={`w-full max-w-4xl rounded-3xl shadow-2xl border overflow-hidden flex flex-col max-h-[90vh] ${
+                isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#0b132b] border-slate-800 text-slate-100'
+              }`}
+            >
+              {/* Modal Header */}
+              <div className={`p-5 sm:p-6 border-b flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
+                isLight ? 'bg-slate-50/80 border-slate-200' : 'bg-slate-900/60 border-slate-800'
+              }`}>
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-emerald-500 text-slate-950 flex items-center justify-center font-bold shadow-md shrink-0">
+                    <Bell size={22} className="animate-pulse" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg sm:text-xl font-black tracking-tight">Pengingat Tagihan SPP (H-2 & Terlambat)</h2>
+                      <span className="px-2.5 py-0.5 text-[10px] font-black uppercase rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                        Otomatis WA
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Kirim pengingat jatuh tempo langsung ke WhatsApp wali murid dengan kata-kata kustom yang profesional.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setIsReminderModalOpen(false)}
+                  className="self-end sm:self-center p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-200/50 dark:hover:bg-slate-800 transition"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Navigation Tabs in Modal */}
+              <div className={`px-6 pt-3 border-b flex items-center gap-2 overflow-x-auto ${
+                isLight ? 'border-slate-200 bg-slate-50/40' : 'border-slate-800/80 bg-slate-900/30'
+              }`}>
+                <button
+                  onClick={() => setActiveReminderTab('list')}
+                  className={`pb-3 px-4 font-extrabold text-xs border-b-2 transition flex items-center gap-2 whitespace-nowrap ${
+                    activeReminderTab === 'list'
+                      ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
+                  }`}
+                >
+                  <Bell size={15} />
+                  <span>Daftar Tagihan H-2</span>
+                  <span className={`px-2 py-0.5 text-[10px] rounded-full font-black ${
+                    h2AndOverdueInvoices.length > 0
+                      ? 'bg-amber-500 text-slate-950'
+                      : isLight ? 'bg-slate-200 text-slate-700' : 'bg-slate-800 text-slate-300'
+                  }`}>
+                    {h2AndOverdueInvoices.length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setActiveReminderTab('template')}
+                  className={`pb-3 px-4 font-extrabold text-xs border-b-2 transition flex items-center gap-2 whitespace-nowrap ${
+                    activeReminderTab === 'template'
+                      ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
+                  }`}
+                >
+                  <Edit3 size={15} />
+                  <span>Kustom Kata-Kata (Template)</span>
+                  <span className="px-2 py-0.5 text-[10px] rounded-full font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                    Fitur Baru
+                  </span>
+                </button>
+              </div>
+
+              {/* Toast Notification inside modal */}
+              {copiedNotification && (
+                <div className="bg-emerald-600 text-white text-xs font-bold py-2 px-4 text-center animate-fade-in flex items-center justify-center gap-2">
+                  <Check size={14} />
+                  <span>{copiedNotification}</span>
+                </div>
+              )}
+
+              {/* Modal Body Content */}
+              <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-5">
+                {activeReminderTab === 'list' ? (
+                  <div className="space-y-4">
+                    {/* Filter & Search Bar */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                      <div className="relative flex-1">
+                        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Cari nama siswa, nama wali, atau no invoice..."
+                          value={modalSearch}
+                          onChange={(e) => setModalSearch(e.target.value)}
+                          className={`w-full pl-10 pr-4 py-2 rounded-xl text-xs border transition ${
+                            isLight
+                              ? 'bg-white border-slate-200 text-slate-800 focus:border-emerald-500'
+                              : 'bg-slate-900 border-slate-800 text-slate-200 focus:border-emerald-500'
+                          }`}
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-1.5 self-start sm:self-center">
+                        <button
+                          type="button"
+                          onClick={() => setFilterH2Type('all')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                            filterH2Type === 'all'
+                              ? 'bg-emerald-600 text-white'
+                              : isLight ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                          }`}
+                        >
+                          Semua ({h2AndOverdueInvoices.length})
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setFilterH2Type('due_soon')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                            filterH2Type === 'due_soon'
+                              ? 'bg-amber-500 text-slate-950'
+                              : isLight ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                          }`}
+                        >
+                          H-2 s/d Hari Ini
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setFilterH2Type('overdue')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                            filterH2Type === 'overdue'
+                              ? 'bg-rose-600 text-white'
+                              : isLight ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                          }`}
+                        >
+                          Terlambat
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* List of Invoices to Remind */}
+                    {(() => {
+                      const filteredList = h2AndOverdueInvoices.filter(inv => {
+                        const student = students.find(s => s.id === inv.studentId);
+                        const parentName = student?.parentName || '';
+                        const studentName = inv.studentName || student?.name || '';
+                        const q = modalSearch.toLowerCase();
+                        
+                        const matchesQuery = !modalSearch || 
+                          studentName.toLowerCase().includes(q) || 
+                          parentName.toLowerCase().includes(q) || 
+                          inv.invoiceNo.toLowerCase().includes(q);
+
+                        if (!matchesQuery) return false;
+
+                        const dueInfo = getInvoiceDueDateInfo(inv.dueDate);
+                        if (filterH2Type === 'due_soon') return dueInfo.isDueSoon;
+                        if (filterH2Type === 'overdue') return dueInfo.isOverdue;
+                        return true;
+                      });
+
+                      if (filteredList.length === 0) {
+                        return (
+                          <div className={`p-8 text-center rounded-2xl border ${
+                            isLight ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-slate-900/40 border-slate-800 text-slate-400'
+                          }`}>
+                            <CheckCircle size={36} className="mx-auto mb-2 text-emerald-500 opacity-80" />
+                            <h4 className="font-bold text-sm text-slate-700 dark:text-slate-200">Tidak ada tagihan yang perlu diingatkan saat ini!</h4>
+                            <p className="text-xs mt-1 max-w-md mx-auto">
+                              Semua tagihan SPP berjalan belum memasuki periode H-2 jatuh tempo atau siswa telah melunasi tagihannya.
+                            </p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="space-y-3">
+                          {filteredList.map(invoice => {
+                            const student = students.find(s => s.id === invoice.studentId);
+                            const dueInfo = getInvoiceDueDateInfo(invoice.dueDate);
+                            const formattedMsg = formatReminderMessage(invoice, student, reminderTemplate, settings);
+                            const isPreview = previewInvoiceId === invoice.id;
+                            const currentPaid = invoice.amountPaid || 0;
+                            const remaining = invoice.status === 'partially_paid' ? (invoice.amount - currentPaid) : invoice.amount;
+
+                            return (
+                              <div
+                                key={invoice.id}
+                                className={`p-4 rounded-2xl border transition-all ${
+                                  isLight 
+                                    ? 'bg-white border-slate-200 hover:border-emerald-300 shadow-xs' 
+                                    : 'bg-slate-900/70 border-slate-800 hover:border-emerald-500/50'
+                                }`}
+                              >
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                  {/* Student & Invoice Info */}
+                                  <div className="flex items-start gap-3.5">
+                                    <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center font-bold shrink-0 text-sm mt-0.5">
+                                      {invoice.studentName ? invoice.studentName.substring(0, 2).toUpperCase() : 'MF'}
+                                    </div>
+
+                                    <div>
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="font-extrabold text-sm text-slate-800 dark:text-slate-100">
+                                          {invoice.studentName}
+                                        </span>
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                                          dueInfo.isOverdue 
+                                            ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30' 
+                                            : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                                        }`}>
+                                          ⏰ {dueInfo.label}
+                                        </span>
+                                        <span className="text-[10px] font-mono text-slate-400">
+                                          ({invoice.invoiceNo})
+                                        </span>
+                                      </div>
+
+                                      <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mt-1 flex-wrap">
+                                        <span>Wali: <strong className="text-slate-700 dark:text-slate-200">{student?.parentName || 'Wali Siswa'}</strong></span>
+                                        <span>•</span>
+                                        <span className="flex items-center gap-1 font-mono text-emerald-600 dark:text-emerald-400">
+                                          <Phone size={12} />
+                                          {student?.parentPhone ? student.parentPhone : 'Belum isi no HP'}
+                                        </span>
+                                        <span>•</span>
+                                        <span>Jatuh Tempo: <strong>{invoice.dueDate}</strong></span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Price & Action Buttons */}
+                                  <div className="flex items-center justify-between md:justify-end gap-3 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-800">
+                                    <div className="text-left md:text-right">
+                                      <div className="text-[10px] text-slate-400 uppercase font-semibold">Sisa Tagihan</div>
+                                      <div className="text-sm font-black text-rose-600 dark:text-rose-400">
+                                        {formatRupiah(remaining)}
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => setPreviewInvoiceId(isPreview ? null : invoice.id)}
+                                        className={`p-2 rounded-xl border text-xs font-bold transition flex items-center gap-1 ${
+                                          isPreview 
+                                            ? 'bg-emerald-500 text-slate-950 border-emerald-500' 
+                                            : isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200' : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                                        }`}
+                                        title="Pratinjau Pesan WA"
+                                      >
+                                        <Eye size={15} />
+                                        <span className="hidden sm:inline">Pratinjau</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(formattedMsg);
+                                          setCopiedNotification(`Pesan untuk ${invoice.studentName} berhasil disalin!`);
+                                          setTimeout(() => setCopiedNotification(null), 3000);
+                                        }}
+                                        className={`p-2 rounded-xl border text-xs font-bold transition flex items-center gap-1 ${
+                                          isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200' : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                                        }`}
+                                        title="Salin Kata-Kata Pesan"
+                                      >
+                                        <Copy size={15} />
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => sendH2ReminderWA(invoice)}
+                                        className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs transition shadow-sm flex items-center gap-1.5"
+                                      >
+                                        <Send size={14} />
+                                        <span>Kirim WA</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Message Preview Drawer */}
+                                {isPreview && (
+                                  <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800"
+                                  >
+                                    <div className="flex items-center justify-between mb-1.5">
+                                      <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                        <MessageSquare size={13} />
+                                        Pratinjau Pesan WhatsApp ({student?.parentName || 'Wali'}):
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => setPreviewInvoiceId(null)}
+                                        className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 underline"
+                                      >
+                                        Tutup Pratinjau
+                                      </button>
+                                    </div>
+                                    <div className={`p-3.5 rounded-xl font-mono text-xs leading-relaxed whitespace-pre-wrap border ${
+                                      isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950 border-slate-850 text-slate-200'
+                                    }`}>
+                                      {formattedMsg}
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  /* TAB 2: TEMPLATE EDITING & DYNAMIC PLACEHOLDERS */
+                  <div className="space-y-5">
+                    <div className={`p-4 rounded-2xl border ${
+                      isLight ? 'bg-amber-50/70 border-amber-200 text-amber-900' : 'bg-amber-950/30 border-amber-800/40 text-amber-200'
+                    }`}>
+                      <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-1">
+                        <Sparkles size={14} />
+                        <span>Kustomisasi Kata-Kata Pesan Pengingat SPP</span>
+                      </div>
+                      <p className="text-xs leading-relaxed">
+                        Anda dapat mengubah isi pesan pengingat sesuai gaya bahasa lembaga. Gunakan tag variabel di bawah ini agar data nama, nominal, dan tanggal terisi otomatis saat dikirim ke tiap wali siswa.
+                      </p>
+                    </div>
+
+                    {/* Placeholder Chips */}
+                    <div>
+                      <label className="block text-xs font-extrabold text-slate-600 dark:text-slate-300 mb-2">
+                        Klik Variabel Otomatis untuk Menyisipkan ke Pesan:
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          { tag: '{parentName}', label: 'Nama Wali' },
+                          { tag: '{studentName}', label: 'Nama Siswa' },
+                          { tag: '{month}', label: 'Bulan Tagihan' },
+                          { tag: '{amount}', label: 'Nominal Tagihan' },
+                          { tag: '{dueDate}', label: 'Tgl Jatuh Tempo' },
+                          { tag: '{diffStatus}', label: 'Status Terlambat/H-2' },
+                          { tag: '{invoiceNo}', label: 'No Invoice' },
+                          { tag: '{bankName}', label: 'Nama Bank' },
+                          { tag: '{bankAccountNo}', label: 'No Rekening' },
+                          { tag: '{bankAccountHolder}', label: 'Atas Nama' },
+                          { tag: '{teacherName}', label: 'Nama Admin/Pengajar' },
+                        ].map(ph => (
+                          <button
+                            key={ph.tag}
+                            type="button"
+                            onClick={() => insertPlaceholder(ph.tag)}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition flex items-center gap-1 border ${
+                              isLight 
+                                ? 'bg-slate-100 hover:bg-emerald-50 hover:border-emerald-300 text-slate-700 border-slate-200' 
+                                : 'bg-slate-800 hover:bg-emerald-950/60 hover:border-emerald-500/50 text-slate-300 border-slate-700'
+                            }`}
+                          >
+                            <span className="text-emerald-500">+</span>
+                            <span>{ph.tag}</span>
+                            <span className="text-[10px] text-slate-400">({ph.label})</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Textarea Editor */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-extrabold text-slate-700 dark:text-slate-200">
+                          Template Pesan WhatsApp:
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleResetTemplate}
+                          className="text-xs text-rose-500 hover:text-rose-600 font-bold flex items-center gap-1"
+                        >
+                          <RotateCcw size={12} />
+                          <span>Reset ke Standar</span>
+                        </button>
+                      </div>
+
+                      <textarea
+                        rows={10}
+                        value={reminderTemplate}
+                        onChange={(e) => setReminderTemplate(e.target.value)}
+                        className={`w-full p-4 rounded-2xl font-mono text-xs leading-relaxed border transition focus:outline-hidden ${
+                          isLight
+                            ? 'bg-white border-slate-300 text-slate-800 focus:border-emerald-500'
+                            : 'bg-slate-900 border-slate-700 text-slate-100 focus:border-emerald-500'
+                        }`}
+                        placeholder="Tuliskan template kata-kata di sini..."
+                      />
+                    </div>
+
+                    {/* Live Sample Preview */}
+                    <div>
+                      <div className="text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-2 flex items-center gap-1.5">
+                        <Eye size={14} className="text-emerald-500" />
+                        <span>Simulasi Hasil Tampilan Pesan (Sample Data):</span>
+                      </div>
+                      <div className={`p-4 rounded-2xl font-mono text-xs leading-relaxed border whitespace-pre-wrap ${
+                        isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950 border-slate-800 text-slate-200'
+                      }`}>
+                        {formatReminderMessage(
+                          {
+                            id: 'sample-1',
+                            studentId: 'st-1',
+                            studentName: 'Aisyah Putri',
+                            branch: 'Singkut',
+                            month: 'Agustus 2026',
+                            amount: 150000,
+                            amountPaid: 0,
+                            status: 'unpaid',
+                            createdAt: Date.now(),
+                            dueDate: '2026-08-12',
+                            invoiceNo: 'INV/202608/001',
+                            category: 'spp'
+                          },
+                          {
+                            id: 'st-1',
+                            name: 'Aisyah Putri',
+                            parentName: 'Bunda Sarah',
+                            parentPhone: '081234567890',
+                            status: 'active',
+                            branch: 'Singkut',
+                            joinDate: '2026-01-01',
+                            level: 'Level 1: Basic',
+                            createdAt: Date.now()
+                          },
+                          reminderTemplate,
+                          settings
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className={`p-4 sm:p-5 border-t flex flex-wrap items-center justify-between gap-3 ${
+                isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800'
+              }`}>
+                <div className="text-xs text-slate-500 font-medium">
+                  {activeReminderTab === 'list' 
+                    ? `Total ${h2AndOverdueInvoices.length} tagihan perlu diingatkan`
+                    : 'Perubahan template disimpan secara otomatis di perangkat Anda'}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {activeReminderTab === 'template' ? (
+                    <button
+                      type="button"
+                      onClick={() => handleSaveTemplate(reminderTemplate)}
+                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs transition shadow-sm flex items-center gap-1.5"
+                    >
+                      <Check size={16} />
+                      <span>Simpan Kata-Kata</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsReminderModalOpen(false)}
+                      className={`px-5 py-2.5 rounded-xl text-xs font-bold transition border ${
+                        isLight ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      Tutup
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

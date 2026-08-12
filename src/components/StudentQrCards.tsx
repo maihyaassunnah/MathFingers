@@ -30,6 +30,7 @@ interface StudentQrCardsProps {
   attendance?: any[];
   onAddAttendanceBatch?: (records: any[]) => Promise<void>;
   theme?: string;
+  isSuperAdmin?: boolean;
 }
 
 export function StudentQrCards({
@@ -38,7 +39,8 @@ export function StudentQrCards({
   branches = [],
   attendance = [],
   onAddAttendanceBatch,
-  theme = 'dark'
+  theme = 'dark',
+  isSuperAdmin = false
 }: StudentQrCardsProps) {
   const isLight = theme === 'light';
   
@@ -1299,17 +1301,19 @@ export function StudentQrCards({
         </div>
 
         <div className="flex flex-wrap gap-2 w-full md:w-auto">
-          {/* Cabang Filter */}
-          <CustomDropdown
-            value={branchFilter}
-            onChange={(val) => setBranchFilter(val)}
-            options={[
-              { value: 'All', label: 'Semua Cabang' },
-              ...availableBranches.map(b => ({ value: b, label: `Cabang: ${b}` }))
-            ]}
-            theme={theme}
-            className="min-w-[140px]"
-          />
+          {/* Cabang Filter - Hanya untuk Super Admin */}
+          {isSuperAdmin && (
+            <CustomDropdown
+              value={branchFilter}
+              onChange={(val) => setBranchFilter(val)}
+              options={[
+                { value: 'All', label: 'Semua Cabang' },
+                ...availableBranches.map(b => ({ value: b, label: `Cabang: ${b}` }))
+              ]}
+              theme={theme}
+              className="min-w-[140px]"
+            />
+          )}
 
           {/* Kelas Filter */}
           <CustomDropdown

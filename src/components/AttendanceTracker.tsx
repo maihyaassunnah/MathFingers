@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Student, Attendance, ClassGroup } from '../types';
 import { getWhatsAppLink, getStudentUniqueCode } from '../utils';
-import { Calendar, Check, X, ShieldAlert, Send, Save, CheckSquare, Clock, Search, Users, TrendingUp, ChevronDown, MessageSquare, Trash2, Layers, DoorClosed, User, QrCode, Printer, Copy, ExternalLink } from 'lucide-react';
+import { Calendar, Check, X, ShieldAlert, Send, Save, CheckSquare, Clock, Search, Users, TrendingUp, ChevronDown, MessageSquare, Trash2, Layers, DoorClosed, User, QrCode, Printer, Copy, ExternalLink, CheckCircle, RefreshCw } from 'lucide-react';
 import { CustomDropdown } from './CustomDropdown';
 import { OfflineIndicator } from './OfflineIndicator';
 
@@ -47,6 +48,20 @@ export function AttendanceTracker({
   const [expandedStudentNotes, setExpandedStudentNotes] = useState<Record<string, boolean>>({});
   const [filterBySchedule, setFilterBySchedule] = useState(false);
   const [selectedMissingStudent, setSelectedMissingStudent] = useState<string>('');
+
+  const [toastNotification, setToastNotification] = useState<{
+    show: boolean;
+    message: string;
+    detail?: string;
+    type?: 'success' | 'error';
+  } | null>(null);
+
+  const triggerToast = (message: string, detail?: string, type: 'success' | 'error' = 'success') => {
+    setToastNotification({ show: true, message, detail, type });
+    setTimeout(() => {
+      setToastNotification(null);
+    }, 4500);
+  };
 
   const toggleNotes = (studentId: string) => {
     setExpandedStudentNotes(prev => ({
@@ -184,11 +199,30 @@ export function AttendanceTracker({
       setSaveStatus('saved');
       setSavedRecordsCount(recordsToSave.length);
       setShowSuccessModal(true);
-      setTimeout(() => setSaveStatus('idle'), 3000);
+      
+      const formattedDateText = (() => {
+        try {
+          return new Date(selectedDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        } catch {
+          return selectedDate;
+        }
+      })();
+
+      triggerToast(
+        'Presensi Berhasil Disimpan! 🎉',
+        `${recordsToSave.length} data kehadiran siswa untuk tanggal ${formattedDateText} telah tersimpan ke database.`,
+        'success'
+      );
+
+      setTimeout(() => setSaveStatus('idle'), 3500);
     } catch (err) {
       console.error(err);
       setSaveStatus('idle');
-      alert('Gagal menyimpan absensi!');
+      triggerToast(
+        'Gagal Menyimpan Presensi',
+        'Terjadi kesalahan saat menyimpan data absensi. Silakan coba lagi.',
+        'error'
+      );
     }
   };
 
@@ -271,7 +305,7 @@ export function AttendanceTracker({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4 border-slate-200 dark:border-slate-800">
         <div>
           <h2 className={`text-2xl font-bold font-sans ${isLight ? 'text-slate-800' : 'text-white'}`}>Absensi Siswa</h2>
-          <p className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-sm`}>Pencatatan harian dan rekapitulasi riwayat kehadiran Math Fingers.</p>
+          <p className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-sm hidden sm:block`}>Pencatatan harian dan rekapitulasi riwayat kehadiran Math Fingers.</p>
         </div>
         
         <div className={`flex p-1 rounded-xl border self-start md:self-center ${
@@ -311,7 +345,7 @@ export function AttendanceTracker({
             <div>
               <h3 className={`font-semibold text-base ${isLight ? 'text-slate-850' : 'text-white'}`}>Pilih Tanggal Sesi Bimbingan</h3>
               <div className="flex flex-col sm:flex-row sm:items-center gap-x-2.5 gap-y-1 mt-0.5">
-                <p className="text-xs text-slate-400">Siswa aktif terdaftar bimbingan privat.</p>
+                <p className="text-xs text-slate-400 hidden sm:block">Siswa aktif terdaftar bimbingan privat.</p>
               </div>
             </div>
             
@@ -544,14 +578,6 @@ export function AttendanceTracker({
               </div>
             </div>
           )}
-
-          {/* Spanduk Tip Mobile (Only on Mobile screens) */}
-          <div className="md:hidden bg-indigo-500/10 border border-indigo-500/20 p-3.5 rounded-2xl flex items-start gap-2.5">
-            <CheckSquare className="text-indigo-500 dark:text-indigo-400 shrink-0 mt-0.5" size={16} />
-            <div className="text-xs text-indigo-700 dark:text-indigo-300 leading-relaxed font-medium">
-              <strong>Tip Mengabsen Mobile:</strong> Ketuk tombol lingkaran berwarna di sisi kanan nama siswa untuk mengganti status bimbingan (Hadir ➜ Izin ➜ Absen) secara langsung dengan satu sentuhan jari!
-            </div>
-          </div>
 
           <OfflineIndicator theme={theme} className="mb-4" />
 
@@ -838,19 +864,42 @@ export function AttendanceTracker({
 
                 {/* Save Footer Bar */}
                 {activeStudents.length > 0 && (
-                  <div className={`p-4 border-t flex justify-end ${
+                  <div className={`p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-3 ${
                     isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/30 border-slate-800'
                   }`}>
+                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                      <CheckCircle size={15} className="text-emerald-500 shrink-0" />
+                      <span>Siswa Terdata: <strong className="font-bold text-emerald-600 dark:text-emerald-400">{scheduledActiveStudents.length} Siswa</strong></span>
+                    </div>
+
                     <button
                       id="btn-save-attendance"
                       onClick={handleSave}
                       disabled={saveStatus === 'saving'}
-                      className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm px-6 py-2.5 rounded-xl transition shadow-sm"
+                      className={`w-full sm:w-auto flex items-center justify-center gap-2 font-bold text-sm px-7 py-3 rounded-xl transition duration-200 shadow-md ${
+                        saveStatus === 'saving'
+                          ? 'bg-slate-700 text-slate-300 cursor-not-allowed animate-pulse'
+                          : saveStatus === 'saved'
+                            ? 'bg-emerald-500 text-white ring-4 ring-emerald-500/20'
+                            : 'bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white shadow-emerald-600/20 hover:shadow-lg'
+                      }`}
                     >
-                      <Save size={16} />
-                      <span>
-                        {saveStatus === 'saving' ? 'Menyimpan...' : saveStatus === 'saved' ? 'Selesai Disimpan!' : 'Simpan Semua Absensi'}
-                      </span>
+                      {saveStatus === 'saving' ? (
+                        <>
+                          <RefreshCw size={18} className="animate-spin text-emerald-400" />
+                          <span>Menyimpan ke Database...</span>
+                        </>
+                      ) : saveStatus === 'saved' ? (
+                        <>
+                          <CheckCircle size={18} className="animate-bounce text-white" />
+                          <span>Presensi Disimpan! 🎉</span>
+                        </>
+                      ) : (
+                        <>
+                          <Save size={18} />
+                          <span>Simpan Semua Absensi Hari Ini</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 )}
@@ -1284,6 +1333,10 @@ export function AttendanceTracker({
                                 notes: ''
                               }]);
                               setSelectedMissingStudent("");
+                              triggerToast(
+                                'Siswa Berhasil Ditambahkan!',
+                                `${student.name} berhasil ditambahkan ke sesi presensi.`
+                              );
                             }
                           }
                         }}
@@ -1314,45 +1367,122 @@ export function AttendanceTracker({
       )}
 
       {/* === SUCCESS MODAL POPUP === */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className={`rounded-2xl w-full max-w-sm shadow-2xl border p-6 text-center transform transition-all scale-100 ${
-            isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#090d16] border-slate-800 text-white'
-          }`}>
-            <div className="w-16 h-16 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
-              <CheckSquare size={36} />
-            </div>
-            
-            <h3 className={`text-lg font-extrabold ${isLight ? 'text-slate-900' : 'text-white'}`}>
-              Presensi Berhasil Disimpan! 🎉
-            </h3>
-            
-            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-              Sebanyak <strong className="text-emerald-500 font-extrabold">{savedRecordsCount} data kehadiran siswa</strong> pada tanggal{' '}
-              <strong className={isLight ? 'text-slate-800 font-bold' : 'text-slate-200 font-bold'}>
-                {(() => {
-                  try {
-                    return new Date(selectedDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-                  } catch {
-                    return selectedDate;
-                  }
-                })()}
-              </strong>{' '}
-              telah aman disimpan ke database.
-            </p>
-            
-            <div className="mt-6">
+      <AnimatePresence>
+        {showSuccessModal && (
+          <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.85, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.85, y: 15 }}
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              className={`rounded-2xl w-full max-w-sm shadow-2xl border p-6 text-center ${
+                isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#090d16] border-slate-800 text-white'
+              }`}
+            >
+              <div className="w-16 h-16 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 relative">
+                <CheckCircle size={38} className="animate-bounce text-emerald-500" />
+                <span className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping opacity-60" />
+              </div>
+              
+              <h3 className={`text-lg font-extrabold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                Presensi Berhasil Disimpan! 🎉
+              </h3>
+              
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                Sebanyak <strong className="text-emerald-500 font-extrabold">{savedRecordsCount} data kehadiran siswa</strong> pada tanggal{' '}
+                <strong className={isLight ? 'text-slate-800 font-bold' : 'text-slate-200 font-bold'}>
+                  {(() => {
+                    try {
+                      return new Date(selectedDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                    } catch {
+                      return selectedDate;
+                    }
+                  })()}
+                </strong>{' '}
+                telah aman disimpan ke database.
+              </p>
+              
+              <div className="mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowSuccessModal(false)}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition shadow-md shadow-emerald-600/10 active:scale-95 cursor-pointer"
+                >
+                  Tutup & Selesai
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* === FLOATING TOAST NOTIFICATION === */}
+      <AnimatePresence>
+        {toastNotification && toastNotification.show && (
+          <motion.div
+            initial={{ opacity: 0, y: -30, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -30, scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 450, damping: 25 }}
+            className="fixed top-5 right-5 z-[9999] max-w-sm w-full pointer-events-auto"
+          >
+            <div className={`p-4 rounded-2xl border shadow-2xl backdrop-blur-xl relative overflow-hidden flex items-start gap-3.5 ${
+              toastNotification.type === 'error'
+                ? 'bg-rose-950/90 border-rose-500/40 text-rose-100 shadow-rose-950/40'
+                : isLight
+                  ? 'bg-white/95 border-emerald-400 text-slate-800 shadow-emerald-500/15'
+                  : 'bg-slate-900/95 border-emerald-500/40 text-white shadow-emerald-950/60'
+            }`}>
+              {/* Left animated icon indicator */}
+              <div className={`p-2.5 rounded-xl shrink-0 flex items-center justify-center relative ${
+                toastNotification.type === 'error'
+                  ? 'bg-rose-500/20 text-rose-400'
+                  : 'bg-emerald-500/15 text-emerald-500'
+              }`}>
+                {toastNotification.type === 'error' ? (
+                  <ShieldAlert size={22} className="animate-pulse" />
+                ) : (
+                  <>
+                    <CheckCircle size={22} className="z-10 text-emerald-500 animate-bounce" />
+                    <span className="absolute inset-0 rounded-xl bg-emerald-500/30 animate-ping opacity-75" />
+                  </>
+                )}
+              </div>
+
+              {/* Toast Text Content */}
+              <div className="flex-1 pr-2">
+                <h4 className="font-extrabold text-sm tracking-tight">
+                  {toastNotification.message}
+                </h4>
+                {toastNotification.detail && (
+                  <p className="text-xs text-slate-500 dark:text-slate-300 mt-1 leading-relaxed font-medium">
+                    {toastNotification.detail}
+                  </p>
+                )}
+              </div>
+
+              {/* Close Button */}
               <button
                 type="button"
-                onClick={() => setShowSuccessModal(false)}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition shadow-md shadow-emerald-600/10"
+                onClick={() => setToastNotification(null)}
+                className="text-slate-400 hover:text-slate-200 transition p-1 rounded-lg hover:bg-slate-800/40 cursor-pointer"
               >
-                Tutup & Selesai
+                <X size={16} />
               </button>
+
+              {/* Bottom animated progress timer bar */}
+              <motion.div
+                initial={{ width: "100%" }}
+                animate={{ width: "0%" }}
+                transition={{ duration: 4.5, ease: "linear" }}
+                className={`absolute bottom-0 left-0 h-1.5 ${
+                  toastNotification.type === 'error' ? 'bg-rose-500' : 'bg-emerald-500'
+                }`}
+              />
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* === QR CODE ABSEN MANDIRI MODAL === */}
       {showQrModal && (

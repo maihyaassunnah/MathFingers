@@ -150,6 +150,14 @@ export default function App() {
     return (localStorage.getItem('math_finggers_theme') as 'light' | 'dark') || 'dark';
   });
 
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState<boolean>(false);
   const [installedVersion, setInstalledVersion] = useState<string>(() => {
     return localStorage.getItem('math_finggers_installed_version') || 'v2.5.0';
@@ -538,6 +546,7 @@ export default function App() {
             theme={theme}
             isSuperAdmin={isSuperAdmin}
             branches={branches}
+            activeBranch={activeBranch}
             allStudents={students}
             allAttendance={attendance}
             allInvoices={invoices}
@@ -574,6 +583,7 @@ export default function App() {
             attendance={attendance}
             onAddAttendanceBatch={addAttendanceBatch}
             theme={theme}
+            isSuperAdmin={isSuperAdmin}
           />
         );
       case 'classes':
@@ -765,6 +775,7 @@ export default function App() {
             theme={theme} 
             isSuperAdmin={isSuperAdmin}
             branches={branches}
+            activeBranch={activeBranch}
             allStudents={students}
             allAttendance={attendance}
             allInvoices={invoices}

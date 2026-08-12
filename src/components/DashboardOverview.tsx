@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Student, Attendance, Invoice, Grade, AppSettings, DashboardTask, Branch, AdminUser } from '../types';
 import { formatRupiah, getWhatsAppLink, getStudentUniqueCode } from '../utils';
 import { MathFingerLogo } from './MathFingerLogo';
@@ -50,6 +51,7 @@ interface DashboardOverviewProps {
   theme?: string;
   isSuperAdmin?: boolean;
   branches?: Branch[];
+  activeBranch?: string;
   allStudents?: Student[];
   allAttendance?: Attendance[];
   allInvoices?: Invoice[];
@@ -73,6 +75,7 @@ export function DashboardOverview({
   theme = 'dark',
   isSuperAdmin = false,
   branches = [],
+  activeBranch = 'all',
   allStudents = [],
   allAttendance = [],
   allInvoices = [],
@@ -159,7 +162,12 @@ export function DashboardOverview({
   const isBranchAdmin = currentUser?.role === 'branch_admin' || activeUser?.role === 'branch_admin';
 
   // Calculate per-branch statistics for super admins
-  const branchStats = branches.map(branch => {
+  const targetBranches = (activeBranch && activeBranch !== 'all')
+    ? branches.filter(br => br.name === activeBranch)
+    : branches;
+  const displayBranches = targetBranches.length > 0 ? targetBranches : branches;
+
+  const branchStats = displayBranches.map(branch => {
     const studentsSource = allStudents.length > 0 ? allStudents : students;
     const gradesSource = allGrades.length > 0 ? allGrades : grades;
     const attendanceSource = allAttendance.length > 0 ? allAttendance : attendance;
@@ -223,7 +231,9 @@ export function DashboardOverview({
 
   // Helper to group by week for Attendance Trends
   const getWeeklyAttendanceData = () => {
-    const attendanceSource = allAttendance.length > 0 ? allAttendance : attendance;
+    const attendanceSource = (activeBranch && activeBranch !== 'all')
+      ? attendance
+      : (allAttendance.length > 0 ? allAttendance : attendance);
     if (attendanceSource.length === 0) return [];
 
     const now = new Date();
@@ -261,7 +271,9 @@ export function DashboardOverview({
   };
 
   const getSppIncomeData = () => {
-    const invoicesSource = allInvoices.length > 0 ? allInvoices : invoices;
+    const invoicesSource = (activeBranch && activeBranch !== 'all')
+      ? invoices
+      : (allInvoices.length > 0 ? allInvoices : invoices);
     const actualBranchNames = branches.map(br => br.name);
     const isPusatMissing = !actualBranchNames.includes('Pusat');
 
@@ -273,7 +285,7 @@ export function DashboardOverview({
       return b;
     };
 
-    return branches.map(branch => {
+    return displayBranches.map(branch => {
       const branchInvoices = invoicesSource.filter(i => getAssignedBranch(i.branch) === branch.name && (i.category === 'spp' || !i.category));
       
       let totalPaid = 0;
@@ -473,71 +485,86 @@ export function DashboardOverview({
       )}
 
       {/* Brand Hero Welcome Banner */}
-      <div className={`relative overflow-hidden bg-gradient-to-r transition-all duration-300 ${
+      <div className={`relative overflow-hidden transition-all duration-300 rounded-3xl border shadow-md ${
         isLight 
-          ? 'from-white/70 via-slate-50/70 to-slate-100/60 border-white/50 text-slate-800 shadow-[0_8px_32px_rgba(148,163,184,0.05)]' 
-          : 'from-[#020617]/50 via-[#0f172a]/50 to-emerald-950/40 border-emerald-500/10 text-white shadow-[0_8px_32px_rgba(0,0,0,0.25)]'
-        } p-6 sm:p-8 rounded-3xl border backdrop-blur-md`}
+          ? 'bg-white border-slate-200 text-slate-900 shadow-slate-200/50' 
+          : 'bg-slate-900 border-slate-800 text-white shadow-emerald-950/30'
+        } p-5 sm:p-7 backdrop-blur-md text-center`}
       >
-        <div className="relative z-10 max-w-xl space-y-3">
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full backdrop-blur-sm border ${
-            isLight ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-          }`}>
-            <Sparkles size={12} className="animate-pulse" />
-            <span>Sistem Manajemen Les Privat Terpadu</span>
-          </span>
-          <div className="py-2">
-            <MathFingerLogo size={80} textSize="xl" theme={theme === 'dark' ? 'dark' : 'light'} />
+        {/* Background decorative ambient glow */}
+        <div className="absolute -top-12 -right-12 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col items-center justify-center space-y-3.5 max-w-2xl mx-auto">
+          {/* Logo mathfinger kecil di tengah paling atas dashboard */}
+          <div className="flex justify-center p-2 rounded-2xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 shadow-sm">
+            <MathFingerLogo size={36} textSize="md" theme={theme === 'dark' ? 'dark' : 'light'} />
           </div>
-          
-          <div className={`p-4 rounded-2xl border transition-all ${
-            isLight 
-              ? 'bg-slate-150/40 border-slate-200/50 text-slate-800' 
-              : 'bg-emerald-950/20 border-emerald-500/10 text-white'
-          }`}>
-            <p className="text-[10px] font-bold uppercase tracking-wider opacity-65">
-              Administrator Aktif
+
+          {/* Role and Date Badges */}
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold border ${
+              isLight ? 'bg-emerald-100/90 border-emerald-300 text-emerald-800' : 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
+            }`}>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              <span>{activeAdminRoleText}</span>
+            </div>
+
+            <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+              isLight ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-slate-800 border-slate-700 text-slate-300'
+            }`}>
+              <CalendarDays size={13} className={isLight ? 'text-slate-600' : 'text-slate-400'} />
+              <span>{new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+            </div>
+          </div>
+
+          {/* Greeting & Name dengan Kontras Tinggi */}
+          <div className="space-y-1">
+            <p className={`text-xs sm:text-sm font-extrabold ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+              Selamat datang kembali 👋
             </p>
-            <h1 className="text-lg sm:text-2xl font-black tracking-tight mt-0.5">
+            <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
               {activeAdminName}
             </h1>
-            <p className="text-xs font-semibold opacity-80 mt-0.5">
-              Role: {activeAdminRoleText}
+            <p className={`text-xs sm:text-sm font-semibold max-w-xl mx-auto leading-relaxed pt-1 ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+              Kelola presensi harian, tagihan SPP, serta perkembangan hasil kuis berhitung siswa Math Fingers.
             </p>
           </div>
 
-          <p className={`${isLight ? 'text-slate-500' : 'text-slate-300'} text-sm sm:text-base font-medium italic`}>
-            "Berhitung Cepat & Akurat Tanpa Alat"
-          </p>
-          <div className="pt-3 flex flex-wrap gap-2">
-            <button
-              onClick={() => onNavigate('students')}
-              className={`${getAccentBgClass()} text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow-sm`}
-            >
-              Kelola Data Siswa
-            </button>
+          {/* Quick Action Buttons - 1 Baris Saja */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-2 w-full max-w-xl mx-auto">
             <button
               onClick={() => onNavigate('attendance')}
-              className={`font-semibold text-xs px-4 py-2.5 rounded-xl border transition ${
+              className="flex flex-col sm:flex-row items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-[11px] sm:text-xs px-2.5 sm:px-4 py-2.5 rounded-xl transition shadow-md shadow-emerald-600/20 cursor-pointer text-center"
+            >
+              <CheckSquare size={15} className="shrink-0" />
+              <span className="truncate">Catat Absen</span>
+            </button>
+            
+            <button
+              onClick={() => onNavigate('students')}
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 font-bold text-[11px] sm:text-xs px-2.5 sm:px-4 py-2.5 rounded-xl border transition active:scale-95 cursor-pointer text-center ${
                 isLight 
-                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-755 border-slate-200' 
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                  ? 'bg-white hover:bg-slate-50 text-slate-900 border-slate-300 shadow-sm' 
+                  : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-700'
               }`}
             >
-              Mulai Absen Hari Ini
+              <Users size={15} className="shrink-0" />
+              <span className="truncate">Kelola Siswa</span>
+            </button>
+
+            <button
+              onClick={() => onNavigate('spp')}
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 font-bold text-[11px] sm:text-xs px-2.5 sm:px-4 py-2.5 rounded-xl border transition active:scale-95 cursor-pointer text-center ${
+                isLight 
+                  ? 'bg-white hover:bg-slate-50 text-slate-900 border-slate-300 shadow-sm' 
+                  : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-700'
+              }`}
+            >
+              <Receipt size={15} className="shrink-0" />
+              <span className="truncate">Keuangan SPP</span>
             </button>
           </div>
-        </div>
-
-        {/* Decorative background vectors */}
-        <div className="absolute right-0 bottom-0 top-0 w-1/3 opacity-10 hidden md:block">
-          <svg viewBox="0 0 100 100" className={`w-full h-full ${isLight ? 'text-slate-300' : 'text-emerald-400'} fill-current`}>
-            <circle cx="20" cy="50" r="10" />
-            <circle cx="40" cy="30" r="10" />
-            <circle cx="60" cy="20" r="10" />
-            <circle cx="80" cy="35" r="10" />
-            <circle cx="90" cy="70" r="15" />
-          </svg>
         </div>
       </div>
 
@@ -553,15 +580,17 @@ export function DashboardOverview({
               <Building className={getAccentTextClass()} size={22} />
               <div>
                 <h3 className={`text-lg font-bold font-sans ${isLight ? 'text-slate-800' : 'text-white'}`}>
-                  Statistik Keseluruhan per Cabang
+                  {activeBranch && activeBranch !== 'all' ? `Statistik Cabang (${activeBranch})` : 'Statistik Keseluruhan per Cabang'}
                 </h3>
-                <p className="text-xs text-slate-550 dark:text-slate-400 font-medium">Data real-time agregat untuk setiap cabang bimbingan Math Fingers</p>
+                <p className="text-xs text-slate-550 dark:text-slate-400 font-medium">
+                  {activeBranch && activeBranch !== 'all' ? `Data real-time khusus untuk ${activeBranch}` : 'Data real-time agregat untuk setiap cabang bimbingan Math Fingers'}
+                </p>
               </div>
             </div>
             
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-550/10 text-emerald-600 dark:text-emerald-400 border border-emerald-550/15 text-xs font-semibold self-start sm:self-center">
               <Sparkles size={12} className="animate-pulse text-emerald-500" />
-              <span>Multi-Cabang Aktif</span>
+              <span>{activeBranch && activeBranch !== 'all' ? `Cabang: ${activeBranch}` : 'Multi-Cabang Aktif'}</span>
             </div>
           </div>
 
@@ -669,9 +698,11 @@ export function DashboardOverview({
                 <TrendingUp className="text-emerald-500" size={18} />
                 <div>
                   <h4 className={`font-bold text-sm ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
-                    Tren Kehadiran Siswa Mingguan
+                    {activeBranch && activeBranch !== 'all' ? `Tren Kehadiran Siswa Mingguan (${activeBranch})` : 'Tren Kehadiran Siswa Mingguan'}
                   </h4>
-                  <p className="text-[11px] text-slate-500">Agregat jumlah status kehadiran (Hadir, Izin, Absen) 6 minggu terakhir</p>
+                  <p className="text-[11px] text-slate-500">
+                    {activeBranch && activeBranch !== 'all' ? `Jumlah status kehadiran 6 minggu terakhir (${activeBranch})` : 'Agregat jumlah status kehadiran (Hadir, Izin, Absen) 6 minggu terakhir'}
+                  </p>
                 </div>
               </div>
 
@@ -774,9 +805,11 @@ export function DashboardOverview({
                 <Receipt className="text-emerald-500" size={18} />
                 <div>
                   <h4 className={`font-bold text-sm ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
-                    Pendapatan & Tunggakan SPP per Cabang
+                    {activeBranch && activeBranch !== 'all' ? `Pendapatan & Tunggakan SPP (${activeBranch})` : 'Pendapatan & Tunggakan SPP per Cabang'}
                   </h4>
-                  <p className="text-[11px] text-slate-500">Perbandingan jumlah pembayaran lunas vs sisa tunggakan SPP per cabang</p>
+                  <p className="text-[11px] text-slate-500">
+                    {activeBranch && activeBranch !== 'all' ? `Perbandingan jumlah pembayaran lunas vs sisa tunggakan SPP (${activeBranch})` : 'Perbandingan jumlah pembayaran lunas vs sisa tunggakan SPP per cabang'}
+                  </p>
                 </div>
               </div>
 
@@ -862,95 +895,164 @@ export function DashboardOverview({
       )}
  
       {/* Metrics bento-grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
         
-        {/* Metric 1 */}
-        <div 
+        {/* Metric 1: Siswa Aktif */}
+        <motion.div 
+          whileHover={{ scale: 1.02, y: -2 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => onNavigate('students')} 
-          className={`p-3 sm:p-5 rounded-2xl border flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:border-emerald-500/40 transition-all duration-300 group backdrop-blur-md ${
+          className={`p-4 sm:p-5 rounded-2xl border flex items-center gap-3.5 sm:gap-4 cursor-pointer transition-all duration-300 group ${
             isLight 
-              ? 'bg-white/75 border-white/50 shadow-[0_8px_32px_rgba(148,163,184,0.05)] hover:shadow-[0_12px_40px_rgba(5,150,105,0.08)]' 
-              : 'bg-slate-900/60 border-emerald-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.25)] hover:shadow-[0_12px_40px_rgba(16,185,129,0.15)]'
+              ? 'bg-white border-slate-200/80 shadow-sm hover:shadow-md hover:border-emerald-400' 
+              : 'bg-slate-900 border-slate-800 shadow-sm hover:shadow-emerald-950/40 hover:border-emerald-500/40'
           }`}
         >
-          <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition border ${
-            isLight ? 'bg-slate-100 group-hover:bg-slate-200 text-emerald-600 border-slate-200' : 'bg-slate-800 group-hover:bg-slate-700 text-emerald-400 border-slate-700/50'
-          }`}>
-            <Users size={16} className="sm:w-5 sm:h-5" />
+          <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+            <Users size={22} className="group-hover:scale-110 transition-transform" />
           </div>
-          <div>
-            <span className="text-slate-500 text-[10px] sm:text-xs font-semibold block">SISWA AKTIF</span>
-            <span className={`text-lg sm:text-2xl font-extrabold ${isLight ? 'text-slate-800' : 'text-white'}`}>{activeStudents.length}</span>
-            <span className="text-[10px] text-slate-500 hidden sm:block mt-0.5">Siswa terdaftar</span>
+          <div className="min-w-0">
+            <span className={`text-[10px] sm:text-xs font-black tracking-wider uppercase block truncate ${
+              isLight ? 'text-slate-800' : 'text-slate-400'
+            }`}>
+              Siswa Aktif
+            </span>
+            <div className="flex items-baseline gap-1.5 mt-0.5">
+              <span className={`text-xl sm:text-2xl font-black ${
+                isLight ? 'text-slate-900' : 'text-white'
+              }`}>
+                {activeStudents.length}
+              </span>
+              <span className={`text-[11px] font-bold ${
+                isLight ? 'text-emerald-700' : 'text-emerald-400'
+              }`}>
+                Anak
+              </span>
+            </div>
+            <span className={`text-[10px] font-medium block truncate mt-0.5 ${
+              isLight ? 'text-slate-600' : 'text-slate-400'
+            }`}>
+              {students.length} Total terdaftar
+            </span>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Metric 2 */}
-        <div 
+        {/* Metric 2: Presensi Hari Ini */}
+        <motion.div 
+          whileHover={{ scale: 1.02, y: -2 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => onNavigate('attendance')} 
-          className={`p-3 sm:p-5 rounded-2xl border flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:border-emerald-500/40 transition-all duration-300 group backdrop-blur-md ${
+          className={`p-4 sm:p-5 rounded-2xl border flex items-center gap-3.5 sm:gap-4 cursor-pointer transition-all duration-300 group ${
             isLight 
-              ? 'bg-white/75 border-white/50 shadow-[0_8px_32px_rgba(148,163,184,0.05)] hover:shadow-[0_12px_40px_rgba(5,150,105,0.08)]' 
-              : 'bg-slate-900/60 border-emerald-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.25)] hover:shadow-[0_12px_40px_rgba(16,185,129,0.15)]'
+              ? 'bg-white border-slate-200/80 shadow-sm hover:shadow-md hover:border-amber-400' 
+              : 'bg-slate-900 border-slate-800 shadow-sm hover:shadow-amber-950/40 hover:border-amber-500/40'
           }`}
         >
-          <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition border ${
-            isLight ? 'bg-slate-100 group-hover:bg-slate-200 text-amber-600 border-slate-200' : 'bg-slate-800 group-hover:bg-slate-700 text-amber-400 border-slate-700/50'
-          }`}>
-            <CheckSquare size={16} className="sm:w-5 sm:h-5" />
+          <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/10 border border-amber-500/25 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+            <CheckSquare size={22} className="group-hover:scale-110 transition-transform" />
           </div>
-          <div>
-            <span className="text-slate-500 text-[10px] sm:text-xs font-semibold block">PRESENSI</span>
-            <span className={`text-lg sm:text-2xl font-extrabold ${isLight ? 'text-slate-800' : 'text-white'}`}>{todaysAttendance.length > 0 ? `${attendanceRate}%` : 'N/A'}</span>
-            <span className="text-[10px] text-slate-500 hidden sm:block mt-0.5">
-              {todaysAttendance.length > 0 ? 'Sudah absen' : 'Belum diabsen hari ini'}
+          <div className="min-w-0">
+            <span className={`text-[10px] sm:text-xs font-black tracking-wider uppercase block truncate ${
+              isLight ? 'text-slate-800' : 'text-slate-400'
+            }`}>
+              Presensi Hari Ini
+            </span>
+            <div className="flex items-baseline gap-1.5 mt-0.5">
+              <span className={`text-xl sm:text-2xl font-black ${
+                isLight ? 'text-slate-900' : 'text-white'
+              }`}>
+                {todaysAttendance.length > 0 ? `${attendanceRate}%` : '0%'}
+              </span>
+            </div>
+            <span className={`text-[10px] font-medium block truncate mt-0.5 ${
+              isLight ? 'text-slate-600' : 'text-slate-400'
+            }`}>
+              {todaysAttendance.length > 0 
+                ? `${todaysAttendance.filter(a => a.status === 'present').length}/${todaysAttendance.length} Siswa hadir`
+                : 'Belum diabsen hari ini'}
             </span>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Metric 3 */}
-        <div 
+        {/* Metric 3: Tagihan SPP */}
+        <motion.div 
+          whileHover={{ scale: 1.02, y: -2 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => onNavigate('spp')} 
-          className={`p-3 sm:p-5 rounded-2xl border flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:border-emerald-500/40 transition-all duration-300 group backdrop-blur-md ${
+          className={`p-4 sm:p-5 rounded-2xl border flex items-center gap-3.5 sm:gap-4 cursor-pointer transition-all duration-300 group ${
             isLight 
-              ? 'bg-white/75 border-white/50 shadow-[0_8px_32px_rgba(148,163,184,0.05)] hover:shadow-[0_12px_40px_rgba(5,150,105,0.08)]' 
-              : 'bg-slate-900/60 border-emerald-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.25)] hover:shadow-[0_12px_40px_rgba(16,185,129,0.15)]'
+              ? 'bg-white border-slate-200/80 shadow-sm hover:shadow-md hover:border-rose-400' 
+              : 'bg-slate-900 border-slate-800 shadow-sm hover:shadow-rose-950/40 hover:border-rose-500/40'
           }`}
         >
-          <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition border ${
-            isLight ? 'bg-slate-100 group-hover:bg-slate-200 text-rose-600 border-slate-200' : 'bg-slate-800 group-hover:bg-slate-700 text-rose-400 border-slate-700/50'
-          }`}>
-            <Receipt size={16} className="sm:w-5 sm:h-5" />
+          <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-br from-rose-500/20 to-pink-500/10 border border-rose-500/25 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+            <Receipt size={22} className="group-hover:scale-110 transition-transform" />
           </div>
-          <div>
-            <span className="text-slate-500 text-[10px] sm:text-xs font-semibold block">TAGIHAN SPP</span>
-            <span className={`text-lg sm:text-2xl font-extrabold ${isLight ? 'text-slate-800' : 'text-white'}`}>
-              {unpaidInvoices.length} <span className="hidden sm:inline">Tagihan</span>
+          <div className="min-w-0">
+            <span className={`text-[10px] sm:text-xs font-black tracking-wider uppercase block truncate ${
+              isLight ? 'text-slate-800' : 'text-slate-400'
+            }`}>
+              Tagihan SPP
             </span>
-            <span className="text-[10px] text-rose-500 font-bold hidden sm:block mt-0.5">{formatRupiah(unpaidAmount)}</span>
+            <div className="flex items-baseline gap-1.5 mt-0.5">
+              <span className={`text-xl sm:text-2xl font-black ${
+                isLight ? 'text-slate-900' : 'text-white'
+              }`}>
+                {unpaidInvoices.length}
+              </span>
+              <span className={`text-[11px] font-bold ${
+                isLight ? 'text-rose-700' : 'text-rose-400'
+              }`}>
+                Tagihan
+              </span>
+            </div>
+            <span className={`text-[10px] font-bold block truncate mt-0.5 ${
+              isLight ? 'text-rose-700' : 'text-rose-400'
+            }`}>
+              {unpaidAmount > 0 ? formatRupiah(unpaidAmount) : 'Semua Lunas!'}
+            </span>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Metric 4 */}
-        <div 
+        {/* Metric 4: Rata-Rata Kelas */}
+        <motion.div 
+          whileHover={{ scale: 1.02, y: -2 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => onNavigate('grades')} 
-          className={`p-3 sm:p-5 rounded-2xl border flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:border-emerald-500/40 transition-all duration-300 group backdrop-blur-md ${
+          className={`p-4 sm:p-5 rounded-2xl border flex items-center gap-3.5 sm:gap-4 cursor-pointer transition-all duration-300 group ${
             isLight 
-              ? 'bg-white/75 border-white/50 shadow-[0_8px_32px_rgba(148,163,184,0.05)] hover:shadow-[0_12px_40px_rgba(5,150,105,0.08)]' 
-              : 'bg-slate-900/60 border-emerald-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.25)] hover:shadow-[0_12px_40px_rgba(16,185,129,0.15)]'
+              ? 'bg-white border-slate-200/80 shadow-sm hover:shadow-md hover:border-sky-400' 
+              : 'bg-slate-900 border-slate-800 shadow-sm hover:shadow-sky-950/40 hover:border-sky-500/40'
           }`}
         >
-          <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition border ${
-            isLight ? 'bg-slate-100 group-hover:bg-slate-200 text-blue-600 border-slate-200' : 'bg-slate-800 group-hover:bg-slate-700 text-blue-400 border-slate-700/50'
-          }`}>
-            <Award size={16} className="sm:w-5 sm:h-5" />
+          <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-br from-sky-500/20 to-indigo-500/10 border border-sky-500/25 flex items-center justify-center text-sky-600 dark:text-sky-400 shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+            <Award size={22} className="group-hover:scale-110 transition-transform" />
           </div>
-          <div>
-            <span className="text-slate-500 text-[10px] sm:text-xs font-semibold block">RATA KELAS</span>
-            <span className={`text-lg sm:text-2xl font-extrabold ${isLight ? 'text-slate-800' : 'text-white'}`}>{avgClassScore}/100</span>
-            <span className="text-[10px] text-slate-500 hidden sm:block mt-0.5">Akurasi kuis berhitung</span>
+          <div className="min-w-0">
+            <span className={`text-[10px] sm:text-xs font-black tracking-wider uppercase block truncate ${
+              isLight ? 'text-slate-800' : 'text-slate-400'
+            }`}>
+              Rata Kelas
+            </span>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className={`text-xl sm:text-2xl font-black ${
+                isLight ? 'text-slate-900' : 'text-white'
+              }`}>
+                {avgClassScore}
+              </span>
+              <span className={`text-xs font-semibold ${
+                isLight ? 'text-slate-600' : 'text-slate-400'
+              }`}>
+                /100
+              </span>
+            </div>
+            <span className={`text-[10px] font-medium block truncate mt-0.5 ${
+              isLight ? 'text-slate-600' : 'text-slate-400'
+            }`}>
+              Akurasi kuis berhitung
+            </span>
           </div>
-        </div>
+        </motion.div>
 
       </div>
 
@@ -966,11 +1068,8 @@ export function DashboardOverview({
               <TrendingUp className={getAccentTextClass()} size={22} />
               <div>
                 <h3 className={`text-lg font-bold font-sans ${isLight ? 'text-slate-800' : 'text-white'}`}>
-                  Grafik & Analitik Performa Cabang ({currentUser?.branch || 'Cabang'})
+                  Grafik & Analitik Performa Cabang ({activeBranch && activeBranch !== 'all' ? activeBranch : (currentUser?.branch || 'Cabang')})
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  Tren kehadiran siswa mingguan serta statistik & pendapatan SPP
-                </p>
               </div>
             </div>
             
@@ -1330,7 +1429,9 @@ export function DashboardOverview({
                 <h3 className={`font-bold text-base ${isLight ? 'text-slate-850' : 'text-white'}`}>Menu Navigasi Pintar</h3>
                 <div className="grid grid-cols-1 gap-2">
                   
-                  <button
+                  <motion.button
+                    whileHover={{ x: 4, scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => onNavigate('students')}
                     className={`flex items-center justify-between p-3 rounded-xl border transition text-left group ${
                       isLight ? 'border-slate-100 bg-slate-50 hover:bg-slate-100/70' : 'border-slate-800/80 bg-slate-950/30 hover:bg-slate-800/40'
@@ -1345,10 +1446,12 @@ export function DashboardOverview({
                         <div className="text-[10px] text-slate-400">Pendaftaran & info wali murid</div>
                       </div>
                     </div>
-                    <Play size={12} className="text-slate-550 group-hover:text-emerald-550" />
-                  </button>
+                    <Play size={12} className="text-slate-550 group-hover:text-emerald-550 group-hover:translate-x-0.5 transition-transform" />
+                  </motion.button>
 
-                  <button
+                  <motion.button
+                    whileHover={{ x: 4, scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => onNavigate('attendance')}
                     className={`flex items-center justify-between p-3 rounded-xl border transition text-left group ${
                       isLight ? 'border-slate-100 bg-slate-50 hover:bg-slate-100/70' : 'border-slate-800/80 bg-slate-950/30 hover:bg-slate-800/40'
@@ -1363,10 +1466,12 @@ export function DashboardOverview({
                         <div className="text-[10px] text-slate-400">Absen & kirim report harian</div>
                       </div>
                     </div>
-                    <Play size={12} className="text-slate-550 group-hover:text-emerald-550" />
-                  </button>
+                    <Play size={12} className="text-slate-550 group-hover:text-emerald-550 group-hover:translate-x-0.5 transition-transform" />
+                  </motion.button>
 
-                  <button
+                  <motion.button
+                    whileHover={{ x: 4, scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => onNavigate('spp')}
                     className={`flex items-center justify-between p-3 rounded-xl border transition text-left group ${
                       isLight ? 'border-slate-100 bg-slate-50 hover:bg-slate-100/70' : 'border-slate-800/80 bg-slate-950/30 hover:bg-slate-800/40'
@@ -1381,10 +1486,12 @@ export function DashboardOverview({
                         <div className="text-[10px] text-slate-400">Lunas/Belum bayar & kuitansi</div>
                       </div>
                     </div>
-                    <Play size={12} className="text-slate-550 group-hover:text-emerald-550" />
-                  </button>
+                    <Play size={12} className="text-slate-550 group-hover:text-emerald-550 group-hover:translate-x-0.5 transition-transform" />
+                  </motion.button>
 
-                  <button
+                  <motion.button
+                    whileHover={{ x: 4, scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => onNavigate('grades')}
                     className={`flex items-center justify-between p-3 rounded-xl border transition text-left group ${
                       isLight ? 'border-slate-100 bg-slate-50 hover:bg-slate-100/70' : 'border-slate-800/80 bg-slate-950/30 hover:bg-slate-800/40'
@@ -1399,8 +1506,8 @@ export function DashboardOverview({
                         <div className="text-[10px] text-slate-400">Kecepatan refleks & akurasi uji</div>
                       </div>
                     </div>
-                    <Play size={12} className="text-slate-550 group-hover:text-emerald-550" />
-                  </button>
+                    <Play size={12} className="text-slate-550 group-hover:text-emerald-550 group-hover:translate-x-0.5 transition-transform" />
+                  </motion.button>
 
                 </div>
               </div>

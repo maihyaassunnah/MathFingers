@@ -93,7 +93,7 @@ export function CustomDropdown({
     <div 
       id={id} 
       ref={dropdownRef} 
-      className={`relative inline-block w-full min-w-[160px] text-left ${className}`}
+      className={`relative inline-block w-full min-w-0 text-left ${className}`}
     >
       {/* Trigger Button */}
       <button

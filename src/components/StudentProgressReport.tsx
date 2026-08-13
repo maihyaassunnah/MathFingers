@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Student, Attendance, TeacherNote, Grade } from '../types';
+import { useState, useMemo, useEffect } from 'react';
+import { Student, Attendance, TeacherNote, Grade, ClassGroup } from '../types';
 import { getWhatsAppLink } from '../utils';
 import { generateStudentPDFReport } from '../utils/pdfGenerator';
 import { 
@@ -7,12 +7,18 @@ import {
   MessageSquare, 
   CheckSquare, 
   Award, 
-  Clock, 
   Send, 
   ShieldAlert, 
   Download,
   Calendar,
-  Sparkles
+  Eye,
+  Printer,
+  X,
+  FileText,
+  Users,
+  CheckCircle2,
+  Sparkles,
+  UserCheck
 } from 'lucide-react';
 import { CustomDropdown } from './CustomDropdown';
 
@@ -21,12 +27,67 @@ interface StudentProgressReportProps {
   attendance: Attendance[];
   notes: TeacherNote[];
   grades: Grade[];
+  classes?: ClassGroup[];
   theme?: string;
 }
 
-export function StudentProgressReport({ students, attendance, notes, grades, theme = 'dark' }: StudentProgressReportProps) {
-  const activeStudents = students.filter(s => s.status === 'active');
-  const [currentStudentId, setSelectedStudentId] = useState<string>(activeStudents[0]?.id || '');
+export function StudentProgressReport({ 
+  students, 
+  attendance, 
+  notes, 
+  grades, 
+  classes = [], 
+  theme = 'dark' 
+}: StudentProgressReportProps) {
+  const activeStudents = useMemo(() => students.filter(s => s.status === 'active'), [students]);
+
+  // Class Filter state
+  const [classFilter, setClassFilter] = useState<string>('All');
+  const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(false);
+
+  // Available unique classes list
+  const availableClasses = useMemo(() => {
+    return Array.from(
+      new Set([
+        ...classes.map(c => c.name),
+        ...activeStudents.map(s => s.kelas).filter((k): k is string => Boolean(k && k.trim()))
+      ])
+    )
+      .filter(Boolean)
+      .filter(c => {
+        const lower = c.toLowerCase();
+        return (
+          !lower.includes('pengenalan') &&
+          !lower.includes('simbol jari') &&
+          !lower.includes('kelas dasar') &&
+          !lower.includes('level dasar')
+        );
+      })
+      .sort();
+  }, [classes, activeStudents]);
+
+  // Filtered active students according to class filter
+  const filteredStudents = useMemo(() => {
+    return activeStudents.filter(s => {
+      if (classFilter === 'All') return true;
+      if (classFilter === 'UNASSIGNED') return !s.kelas;
+      return s.kelas === classFilter;
+    });
+  }, [activeStudents, classFilter]);
+
+  // Selected student state
+  const [currentStudentId, setSelectedStudentId] = useState<string>(filteredStudents[0]?.id || activeStudents[0]?.id || '');
+
+  // Keep selected student synced when filter changes
+  useEffect(() => {
+    if (filteredStudents.length > 0) {
+      if (!filteredStudents.some(s => s.id === currentStudentId)) {
+        setSelectedStudentId(filteredStudents[0].id);
+      }
+    } else {
+      setSelectedStudentId('');
+    }
+  }, [filteredStudents, currentStudentId]);
 
   const currentStudent = students.find(s => s.id === currentStudentId);
 
@@ -67,27 +128,57 @@ export function StudentProgressReport({ students, attendance, notes, grades, the
     generateStudentPDFReport(currentStudent, attendance, notes, grades);
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   const isLight = theme === 'light';
 
   return (
     <div id="progress-report-section" className="space-y-6">
-      {/* Header and Student Selector */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header and Filter Controls */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h2 className={`text-2xl font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Laporan Perkembangan Siswa</h2>
           <p className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-sm`}>Rapor digital harian untuk memantau nilai, kehadiran, dan ulasan guru.</p>
         </div>
 
         {activeStudents.length > 0 && (
-          <div className="w-full sm:w-64">
-            <CustomDropdown
-              id="report-student-selector"
-              value={currentStudentId}
-              onChange={(val) => setSelectedStudentId(val)}
-              options={activeStudents.map(s => ({ value: s.id, label: `${s.name} (${s.level})` }))}
-              theme={theme}
-              className="w-full"
-            />
+          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+            {/* Filter Kelas Dropdown */}
+            <div className="w-full sm:w-[200px]">
+              <CustomDropdown
+                id="report-class-filter"
+                value={classFilter}
+                onChange={(val) => setClassFilter(val)}
+                options={[
+                  { value: 'All', label: 'Semua Kelas' },
+                  ...availableClasses.map(c => ({ value: c, label: `Kelas: ${c}` })),
+                  ...(activeStudents.some(s => !s.kelas) ? [{ value: 'UNASSIGNED', label: 'Tanpa Kelas' }] : [])
+                ]}
+                theme={theme}
+                className="w-full"
+              />
+            </div>
+
+            {/* Student Selector Dropdown */}
+            <div className="w-full sm:w-[260px]">
+              <CustomDropdown
+                id="report-student-selector"
+                value={currentStudentId}
+                onChange={(val) => setSelectedStudentId(val)}
+                options={
+                  filteredStudents.length > 0
+                    ? filteredStudents.map(s => ({
+                        value: s.id,
+                        label: `${s.name}${s.kelas ? ` (${s.kelas})` : ''}`
+                      }))
+                    : [{ value: '', label: '-- Tidak Ada Siswa --' }]
+                }
+                theme={theme}
+                className="w-full"
+              />
+            </div>
           </div>
         )}
       </div>
@@ -97,8 +188,18 @@ export function StudentProgressReport({ students, attendance, notes, grades, the
           isLight ? 'bg-white border-slate-200 text-slate-500' : 'bg-slate-900 border-slate-800 text-slate-500'
         }`}>
           <ShieldAlert size={44} className="mx-auto text-slate-500 mb-3" />
-          <p className={`font-medium ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Belum ada data laporan</p>
-          <p className="text-xs text-slate-400 mt-1">Silakan daftarkan siswa aktif terlebih dahulu untuk meninjau laporan.</p>
+          <p className={`font-medium ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+            {filteredStudents.length === 0 && classFilter !== 'All' 
+              ? `Tidak ada siswa di ${classFilter === 'UNASSIGNED' ? 'kategori Tanpa Kelas' : `Kelas ${classFilter}`}`
+              : 'Belum ada data laporan'
+            }
+          </p>
+          <p className="text-xs text-slate-400 mt-1">
+            {filteredStudents.length === 0 && classFilter !== 'All'
+              ? 'Silakan ubah filter kelas atau daftarkan siswa ke kelas ini.'
+              : 'Silakan daftarkan siswa aktif terlebih dahulu untuk meninjau laporan.'
+            }
+          </p>
         </div>
       ) : (
         <div className="space-y-6">
@@ -142,17 +243,42 @@ export function StudentProgressReport({ students, attendance, notes, grades, the
               isLight ? 'bg-slate-50/80 border-slate-200' : 'bg-slate-950/40 border-slate-800'
             }`}>
               <div>
-                <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-md">RAPOR DIGITAL</span>
-                <h3 className={`text-lg font-extrabold mt-2 ${isLight ? 'text-slate-800' : 'text-white'}`}>Ringkasan Prestasi: {currentStudent.name}</h3>
-                <p className="text-slate-400 text-xs">Mulai belajar: {currentStudent.joinDate} &bull; Wali: {currentStudent.parentName}</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-md">
+                    RAPOR DIGITAL
+                  </span>
+                  {currentStudent.kelas && (
+                    <span className="text-[10px] font-bold text-blue-500 bg-blue-500/10 px-2.5 py-1 rounded-md">
+                      🏫 {currentStudent.kelas}
+                    </span>
+                  )}
+                </div>
+                <h3 className={`text-lg font-extrabold mt-2 ${isLight ? 'text-slate-800' : 'text-white'}`}>
+                  Ringkasan Prestasi: {currentStudent.name}
+                </h3>
+                <p className="text-slate-400 text-xs">
+                  Mulai belajar: {currentStudent.joinDate} &bull; Wali: {currentStudent.parentName}
+                </p>
               </div>
 
               <div className="flex flex-wrap gap-2">
+                {/* Preview Report Button */}
+                <button
+                  id="btn-preview-report"
+                  type="button"
+                  onClick={() => setIsPreviewOpen(true)}
+                  className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition duration-150 shadow-sm cursor-pointer"
+                >
+                  <Eye size={16} />
+                  <span>Preview Raport</span>
+                </button>
+
                 {/* PDF Download Button */}
                 <button
                   id="btn-download-report-pdf"
+                  type="button"
                   onClick={downloadPDFReport}
-                  className="flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition duration-150 shadow-sm"
+                  className="flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition duration-150 shadow-sm cursor-pointer"
                 >
                   <Download size={15} />
                   <span>Unduh PDF</span>
@@ -161,11 +287,16 @@ export function StudentProgressReport({ students, attendance, notes, grades, the
                 {/* Share WA Button */}
                 <button
                   id="btn-share-report-wa"
+                  type="button"
                   onClick={shareWhatsAppReport}
-                  className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition duration-150"
+                  className={`flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-xl border transition duration-150 cursor-pointer ${
+                    isLight 
+                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300' 
+                      : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-700'
+                  }`}
                 >
                   <Send size={15} />
-                  <span>Bagikan ke WA</span>
+                  <span>Bagikan WA</span>
                 </button>
               </div>
             </div>
@@ -288,6 +419,229 @@ export function StudentProgressReport({ students, attendance, notes, grades, the
                     ))}
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FULL REPORT PREVIEW MODAL */}
+      {isPreviewOpen && currentStudent && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex flex-col items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          {/* Modal Container */}
+          <div className="w-full max-w-4xl bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl flex flex-col max-h-[92vh] overflow-hidden text-slate-100">
+            {/* Modal Header Controls */}
+            <div className="p-4 bg-slate-950 border-b border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                    <span>Preview Rapor Digital Siswa</span>
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 text-xs font-mono">A4 Sheet</span>
+                  </h3>
+                  <p className="text-xs text-slate-400">Pratinjau tampilan rapi sebelum dicetak atau diunduh sebagai dokumen PDF.</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="px-3 py-2 text-xs font-bold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Printer size={15} />
+                  <span className="hidden sm:inline">Cetak</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={downloadPDFReport}
+                  className="px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Download size={15} />
+                  <span>Unduh PDF</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={shareWhatsAppReport}
+                  className="px-3.5 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Send size={15} />
+                  <span className="hidden sm:inline">Kirim WA</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewOpen(false)}
+                  className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition cursor-pointer ml-1"
+                  title="Tutup Preview"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body - Paper Document Canvas */}
+            <div className="p-4 sm:p-8 overflow-y-auto bg-slate-950/60 flex-1 flex justify-center">
+              {/* Paper Sheet A4 View */}
+              <div id="printable-report-paper" className="w-full max-w-3xl bg-white text-slate-800 rounded-xl shadow-2xl border border-slate-200 p-6 sm:p-10 font-sans space-y-6">
+                
+                {/* Header Banner */}
+                <div className="bg-emerald-600 text-white p-6 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md">
+                  <div>
+                    <h1 className="text-2xl font-black tracking-tight uppercase flex items-center gap-2">
+                      <Sparkles size={24} className="text-amber-300" />
+                      <span>MATH FINGERS</span>
+                    </h1>
+                    <p className="text-emerald-100 text-xs font-medium mt-1">Berhitung Cepat & Akurat Tanpa Alat</p>
+                    <p className="text-emerald-200/80 text-[11px]">Sistem Rapor Keterampilan Berhitung Jari Digital</p>
+                  </div>
+                  <div className="text-right sm:border-l sm:border-emerald-500/50 sm:pl-4">
+                    <span className="text-xs font-extrabold uppercase bg-emerald-800/60 text-emerald-100 px-3 py-1 rounded-md tracking-wider border border-emerald-400/30">
+                      RAPOR DIGITAL
+                    </span>
+                    <p className="text-[11px] text-emerald-100 mt-2 font-mono">
+                      {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Student Info Card */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 text-xs text-slate-700 space-y-3">
+                  <div className="font-extrabold text-slate-900 border-b border-slate-200 pb-2 text-sm uppercase tracking-wider flex items-center gap-2">
+                    <UserCheck size={16} className="text-emerald-600" />
+                    <span>INFORMASI SISWA</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                    <div>
+                      <span className="text-slate-400 inline-block w-28">Nama Lengkap</span>
+                      <strong className="text-slate-900">: {currentStudent.name}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 inline-block w-28">Kelas Bimbingan</span>
+                      <strong className="text-emerald-700">: {currentStudent.kelas || '-'}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 inline-block w-28">Wali / Orang Tua</span>
+                      <span className="font-medium text-slate-800">: {currentStudent.parentName}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 inline-block w-28">Level Bimbingan</span>
+                      <span className="font-medium text-slate-800">: {currentStudent.level}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 inline-block w-28">Nomor Kontak</span>
+                      <span className="font-medium text-slate-800">: {currentStudent.parentPhone}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 inline-block w-28">Mulai Bergabung</span>
+                      <span className="font-medium text-slate-800">: {currentStudent.joinDate}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stat Summary Boxes */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-4 text-center">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 block">PERSENTASE PRESENSI</span>
+                    <span className="text-3xl font-black text-emerald-600 my-1 block">{attendanceRate}%</span>
+                    <span className="text-xs text-emerald-700">{presentCount} dari {totalAttendance} Sesi Hadir</span>
+                  </div>
+
+                  <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-4 text-center">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 block">SKOR RATA-RATA UJI</span>
+                    <span className="text-3xl font-black text-amber-600 my-1 block">{averageScore ? `${averageScore}/100` : 'N/A'}</span>
+                    <span className="text-xs text-amber-700">{studentGrades.length} Sesi Evaluasi</span>
+                  </div>
+                </div>
+
+                {/* Section: Grades History */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-1.5 flex items-center justify-between">
+                    <span>RIWAYAT UJI KETERAMPILAN JARI (AKURASI)</span>
+                    <span className="text-[10px] text-slate-500 font-normal">{studentGrades.length} Record</span>
+                  </h4>
+
+                  {studentGrades.length === 0 ? (
+                    <p className="text-xs italic text-slate-400 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                      Belum ada riwayat uji keterampilan berhitung.
+                    </p>
+                  ) : (
+                    <table className="w-full text-xs text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+                          <th className="py-2 px-3">Tanggal</th>
+                          <th className="py-2 px-3">Materi / Bab Uji</th>
+                          <th className="py-2 px-3 text-right">Skor Akurasi</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {studentGrades.slice(0, 8).map((g, idx) => (
+                          <tr key={g.id || idx} className="border-b border-slate-100 hover:bg-slate-50/60">
+                            <td className="py-2 px-3 font-mono text-slate-500">{g.date}</td>
+                            <td className="py-2 px-3 font-semibold text-slate-800">{g.topic}</td>
+                            <td className="py-2 px-3 text-right font-extrabold text-emerald-600">
+                              {g.score} / 100
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+
+                {/* Section: Teacher Notes */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-1.5">
+                    CATATAN & EVALUASI BELAJAR GURU
+                  </h4>
+
+                  {studentNotes.length === 0 ? (
+                    <p className="text-xs italic text-slate-400 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                      Belum ada catatan evaluasi tertulis dari pengajar.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {studentNotes.slice(0, 3).map((n) => (
+                        <div key={n.id} className="p-3 bg-amber-50/50 border border-amber-200/80 rounded-xl space-y-1 text-xs">
+                          <div className="flex justify-between text-amber-900 font-bold">
+                            <span>Materi: {n.topic}</span>
+                            <span className="font-mono text-[11px] font-normal text-amber-700">{n.date}</span>
+                          </div>
+                          <p className="text-slate-700 italic">"{n.content}"</p>
+                          <p className="text-[10px] text-right text-slate-500 font-semibold">&mdash; {n.teacherName}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Signatures & Footer */}
+                <div className="pt-8 border-t border-slate-200 text-xs">
+                  <div className="grid grid-cols-2 gap-8 text-center pt-2">
+                    <div>
+                      <p className="text-slate-400 text-[11px] mb-12">Orang Tua / Wali Siswa</p>
+                      <p className="font-bold text-slate-800 border-t border-slate-300 pt-1 inline-block px-8">
+                        ( {currentStudent.parentName} )
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-slate-400 text-[11px] mb-12">Pengajar / Tutor Math Fingers</p>
+                      <p className="font-bold text-slate-800 border-t border-slate-300 pt-1 inline-block px-8">
+                        ( ......................................... )
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-8 text-center text-[10px] text-slate-400 italic">
+                    Math Fingers - Berhitung Cepat & Akurat Tanpa Alat. Dokumen Rapor Resmi Math Fingers Digital.
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>

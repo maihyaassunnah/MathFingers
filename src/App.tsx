@@ -717,6 +717,7 @@ export default function App() {
             attendance={filteredAttendance} 
             notes={filteredNotes} 
             grades={filteredGrades} 
+            classes={filteredClasses}
             theme={theme}
           />
         );

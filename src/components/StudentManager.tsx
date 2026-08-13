@@ -69,6 +69,15 @@ export function StudentManager({
   const [selectedCurriculumFullImg, setSelectedCurriculumFullImg] = useState<string | null>(null);
   const [selectedDetailStudent, setSelectedDetailStudent] = useState<Student | null>(null);
 
+  // Bulk Edit States
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState<string>('NO_CHANGE');
+  const [bulkClass, setBulkClass] = useState<string>('NO_CHANGE');
+  const [customBulkClass, setCustomBulkClass] = useState<string>('');
+  const [bulkBranch, setBulkBranch] = useState<string>('NO_CHANGE');
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+
   const levels = [
     'Level Dasar: Pengenalan Simbol Jari',
     'Level 1 : Penjumlahan & Pengurangan Angka Satuan',
@@ -204,6 +213,72 @@ export function StudentManager({
       return b.name.localeCompare(a.name);
     }
   });
+
+  // Bulk Selection Handlers
+  const handleToggleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedStudentIds(sortedStudents.map(s => s.id));
+    } else {
+      setSelectedStudentIds([]);
+    }
+  };
+
+  const handleToggleSelectStudent = (id: string) => {
+    setSelectedStudentIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleApplyBulkEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedStudentIds.length === 0) return;
+
+    const updates: Partial<Student> = {};
+
+    if (bulkStatus !== 'NO_CHANGE') {
+      updates.status = bulkStatus as 'active' | 'inactive' | 'alumni';
+    }
+
+    if (bulkClass === 'CLEAR') {
+      updates.kelas = '';
+    } else if (bulkClass === 'CUSTOM') {
+      if (customBulkClass.trim()) {
+        updates.kelas = customBulkClass.trim();
+      }
+    } else if (bulkClass !== 'NO_CHANGE') {
+      updates.kelas = bulkClass;
+    }
+
+    if (bulkBranch !== 'NO_CHANGE') {
+      updates.branch = bulkBranch;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      alert('Mohon pilih minimal satu opsi data (Status, Kelas, atau Cabang) yang ingin diubah.');
+      return;
+    }
+
+    const confirmMsg = `Apakah Anda yakin ingin memperbarui data ${selectedStudentIds.length} siswa terpilih sekaligus?`;
+    if (!confirm(confirmMsg)) return;
+
+    setIsBulkUpdating(true);
+    try {
+      await Promise.all(selectedStudentIds.map(id => onUpdateStudent(id, updates)));
+      alert(`Berhasil memperbarui data ${selectedStudentIds.length} siswa!`);
+      setSelectedStudentIds([]);
+      setIsBulkModalOpen(false);
+      // Reset form
+      setBulkStatus('NO_CHANGE');
+      setBulkClass('NO_CHANGE');
+      setCustomBulkClass('');
+      setBulkBranch('NO_CHANGE');
+    } catch (err) {
+      console.error(err);
+      alert(`Gagal memperbarui data siswa: ${err instanceof Error ? err.message : 'Kesalahan tidak diketahui'}`);
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
 
   const isLight = theme === 'light';
 
@@ -342,6 +417,51 @@ export function StudentManager({
           )}
         </div>
       </div>
+
+      {/* Bulk Selection Sticky Action Banner */}
+      {selectedStudentIds.length > 0 && (
+        <div className={`p-4 rounded-2xl shadow-xl border flex flex-col sm:flex-row items-center justify-between gap-3 sticky top-4 z-30 transition-all ${
+          isLight ? 'bg-emerald-50/95 border-emerald-300 text-slate-800 shadow-emerald-500/10' : 'bg-slate-900/95 border-emerald-500/40 text-white backdrop-blur-md shadow-black/40'
+        }`}>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-extrabold flex items-center justify-center text-sm border border-emerald-500/30 shrink-0">
+              {selectedStudentIds.length}
+            </div>
+            <div>
+              <div className="font-bold text-sm flex items-center gap-2">
+                <span>{selectedStudentIds.length} Siswa Terpilih</span>
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-mono">
+                  {selectedStudentIds.length} dari {sortedStudents.length}
+                </span>
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">
+                Ubah status, kelas, atau cabang untuk semua siswa yang dicentang secara bersamaan.
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <button
+              type="button"
+              onClick={() => setIsBulkModalOpen(true)}
+              className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition flex items-center gap-2 cursor-pointer"
+            >
+              <Edit2 size={15} />
+              <span>Edit Massal ({selectedStudentIds.length} Siswa)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedStudentIds([])}
+              className={`px-3 py-2 text-xs font-semibold rounded-xl border transition cursor-pointer ${
+                isLight ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+              }`}
+            >
+              Batal Pilih
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Registration/Edit Form Overlay Modal */}
       {isFormOpen && (
@@ -658,7 +778,18 @@ export function StudentManager({
                 <tr className={`border-b text-xs font-semibold uppercase tracking-wider text-slate-500 ${
                   isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/40 border-slate-800'
                 }`}>
-                  <th className="p-4 w-12 text-center">NO</th>
+                  <th className="p-4 w-16 text-center">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={sortedStudents.length > 0 && selectedStudentIds.length === sortedStudents.length}
+                        onChange={(e) => handleToggleSelectAll(e.target.checked)}
+                        className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-400 cursor-pointer"
+                        title="Pilih Semua Siswa"
+                      />
+                      <span>NO</span>
+                    </div>
+                  </th>
                   <th className="p-4">Nama Siswa</th>
                   <th className="p-4 hidden sm:table-cell">Orang Tua / HP</th>
                   <th className="p-4 hidden sm:table-cell">Level</th>
@@ -672,11 +803,26 @@ export function StudentManager({
                 {sortedStudents.map((student, index) => {
                   const waText = `Halo Ibu/Bapak ${student.parentName}, salam kenal dari Math Fingers. Ada perkembangan les yang ingin kami infokan terkait ananda ${student.name}.`;
                   const waLink = getWhatsAppLink(student.parentPhone, waText);
+                  const isSelected = selectedStudentIds.includes(student.id);
 
                   return (
-                    <tr key={student.id} className={`transition duration-150 ${isLight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/20'}`}>
-                      <td className="p-4 text-center font-bold text-slate-500 dark:text-slate-400 text-xs sm:text-sm">
-                        {index + 1}
+                    <tr key={student.id} className={`transition duration-150 ${
+                      isSelected 
+                        ? isLight ? 'bg-emerald-50/60 hover:bg-emerald-100/60' : 'bg-emerald-950/30 hover:bg-emerald-950/50'
+                        : isLight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/20'
+                    }`}>
+                      <td className="p-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleSelectStudent(student.id)}
+                            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-400 cursor-pointer"
+                          />
+                          <span className="font-bold text-slate-500 dark:text-slate-400 text-xs sm:text-sm">
+                            {index + 1}
+                          </span>
+                        </div>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-2 flex-nowrap whitespace-nowrap overflow-x-auto no-scrollbar">
@@ -1230,6 +1376,142 @@ export function StudentManager({
                 Tutup
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Edit Modal */}
+      {isBulkModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`rounded-2xl w-full max-w-lg shadow-2xl border flex flex-col max-h-[90vh] ${
+            isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#020617] border-slate-800 text-white'
+          }`}>
+            <div className={`p-5 border-b flex items-center justify-between ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
+                  <Users size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold">Edit Massal Siswa</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Mengubah data <strong className="text-emerald-500">{selectedStudentIds.length} siswa</strong> terpilih sekaligus.
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsBulkModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleApplyBulkEdit} className="p-6 overflow-y-auto space-y-4 text-sm">
+              <OfflineIndicator theme={theme} className="mb-2" />
+
+              {/* Status Section */}
+              <div className={`p-4 rounded-xl border space-y-2 ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800'}`}>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                  1. Ubah Status Siswa
+                </label>
+                <select
+                  value={bulkStatus}
+                  onChange={(e) => setBulkStatus(e.target.value)}
+                  className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs font-medium ${
+                    isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-800 text-white'
+                  }`}
+                >
+                  <option value="NO_CHANGE">-- Jangan Ubah Status (Tetap) --</option>
+                  <option value="active">Status: Aktif</option>
+                  <option value="inactive">Status: Nonaktif</option>
+                  <option value="alumni">Status: Alumni (Lulus)</option>
+                </select>
+              </div>
+
+              {/* Kelas Section */}
+              <div className={`p-4 rounded-xl border space-y-2.5 ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800'}`}>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                  2. Ubah Kelas Bimbingan
+                </label>
+                <select
+                  value={bulkClass}
+                  onChange={(e) => setBulkClass(e.target.value)}
+                  className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs font-medium ${
+                    isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-800 text-white'
+                  }`}
+                >
+                  <option value="NO_CHANGE">-- Jangan Ubah Kelas (Tetap) --</option>
+                  <option value="CLEAR">❌ Kosongkan Kelas (Tanpa Kelas)</option>
+                  <option value="CUSTOM">➕ Input Nama Kelas Baru...</option>
+                  {availableClasses.map(clsName => (
+                    <option key={clsName} value={clsName}>
+                      Kelas: {clsName}
+                    </option>
+                  ))}
+                </select>
+
+                {bulkClass === 'CUSTOM' && (
+                  <input
+                    type="text"
+                    required
+                    placeholder="Masukkan nama kelas baru (contoh: Kelas C, Kelas Reguler Pagi)..."
+                    value={customBulkClass}
+                    onChange={(e) => setCustomBulkClass(e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs ${
+                      isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-800 text-white'
+                    }`}
+                  />
+                )}
+              </div>
+
+              {/* Cabang Section */}
+              <div className={`p-4 rounded-xl border space-y-2 ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800'}`}>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                  3. Ubah Cabang Bimbingan
+                </label>
+                <select
+                  value={bulkBranch}
+                  onChange={(e) => setBulkBranch(e.target.value)}
+                  className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs font-medium ${
+                    isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-800 text-white'
+                  }`}
+                >
+                  <option value="NO_CHANGE">-- Jangan Ubah Cabang (Tetap) --</option>
+                  {availableBranches.map(brName => (
+                    <option key={brName} value={brName}>
+                      Cabang: {brName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsBulkModalOpen(false)}
+                  disabled={isBulkUpdating}
+                  className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition ${
+                    isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                  }`}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isBulkUpdating}
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-md transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isBulkUpdating ? (
+                    <span>Memproses ({selectedStudentIds.length})...</span>
+                  ) : (
+                    <>
+                      <Check size={16} />
+                      <span>Simpan Perubahan Massal ({selectedStudentIds.length})</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

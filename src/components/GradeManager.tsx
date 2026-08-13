@@ -58,10 +58,20 @@ export function GradeManager({
   const availableBulkClasses = Array.from(
     new Set([
       ...classes.map(c => c.name),
-      ...activeStudents.map(s => s.kelas).filter((k): k is string => Boolean(k && k.trim())),
-      ...activeStudents.map(s => s.level).filter((l): l is string => Boolean(l && l.trim()))
+      ...activeStudents.map(s => s.kelas).filter((k): k is string => Boolean(k && k.trim()))
     ])
-  ).filter(Boolean).sort();
+  )
+    .filter(Boolean)
+    .filter(c => {
+      const lower = c.toLowerCase();
+      return (
+        !lower.includes('pengenalan') &&
+        !lower.includes('simbol jari') &&
+        !lower.includes('kelas dasar') &&
+        !lower.includes('level dasar')
+      );
+    })
+    .sort();
 
   const availableBulkLetters = Array.from(
     new Set(
@@ -74,12 +84,12 @@ export function GradeManager({
   const filteredBulkStudents = activeStudents.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(bulkStudentSearchQuery.toLowerCase());
     const matchesLetter = bulkSelectedLetter === 'ALL' || s.name.trim().toUpperCase().startsWith(bulkSelectedLetter);
-    const studentClass = s.kelas || s.level || '';
+    const studentClass = s.kelas || '';
     const matchesClass = bulkClassFilter === 'All'
       ? true
       : bulkClassFilter === 'UNASSIGNED'
-        ? !studentClass
-        : (s.kelas === bulkClassFilter || s.level === bulkClassFilter);
+        ? !s.kelas
+        : s.kelas === bulkClassFilter;
 
     return matchesSearch && matchesLetter && matchesClass;
   });
@@ -250,12 +260,12 @@ export function GradeManager({
 
   const ledgerStudents = activeStudents.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(legerSearchQuery.toLowerCase());
-    const studentClass = s.kelas || s.level || '';
+    const studentClass = s.kelas || '';
     const matchesClass = legerClassFilter === 'All'
       ? true
       : legerClassFilter === 'UNASSIGNED'
-        ? !studentClass
-        : (s.kelas === legerClassFilter || s.level === legerClassFilter);
+        ? !s.kelas
+        : s.kelas === legerClassFilter;
     return matchesSearch && matchesClass;
   });
 
@@ -282,7 +292,7 @@ export function GradeManager({
   const downloadLegerCSV = () => {
     const headers = ['Nama Siswa', 'Kelas', ...sortedTopics, 'Rata-rata'];
     const rows = ledgerStudents.map(student => {
-      const rowData = [student.name, student.kelas || student.level || '-'];
+      const rowData = [student.name, student.kelas || '-'];
       let totalScore = 0;
       let gradedCount = 0;
       
@@ -554,7 +564,7 @@ export function GradeManager({
                   ) : (
                     filteredBulkStudents.map((student) => {
                       const data = studentGradesData[student.id] || { included: true, score: 0, speedSeconds: 0, notes: '' };
-                      const studentClass = student.kelas || student.level;
+                      const studentClass = student.kelas;
                     return (
                       <tr key={student.id} className={`transition ${data.included ? '' : 'opacity-40'}`}>
                         <td className="py-3 text-center">

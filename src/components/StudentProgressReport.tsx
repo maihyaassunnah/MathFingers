@@ -425,165 +425,166 @@ export function StudentProgressReport({
         </div>
       )}
 
-      {/* FULL REPORT PREVIEW MODAL */}
+      {/* FULL REPORT PREVIEW MODAL (FULLSCREEN) */}
       {isPreviewOpen && currentStudent && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex flex-col items-center justify-center p-3 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex flex-col w-screen h-screen overflow-hidden">
           {/* Modal Container */}
-          <div className="w-full max-w-4xl bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl flex flex-col max-h-[92vh] overflow-hidden text-slate-100">
+          <div className="w-full h-full bg-slate-900 flex flex-col overflow-hidden text-slate-100">
             {/* Modal Header Controls */}
-            <div className="p-4 bg-slate-950 border-b border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                  <FileText size={20} />
+            <div className="px-6 py-4 bg-slate-950 border-b border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0 shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  <FileText size={22} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                  <h3 className="font-extrabold text-base text-white flex items-center gap-2">
                     <span>Preview Rapor Digital Siswa</span>
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 text-xs font-mono">A4 Sheet</span>
+                    <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 text-xs font-mono font-semibold">Dokumen Resmi A4</span>
                   </h3>
-                  <p className="text-xs text-slate-400">Pratinjau tampilan rapi sebelum dicetak atau diunduh sebagai dokumen PDF.</p>
+                  <p className="text-xs text-slate-400">Tampilan penuh rapor {currentStudent.name} sebelum dicetak atau diunduh PDF.</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
                 <button
                   type="button"
                   onClick={handlePrint}
-                  className="px-3 py-2 text-xs font-bold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-2.5 text-xs font-bold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-2 cursor-pointer shadow-sm"
                 >
-                  <Printer size={15} />
-                  <span className="hidden sm:inline">Cetak</span>
+                  <Printer size={16} />
+                  <span>Cetak Rapor</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={downloadPDFReport}
-                  className="px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-2.5 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-md transition flex items-center gap-2 cursor-pointer"
                 >
-                  <Download size={15} />
+                  <Download size={16} />
                   <span>Unduh PDF</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={shareWhatsAppReport}
-                  className="px-3.5 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition flex items-center gap-2 cursor-pointer"
                 >
-                  <Send size={15} />
+                  <Send size={16} />
                   <span className="hidden sm:inline">Kirim WA</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setIsPreviewOpen(false)}
-                  className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition cursor-pointer ml-1"
-                  title="Tutup Preview"
+                  className="px-4 py-2.5 text-xs font-bold rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 transition cursor-pointer flex items-center gap-1.5 ml-2"
+                  title="Tutup Preview Fullscreen"
                 >
-                  <X size={20} />
+                  <X size={18} />
+                  <span>Tutup</span>
                 </button>
               </div>
             </div>
 
-            {/* Modal Body - Paper Document Canvas */}
-            <div className="p-4 sm:p-8 overflow-y-auto bg-slate-950/60 flex-1 flex justify-center">
+            {/* Modal Body - Fullscreen Canvas */}
+            <div className="p-4 sm:p-8 md:p-12 overflow-y-auto bg-slate-950/80 flex-1 flex justify-center items-start">
               {/* Paper Sheet A4 View */}
-              <div id="printable-report-paper" className="w-full max-w-3xl bg-white text-slate-800 rounded-xl shadow-2xl border border-slate-200 p-6 sm:p-10 font-sans space-y-6">
+              <div id="printable-report-paper" className="w-full max-w-4xl bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-200 p-8 sm:p-12 md:p-14 font-sans space-y-8 my-auto">
                 
                 {/* Header Banner */}
-                <div className="bg-emerald-600 text-white p-6 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md">
+                <div className="bg-emerald-600 text-white p-6 sm:p-8 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
                   <div>
-                    <h1 className="text-2xl font-black tracking-tight uppercase flex items-center gap-2">
-                      <Sparkles size={24} className="text-amber-300" />
+                    <h1 className="text-2xl sm:text-3xl font-black tracking-tight uppercase flex items-center gap-2.5">
+                      <Sparkles size={28} className="text-amber-300" />
                       <span>MATH FINGERS</span>
                     </h1>
-                    <p className="text-emerald-100 text-xs font-medium mt-1">Berhitung Cepat & Akurat Tanpa Alat</p>
-                    <p className="text-emerald-200/80 text-[11px]">Sistem Rapor Keterampilan Berhitung Jari Digital</p>
+                    <p className="text-emerald-100 text-xs sm:text-sm font-medium mt-1">Berhitung Cepat & Akurat Tanpa Alat</p>
+                    <p className="text-emerald-200/80 text-xs">Sistem Rapor Keterampilan Berhitung Jari Digital</p>
                   </div>
-                  <div className="text-right sm:border-l sm:border-emerald-500/50 sm:pl-4">
-                    <span className="text-xs font-extrabold uppercase bg-emerald-800/60 text-emerald-100 px-3 py-1 rounded-md tracking-wider border border-emerald-400/30">
+                  <div className="text-right sm:border-l sm:border-emerald-500/50 sm:pl-6">
+                    <span className="text-xs font-extrabold uppercase bg-emerald-800/60 text-emerald-100 px-3.5 py-1.5 rounded-lg tracking-wider border border-emerald-400/30">
                       RAPOR DIGITAL
                     </span>
-                    <p className="text-[11px] text-emerald-100 mt-2 font-mono">
+                    <p className="text-xs text-emerald-100 mt-2 font-mono font-semibold">
                       {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                     </p>
                   </div>
                 </div>
 
                 {/* Student Info Card */}
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 text-xs text-slate-700 space-y-3">
-                  <div className="font-extrabold text-slate-900 border-b border-slate-200 pb-2 text-sm uppercase tracking-wider flex items-center gap-2">
-                    <UserCheck size={16} className="text-emerald-600" />
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 text-xs sm:text-sm text-slate-700 space-y-4">
+                  <div className="font-extrabold text-slate-900 border-b border-slate-200 pb-2.5 text-sm uppercase tracking-wider flex items-center gap-2">
+                    <UserCheck size={18} className="text-emerald-600" />
                     <span>INFORMASI SISWA</span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
                     <div>
-                      <span className="text-slate-400 inline-block w-28">Nama Lengkap</span>
+                      <span className="text-slate-400 inline-block w-32">Nama Lengkap</span>
                       <strong className="text-slate-900">: {currentStudent.name}</strong>
                     </div>
                     <div>
-                      <span className="text-slate-400 inline-block w-28">Kelas Bimbingan</span>
+                      <span className="text-slate-400 inline-block w-32">Kelas Bimbingan</span>
                       <strong className="text-emerald-700">: {currentStudent.kelas || '-'}</strong>
                     </div>
                     <div>
-                      <span className="text-slate-400 inline-block w-28">Wali / Orang Tua</span>
-                      <span className="font-medium text-slate-800">: {currentStudent.parentName}</span>
+                      <span className="text-slate-400 inline-block w-32">Wali / Orang Tua</span>
+                      <span className="font-semibold text-slate-800">: {currentStudent.parentName}</span>
                     </div>
                     <div>
-                      <span className="text-slate-400 inline-block w-28">Level Bimbingan</span>
-                      <span className="font-medium text-slate-800">: {currentStudent.level}</span>
+                      <span className="text-slate-400 inline-block w-32">Level Bimbingan</span>
+                      <span className="font-semibold text-slate-800">: {currentStudent.level}</span>
                     </div>
                     <div>
-                      <span className="text-slate-400 inline-block w-28">Nomor Kontak</span>
-                      <span className="font-medium text-slate-800">: {currentStudent.parentPhone}</span>
+                      <span className="text-slate-400 inline-block w-32">Nomor Kontak</span>
+                      <span className="font-semibold text-slate-800">: {currentStudent.parentPhone}</span>
                     </div>
                     <div>
-                      <span className="text-slate-400 inline-block w-28">Mulai Bergabung</span>
-                      <span className="font-medium text-slate-800">: {currentStudent.joinDate}</span>
+                      <span className="text-slate-400 inline-block w-32">Mulai Bergabung</span>
+                      <span className="font-semibold text-slate-800">: {currentStudent.joinDate}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Stat Summary Boxes */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-4 text-center">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 block">PERSENTASE PRESENSI</span>
-                    <span className="text-3xl font-black text-emerald-600 my-1 block">{attendanceRate}%</span>
-                    <span className="text-xs text-emerald-700">{presentCount} dari {totalAttendance} Sesi Hadir</span>
+                <div className="grid grid-cols-2 gap-5">
+                  <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-5 text-center">
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 block">PERSENTASE PRESENSI</span>
+                    <span className="text-3xl sm:text-4xl font-black text-emerald-600 my-1 block">{attendanceRate}%</span>
+                    <span className="text-xs text-emerald-700 font-medium">{presentCount} dari {totalAttendance} Sesi Hadir</span>
                   </div>
 
-                  <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-4 text-center">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 block">SKOR RATA-RATA UJI</span>
-                    <span className="text-3xl font-black text-amber-600 my-1 block">{averageScore ? `${averageScore}/100` : 'N/A'}</span>
-                    <span className="text-xs text-amber-700">{studentGrades.length} Sesi Evaluasi</span>
+                  <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 text-center">
+                    <span className="text-xs font-bold uppercase tracking-wider text-amber-800 block">SKOR RATA-RATA UJI</span>
+                    <span className="text-3xl sm:text-4xl font-black text-amber-600 my-1 block">{averageScore ? `${averageScore}/100` : 'N/A'}</span>
+                    <span className="text-xs text-amber-700 font-medium">{studentGrades.length} Sesi Evaluasi</span>
                   </div>
                 </div>
 
                 {/* Section: Grades History */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-1.5 flex items-center justify-between">
+                <div className="space-y-3">
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-2 flex items-center justify-between">
                     <span>RIWAYAT UJI KETERAMPILAN JARI (AKURASI)</span>
-                    <span className="text-[10px] text-slate-500 font-normal">{studentGrades.length} Record</span>
+                    <span className="text-xs text-slate-500 font-normal">{studentGrades.length} Record</span>
                   </h4>
 
                   {studentGrades.length === 0 ? (
-                    <p className="text-xs italic text-slate-400 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <p className="text-xs italic text-slate-400 p-4 bg-slate-50 rounded-xl border border-slate-100">
                       Belum ada riwayat uji keterampilan berhitung.
                     </p>
                   ) : (
-                    <table className="w-full text-xs text-left border-collapse">
+                    <table className="w-full text-xs sm:text-sm text-left border-collapse">
                       <thead>
                         <tr className="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
-                          <th className="py-2 px-3">Tanggal</th>
-                          <th className="py-2 px-3">Materi / Bab Uji</th>
-                          <th className="py-2 px-3 text-right">Skor Akurasi</th>
+                          <th className="py-2.5 px-3">Tanggal</th>
+                          <th className="py-2.5 px-3">Materi / Bab Uji</th>
+                          <th className="py-2.5 px-3 text-right">Skor Akurasi</th>
                         </tr>
                       </thead>
                       <tbody>
                         {studentGrades.slice(0, 8).map((g, idx) => (
                           <tr key={g.id || idx} className="border-b border-slate-100 hover:bg-slate-50/60">
-                            <td className="py-2 px-3 font-mono text-slate-500">{g.date}</td>
-                            <td className="py-2 px-3 font-semibold text-slate-800">{g.topic}</td>
-                            <td className="py-2 px-3 text-right font-extrabold text-emerald-600">
+                            <td className="py-2.5 px-3 font-mono text-slate-500">{g.date}</td>
+                            <td className="py-2.5 px-3 font-semibold text-slate-800">{g.topic}</td>
+                            <td className="py-2.5 px-3 text-right font-extrabold text-emerald-600">
                               {g.score} / 100
                             </td>
                           </tr>
@@ -594,50 +595,50 @@ export function StudentProgressReport({
                 </div>
 
                 {/* Section: Teacher Notes */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-1.5">
+                <div className="space-y-3">
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-2">
                     CATATAN & EVALUASI BELAJAR GURU
                   </h4>
 
                   {studentNotes.length === 0 ? (
-                    <p className="text-xs italic text-slate-400 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <p className="text-xs italic text-slate-400 p-4 bg-slate-50 rounded-xl border border-slate-100">
                       Belum ada catatan evaluasi tertulis dari pengajar.
                     </p>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {studentNotes.slice(0, 3).map((n) => (
-                        <div key={n.id} className="p-3 bg-amber-50/50 border border-amber-200/80 rounded-xl space-y-1 text-xs">
+                        <div key={n.id} className="p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl space-y-1.5 text-xs sm:text-sm">
                           <div className="flex justify-between text-amber-900 font-bold">
                             <span>Materi: {n.topic}</span>
-                            <span className="font-mono text-[11px] font-normal text-amber-700">{n.date}</span>
+                            <span className="font-mono text-xs font-normal text-amber-700">{n.date}</span>
                           </div>
-                          <p className="text-slate-700 italic">"{n.content}"</p>
-                          <p className="text-[10px] text-right text-slate-500 font-semibold">&mdash; {n.teacherName}</p>
+                          <p className="text-slate-700 italic leading-relaxed">"{n.content}"</p>
+                          <p className="text-xs text-right text-slate-500 font-semibold">&mdash; {n.teacherName}</p>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
 
-                {/* Signatures & Footer */}
-                <div className="pt-8 border-t border-slate-200 text-xs">
-                  <div className="grid grid-cols-2 gap-8 text-center pt-2">
+                {/* Signatures & Footer (Tanda Tangan Orang Tua & Pengajar) */}
+                <div className="pt-10 border-t border-slate-200 text-xs sm:text-sm">
+                  <div className="grid grid-cols-2 gap-12 text-center pt-2">
                     <div>
-                      <p className="text-slate-400 text-[11px] mb-12">Orang Tua / Wali Siswa</p>
-                      <p className="font-bold text-slate-800 border-t border-slate-300 pt-1 inline-block px-8">
+                      <p className="text-slate-500 font-medium text-xs mb-16">Orang Tua / Wali Siswa</p>
+                      <p className="font-bold text-slate-900 border-t border-slate-400 pt-1.5 inline-block px-10">
                         ( {currentStudent.parentName} )
                       </p>
                     </div>
 
                     <div>
-                      <p className="text-slate-400 text-[11px] mb-12">Pengajar / Tutor Math Fingers</p>
-                      <p className="font-bold text-slate-800 border-t border-slate-300 pt-1 inline-block px-8">
+                      <p className="text-slate-500 font-medium text-xs mb-16">Pengajar / Tutor Math Fingers</p>
+                      <p className="font-bold text-slate-900 border-t border-slate-400 pt-1.5 inline-block px-10">
                         ( ......................................... )
                       </p>
                     </div>
                   </div>
 
-                  <div className="mt-8 text-center text-[10px] text-slate-400 italic">
+                  <div className="mt-10 text-center text-xs text-slate-400 italic">
                     Math Fingers - Berhitung Cepat & Akurat Tanpa Alat. Dokumen Rapor Resmi Math Fingers Digital.
                   </div>
                 </div>

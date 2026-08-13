@@ -718,6 +718,7 @@ export default function App() {
             notes={filteredNotes} 
             grades={filteredGrades} 
             classes={filteredClasses}
+            currentUser={currentUser}
             theme={theme}
           />
         );

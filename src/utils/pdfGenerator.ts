@@ -10,11 +10,60 @@ export const getAgilityBadge = (score: number, seconds: number) => {
   return { text: 'Cukup Refleks', color: 'bg-slate-500/10 text-slate-400 border-slate-500/20' };
 };
 
+// Helper to automatically resolve teacher signature based on branch or user
+export function getTeacherSignatureName(
+  student?: { branch?: string } | null,
+  currentUser?: { name?: string; branch?: string } | null,
+  notes?: { teacherName?: string; branch?: string }[]
+): string {
+  // Normalize strings
+  const sBranch = (student?.branch || '').trim().toLowerCase();
+  const uBranch = (currentUser?.branch || '').trim().toLowerCase();
+  const uName = (currentUser?.name || '').trim().toLowerCase();
+
+  // 1. Direct match on student's branch
+  if (sBranch.includes('bangko')) return 'Dewi Safitri, S.H';
+  if (sBranch.includes('singkut')) return 'Febrianti Dewi, S.Pd';
+
+  // 2. Direct match on current logged-in account branch
+  if (uBranch.includes('bangko')) return 'Dewi Safitri, S.H';
+  if (uBranch.includes('singkut')) return 'Febrianti Dewi, S.Pd';
+
+  // 3. Match on current user's name
+  if (uName.includes('safitri') || uName.includes('dewi safitri') || uName.includes('bangko')) {
+    return 'Dewi Safitri, S.H';
+  }
+  if (uName.includes('febrianti') || uName.includes('singkut')) {
+    return 'Febrianti Dewi, S.Pd';
+  }
+
+  // 4. Check notes for branch or teacher name
+  if (notes && notes.length > 0) {
+    for (const note of notes) {
+      const nBranch = (note.branch || '').toLowerCase();
+      if (nBranch.includes('bangko')) return 'Dewi Safitri, S.H';
+      if (nBranch.includes('singkut')) return 'Febrianti Dewi, S.Pd';
+
+      const tName = (note.teacherName || '').toLowerCase();
+      if (tName.includes('safitri') || tName.includes('dewi safitri') || tName.includes('bangko')) {
+        return 'Dewi Safitri, S.H';
+      }
+      if (tName.includes('febrianti') || tName.includes('singkut')) {
+        return 'Febrianti Dewi, S.Pd';
+      }
+    }
+  }
+
+  // Default fallback if branch not explicitly Singkut
+  return 'Dewi Safitri, S.H';
+}
+
 export function generateStudentPDFReport(
   currentStudent: Student,
   attendance: Attendance[],
   notes: TeacherNote[],
-  grades: Grade[]
+  grades: Grade[],
+  currentUser?: { name?: string; branch?: string } | null
 ) {
   const doc = new jsPDF();
   
@@ -22,6 +71,9 @@ export function generateStudentPDFReport(
   const studentAttendance = attendance.filter(a => a.studentId === currentStudent.id);
   const studentNotes = notes.filter(n => n.studentId === currentStudent.id);
   const studentGrades = grades.filter(g => g.studentId === currentStudent.id);
+
+  // Auto-resolve teacher signature name based on branch
+  const teacherSignature = getTeacherSignatureName(currentStudent, currentUser, studentNotes);
 
   // Calculations
   const totalAttendance = studentAttendance.length;
@@ -223,8 +275,8 @@ export function generateStudentPDFReport(
   doc.line(15, y + 1, 55, y + 1);
   
   // Teacher Name Line
-  doc.text("( ......................................... )", 160, y, { align: "center" });
-  doc.line(135, y + 1, 185, y + 1);
+  doc.text(`( ${teacherSignature} )`, 160, y, { align: "center" });
+  doc.line(130, y + 1, 190, y + 1);
   
   // Bottom Footer Notice
   y += 10;

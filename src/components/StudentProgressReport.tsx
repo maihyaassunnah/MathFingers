@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Student, Attendance, TeacherNote, Grade, ClassGroup } from '../types';
+import { Student, Attendance, TeacherNote, Grade, ClassGroup, AdminUser } from '../types';
 import { getWhatsAppLink } from '../utils';
-import { generateStudentPDFReport } from '../utils/pdfGenerator';
+import { generateStudentPDFReport, getTeacherSignatureName } from '../utils/pdfGenerator';
 import { 
   TrendingUp, 
   MessageSquare, 
@@ -28,6 +28,7 @@ interface StudentProgressReportProps {
   notes: TeacherNote[];
   grades: Grade[];
   classes?: ClassGroup[];
+  currentUser?: AdminUser | null;
   theme?: string;
 }
 
@@ -37,6 +38,7 @@ export function StudentProgressReport({
   notes, 
   grades, 
   classes = [], 
+  currentUser,
   theme = 'dark' 
 }: StudentProgressReportProps) {
   const activeStudents = useMemo(() => students.filter(s => s.status === 'active'), [students]);
@@ -122,10 +124,13 @@ export function StudentProgressReport({
     window.open(getWhatsAppLink(currentStudent.parentPhone, message), '_blank');
   };
 
+  // Teacher signature resolution based on branch
+  const teacherSignature = getTeacherSignatureName(currentStudent, currentUser, studentNotes);
+
   // jsPDF report generation function
   const downloadPDFReport = () => {
     if (!currentStudent) return;
-    generateStudentPDFReport(currentStudent, attendance, notes, grades);
+    generateStudentPDFReport(currentStudent, attendance, notes, grades, currentUser);
   };
 
   const handlePrint = () => {
@@ -632,8 +637,8 @@ export function StudentProgressReport({
 
                     <div>
                       <p className="text-slate-500 font-medium text-xs mb-16">Pengajar / Tutor Math Fingers</p>
-                      <p className="font-bold text-slate-900 border-t border-slate-400 pt-1.5 inline-block px-10">
-                        ( ......................................... )
+                      <p className="font-bold text-slate-900 border-t border-slate-400 pt-1.5 inline-block px-8 sm:px-10">
+                        ( {teacherSignature} )
                       </p>
                     </div>
                   </div>

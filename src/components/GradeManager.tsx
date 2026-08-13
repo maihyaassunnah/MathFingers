@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Student, Grade } from '../types';
 import { getWhatsAppLink } from '../utils';
-import { Award, Search, Calendar, Zap, Trash2, Send, AlertCircle, Edit2, X, ChevronDown, FileSpreadsheet, Printer, Download } from 'lucide-react';
+import { Award, Search, Calendar, Zap, Trash2, Send, AlertCircle, Edit2, X, ChevronDown, FileSpreadsheet, Printer, Download, CheckSquare, Square, Layers } from 'lucide-react';
 import { CustomDropdown } from './CustomDropdown';
 import { OfflineIndicator } from './OfflineIndicator';
 
 interface GradeManagerProps {
   students: Student[];
   grades: Grade[];
+  classes?: { id: string; name: string }[];
   onAddGrade: (data: Omit<Grade, 'id'>) => Promise<void>;
   onDeleteGrade: (id: string) => Promise<void>;
   onUpdateGrade: (grade: Grade) => Promise<void>;
@@ -17,6 +18,7 @@ interface GradeManagerProps {
 export function GradeManager({ 
   students, 
   grades, 
+  classes = [],
   onAddGrade, 
   onDeleteGrade,
   onUpdateGrade,
@@ -27,6 +29,7 @@ export function GradeManager({
   const [topicFilter, setTopicFilter] = useState('All');
   const [viewMode, setViewMode] = useState<'input' | 'leger'>('input');
   const [legerSearchQuery, setLegerSearchQuery] = useState('');
+  const [legerClassFilter, setLegerClassFilter] = useState<string>('All');
 
   // Direct Inline Class Form states
   const [bulkTopic, setBulkTopic] = useState('');
@@ -50,6 +53,15 @@ export function GradeManager({
 
   const [bulkStudentSearchQuery, setBulkStudentSearchQuery] = useState('');
   const [bulkSelectedLetter, setBulkSelectedLetter] = useState<string>('ALL');
+  const [bulkClassFilter, setBulkClassFilter] = useState<string>('All');
+
+  const availableBulkClasses = Array.from(
+    new Set([
+      ...classes.map(c => c.name),
+      ...activeStudents.map(s => s.kelas).filter((k): k is string => Boolean(k && k.trim())),
+      ...activeStudents.map(s => s.level).filter((l): l is string => Boolean(l && l.trim()))
+    ])
+  ).filter(Boolean).sort();
 
   const availableBulkLetters = Array.from(
     new Set(
@@ -62,8 +74,33 @@ export function GradeManager({
   const filteredBulkStudents = activeStudents.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(bulkStudentSearchQuery.toLowerCase());
     const matchesLetter = bulkSelectedLetter === 'ALL' || s.name.trim().toUpperCase().startsWith(bulkSelectedLetter);
-    return matchesSearch && matchesLetter;
+    const studentClass = s.kelas || s.level || '';
+    const matchesClass = bulkClassFilter === 'All'
+      ? true
+      : bulkClassFilter === 'UNASSIGNED'
+        ? !studentClass
+        : (s.kelas === bulkClassFilter || s.level === bulkClassFilter);
+
+    return matchesSearch && matchesLetter && matchesClass;
   });
+
+  const isAllFilteredSelected = filteredBulkStudents.length > 0 &&
+    filteredBulkStudents.every(s => studentGradesData[s.id]?.included);
+
+  const isSomeFilteredSelected = filteredBulkStudents.some(s => studentGradesData[s.id]?.included) && !isAllFilteredSelected;
+
+  const handleToggleSelectAll = (checked: boolean) => {
+    setStudentGradesData(prev => {
+      const newData = { ...prev };
+      filteredBulkStudents.forEach(s => {
+        newData[s.id] = {
+          ...(newData[s.id] || { score: 0, speedSeconds: 0, notes: '' }),
+          included: checked
+        };
+      });
+      return newData;
+    });
+  };
 
   // Initialize/sync studentGradesData whenever activeStudents changes, with default score & speedSeconds of 0
   React.useEffect(() => {
@@ -211,9 +248,16 @@ export function GradeManager({
   topicDates.sort((a, b) => a.date.localeCompare(b.date));
   const sortedTopics = topicDates.map(td => td.topic);
 
-  const ledgerStudents = activeStudents.filter(s =>
-    s.name.toLowerCase().includes(legerSearchQuery.toLowerCase())
-  );
+  const ledgerStudents = activeStudents.filter(s => {
+    const matchesSearch = s.name.toLowerCase().includes(legerSearchQuery.toLowerCase());
+    const studentClass = s.kelas || s.level || '';
+    const matchesClass = legerClassFilter === 'All'
+      ? true
+      : legerClassFilter === 'UNASSIGNED'
+        ? !studentClass
+        : (s.kelas === legerClassFilter || s.level === legerClassFilter);
+    return matchesSearch && matchesClass;
+  });
 
   let classAverageTotal = 0;
   let gradedStudentsCount = 0;
@@ -238,7 +282,7 @@ export function GradeManager({
   const downloadLegerCSV = () => {
     const headers = ['Nama Siswa', 'Kelas', ...sortedTopics, 'Rata-rata'];
     const rows = ledgerStudents.map(student => {
-      const rowData = [student.name, student.level];
+      const rowData = [student.name, student.kelas || student.level || '-'];
       let totalScore = 0;
       let gradedCount = 0;
       
@@ -368,7 +412,7 @@ export function GradeManager({
           {activeStudents.length > 0 && (
             <div className="px-5 pb-4 flex flex-col gap-3">
               <div>
-                <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>Saring Berdasarkan Nama / Abjad</label>
+                <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>Saring Berdasarkan Nama / Kelas / Abjad</label>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                   <div className="relative flex-1">
                     <Search className="absolute left-3.5 top-2.5 text-slate-500" size={16} />
@@ -382,6 +426,21 @@ export function GradeManager({
                           ? 'bg-slate-50 border-slate-200 text-slate-800' 
                           : 'bg-slate-950/40 border-slate-800 text-white'
                       }`}
+                    />
+                  </div>
+
+                  {/* Class Filter Dropdown */}
+                  <div className="shrink-0 min-w-[170px]">
+                    <CustomDropdown
+                      value={bulkClassFilter}
+                      onChange={(val) => setBulkClassFilter(val)}
+                      options={[
+                        { value: 'All', label: 'Semua Kelas' },
+                        ...availableBulkClasses.map(c => ({ value: c, label: `Kelas: ${c}` })),
+                        ...(activeStudents.some(s => !s.kelas && !s.level) ? [{ value: 'UNASSIGNED', label: 'Tanpa Kelas' }] : [])
+                      ]}
+                      theme={theme}
+                      className="w-full"
                     />
                   </div>
 
@@ -399,12 +458,13 @@ export function GradeManager({
                     />
                   </div>
 
-                  {(bulkStudentSearchQuery || bulkSelectedLetter !== 'ALL' || bulkSortOrder !== 'asc') && (
+                  {(bulkStudentSearchQuery || bulkSelectedLetter !== 'ALL' || bulkClassFilter !== 'All' || bulkSortOrder !== 'asc') && (
                     <button
                       type="button"
                       onClick={() => {
                         setBulkStudentSearchQuery('');
                         setBulkSelectedLetter('ALL');
+                        setBulkClassFilter('All');
                         setBulkSortOrder('asc');
                       }}
                       className={`px-4 py-2 text-xs font-bold rounded-xl border transition shrink-0 ${
@@ -413,7 +473,7 @@ export function GradeManager({
                           : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
                       }`}
                     >
-                      Reset
+                      Reset Filter
                     </button>
                   )}
                 </div>
@@ -468,7 +528,17 @@ export function GradeManager({
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className={`border-b text-xs font-bold uppercase tracking-wider pb-2 ${isLight ? 'border-slate-200 text-slate-800 bg-slate-100/70' : 'border-slate-800/60 text-slate-400'}`}>
-                    <th className="py-2.5 px-2 w-16 text-center">Ikut</th>
+                    <th className="py-2.5 px-2 w-20 text-center">
+                      <div className="flex items-center justify-center gap-1.5 cursor-pointer" title="Ceklis Semua / Hapus Ceklis">
+                        <input
+                          type="checkbox"
+                          checked={isAllFilteredSelected}
+                          onChange={(e) => handleToggleSelectAll(e.target.checked)}
+                          className="w-4.5 h-4.5 rounded text-emerald-600 focus:ring-emerald-500 bg-slate-950/40 border-slate-800 cursor-pointer"
+                        />
+                        <span>Ikut</span>
+                      </div>
+                    </th>
                     <th className="py-2.5 px-2">Nama Siswa</th>
                     <th className="py-2.5 px-2 w-32 text-center">Skor (0-100)</th>
                     <th className="py-2.5 px-2">Catatan Tambahan</th>
@@ -478,12 +548,13 @@ export function GradeManager({
                   {filteredBulkStudents.length === 0 ? (
                     <tr>
                       <td colSpan={4} className="py-8 text-center text-slate-500 text-sm">
-                        Tidak ada siswa yang cocok dengan pencarian "{bulkStudentSearchQuery}".
+                        Tidak ada siswa yang cocok dengan kriteria filter {bulkClassFilter !== 'All' ? `kelas "${bulkClassFilter}"` : ''}.
                       </td>
                     </tr>
                   ) : (
                     filteredBulkStudents.map((student) => {
                       const data = studentGradesData[student.id] || { included: true, score: 0, speedSeconds: 0, notes: '' };
+                      const studentClass = student.kelas || student.level;
                     return (
                       <tr key={student.id} className={`transition ${data.included ? '' : 'opacity-40'}`}>
                         <td className="py-3 text-center">
@@ -495,7 +566,14 @@ export function GradeManager({
                           />
                         </td>
                         <td className="py-3 font-semibold text-sm">
-                          <div className={isLight ? 'text-slate-800' : 'text-slate-200'}>{student.name}</div>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1.5">
+                            <span className={isLight ? 'text-slate-800 font-bold' : 'text-slate-200 font-bold'}>{student.name}</span>
+                            {studentClass && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 w-fit">
+                                🏫 {studentClass}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 text-center px-2">
                           <input
@@ -715,20 +793,54 @@ export function GradeManager({
           </div>
 
           {/* Leger Filter & Action Row */}
-          <div className={`p-4 rounded-2xl shadow-sm border flex flex-col sm:flex-row gap-4 items-center justify-between ${
+          <div className={`p-4 rounded-2xl shadow-sm border flex flex-col md:flex-row gap-3 items-center justify-between ${
             isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
           } print:hidden`}>
-            <div className="relative w-full sm:max-w-xs">
-              <Search className="absolute left-3 top-2.5 text-slate-500" size={16} />
-              <input
-                type="text"
-                placeholder="Cari siswa di leger..."
-                value={legerSearchQuery}
-                onChange={(e) => setLegerSearchQuery(e.target.value)}
-                className={`w-full pl-9 pr-4 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs ${
-                  isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
-                }`}
-              />
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto flex-1">
+              <div className="relative w-full sm:w-[220px]">
+                <Search className="absolute left-3 top-2.5 text-slate-500" size={16} />
+                <input
+                  type="text"
+                  placeholder="Cari siswa di leger..."
+                  value={legerSearchQuery}
+                  onChange={(e) => setLegerSearchQuery(e.target.value)}
+                  className={`w-full pl-9 pr-4 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs ${
+                    isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
+                  }`}
+                />
+              </div>
+
+              {/* Class Filter Dropdown for Leger */}
+              <div className="w-full sm:w-[180px]">
+                <CustomDropdown
+                  value={legerClassFilter}
+                  onChange={(val) => setLegerClassFilter(val)}
+                  options={[
+                    { value: 'All', label: 'Semua Kelas' },
+                    ...availableBulkClasses.map(c => ({ value: c, label: `Kelas: ${c}` })),
+                    ...(activeStudents.some(s => !s.kelas && !s.level) ? [{ value: 'UNASSIGNED', label: 'Tanpa Kelas' }] : [])
+                  ]}
+                  theme={theme}
+                  className="w-full"
+                />
+              </div>
+
+              {(legerSearchQuery || legerClassFilter !== 'All') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLegerSearchQuery('');
+                    setLegerClassFilter('All');
+                  }}
+                  className={`px-3 py-2 text-xs font-bold rounded-xl border transition shrink-0 ${
+                    isLight
+                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                  }`}
+                >
+                  Reset Filter
+                </button>
+              )}
             </div>
 
             <div className="flex gap-2 w-full sm:w-auto">

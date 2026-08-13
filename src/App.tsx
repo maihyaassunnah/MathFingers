@@ -692,6 +692,7 @@ export default function App() {
           <GradeManager 
             students={filteredStudents} 
             grades={filteredGrades} 
+            classes={filteredClasses}
             onAddGrade={handleAddGrade} 
             onDeleteGrade={deleteGrade} 
             onUpdateGrade={updateGrade}

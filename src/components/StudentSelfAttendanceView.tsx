@@ -29,10 +29,21 @@ export function StudentSelfAttendanceView({
 
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
   const [inputCode, setInputCode] = useState<string>('');
+  const [status, setStatus] = useState<'present' | 'permission'>('present');
+  const [notes, setNotes] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [successStudentName, setSuccessStudentName] = useState<string>('');
+  const [savedStatus, setSavedStatus] = useState<'present' | 'permission'>('present');
+  const [savedNotes, setSavedNotes] = useState<string>('');
+
+  const [toastNotification, setToastNotification] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error';
+  }>({ show: false, title: '', message: '', type: 'success' });
 
   // Get active students for self-attendance based on the target class
   const filteredStudents = students
@@ -69,22 +80,38 @@ export function StudentSelfAttendanceView({
     setErrorMessage('');
 
     try {
+      const finalNotes = notes.trim() || (status === 'permission' ? 'Izin Mandiri' : 'Absen Mandiri via QR');
+
       // Prepare attendance object to save
       const record: Omit<Attendance, 'id'> = {
         studentId: selectedStudent.id,
         studentName: selectedStudent.name,
         date: targetDate,
-        status: 'present',
-        notes: 'Absen Mandiri via QR',
+        status: status,
+        notes: finalNotes,
         branch: selectedStudent.branch || 'Pusat'
       };
 
       await onAddAttendanceBatch([record]);
+      setSavedStatus(status);
+      setSavedNotes(finalNotes);
       setSuccessStudentName(selectedStudent.name);
       setIsSuccess(true);
+
+      // Trigger Toast notification
+      setToastNotification({
+        show: true,
+        title: 'Presensi Berhasil Disimpan! 🎉',
+        message: `Status ${selectedStudent.name} tersimpan sebagai ${status === 'permission' ? 'IZIN' : 'HADIR'}${finalNotes ? ` (${finalNotes})` : ''}.`,
+        type: 'success'
+      });
+      setTimeout(() => setToastNotification(prev => ({ ...prev, show: false })), 4000);
+
       // Reset input fields
       setSelectedStudentId('');
       setInputCode('');
+      setNotes('');
+      setStatus('present');
     } catch (err: any) {
       console.error(err);
       setErrorMessage('Gagal memproses absensi. Silakan hubungi tentor Anda.');
@@ -241,6 +268,90 @@ export function StudentSelfAttendanceView({
                   )}
                 </div>
 
+                {/* Step 3: Select Attendance Status */}
+                <div className="space-y-2">
+                  <label className={`block text-xs font-bold tracking-wide uppercase ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                    3. Status Kehadiran
+                  </label>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setStatus('present')}
+                      className={`py-2.5 px-3 rounded-2xl text-xs font-extrabold border transition flex items-center justify-center gap-2 cursor-pointer ${
+                        status === 'present'
+                          ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-600/20'
+                          : isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-250' : 'bg-slate-950/40 hover:bg-slate-900 text-slate-400 border-slate-800'
+                      }`}
+                    >
+                      <Check size={16} />
+                      <span>Hadir</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStatus('permission')}
+                      className={`py-2.5 px-3 rounded-2xl text-xs font-extrabold border transition flex items-center justify-center gap-2 cursor-pointer ${
+                        status === 'permission'
+                          ? 'bg-amber-500 text-white border-amber-400 shadow-md shadow-amber-500/20'
+                          : isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-250' : 'bg-slate-950/40 hover:bg-slate-900 text-slate-400 border-slate-800'
+                      }`}
+                    >
+                      <Calendar size={15} />
+                      <span>Izin / Permohonan</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Step 4: Notes & Quick Shortcut Pills */}
+                <div className="space-y-2">
+                  <label className={`block text-xs font-bold tracking-wide uppercase ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                    4. Catatan / Alasan (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Tulis catatan (misal: Izin makan, telat 10 menit)..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className={`w-full px-3.5 py-2.5 rounded-2xl text-xs border transition focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                      isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
+                    }`}
+                  />
+                  
+                  {/* Quick Shortcut Pills */}
+                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                    <span className="text-[10px] text-slate-400 font-semibold">Pintasan Catatan:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNotes(prev => prev ? `${prev.trim()}, Izin makan` : 'Izin makan');
+                        setStatus('permission');
+                      }}
+                      className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-300 border border-amber-500/25 transition cursor-pointer active:scale-95"
+                    >
+                      + Izin Makan
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNotes(prev => prev ? `${prev.trim()}, Hadir kembali` : 'Hadir kembali');
+                        setStatus('present');
+                      }}
+                      className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-300 border border-emerald-500/25 transition cursor-pointer active:scale-95"
+                    >
+                      + Hadir Kembali
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNotes(prev => prev ? `${prev.trim()}, Izin sakit` : 'Izin sakit');
+                        setStatus('permission');
+                      }}
+                      className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-600 dark:text-indigo-300 border border-indigo-500/25 transition cursor-pointer active:scale-95"
+                    >
+                      + Izin Sakit
+                    </button>
+                  </div>
+                </div>
+
                 {/* Submission Button */}
                 <button
                   type="submit"
@@ -298,12 +409,12 @@ export function StudentSelfAttendanceView({
               </span>
 
               <h2 className={`text-2xl font-black mt-4 leading-snug ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                Hadir Berhasil Dicatat! 🎉
+                {savedStatus === 'permission' ? 'Izin Berhasil Dicatat! 📝' : 'Hadir Berhasil Dicatat! 🎉'}
               </h2>
 
               <p className="text-sm text-slate-400 mt-2 leading-relaxed">
                 Halo <strong className="text-emerald-400 font-extrabold text-base block my-1">{successStudentName}</strong>
-                Kehadiran Anda pada sesi bimbingan hari ini telah aman terkirim ke sistem Math Fingers.
+                Presensi Anda pada sesi bimbingan hari ini telah aman terkirim ke sistem Math Fingers.
               </p>
 
               {/* Attendance Details Card */}
@@ -322,12 +433,22 @@ export function StudentSelfAttendanceView({
                   <span className="text-slate-450 font-semibold">Hari & Tanggal:</span>
                   <span className={`font-bold ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>{formattedDate}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between border-b pb-1.5 border-slate-200/50 dark:border-slate-850">
                   <span className="text-slate-450 font-semibold">Status Kehadiran:</span>
-                  <span className="text-emerald-500 font-black flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/15">
-                    HADIR
+                  <span className={`font-black flex items-center gap-1 px-2.5 py-0.5 rounded border ${
+                    savedStatus === 'permission'
+                      ? 'bg-amber-500/15 text-amber-500 border-amber-500/25'
+                      : 'bg-emerald-500/15 text-emerald-500 border-emerald-500/25'
+                  }`}>
+                    {savedStatus === 'permission' ? 'IZIN' : 'HADIR'}
                   </span>
                 </div>
+                {savedNotes && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-450 font-semibold">Catatan:</span>
+                    <span className="text-amber-400 font-bold">{savedNotes}</span>
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}
@@ -358,6 +479,32 @@ export function StudentSelfAttendanceView({
           )}
         </AnimatePresence>
       </div>
+
+      {/* Toast Notification Banner */}
+      <AnimatePresence>
+        {toastNotification.show && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="fixed top-5 left-1/2 -translate-x-1/2 z-[100] max-w-md w-[92%] bg-slate-900/95 text-white border border-emerald-500/35 shadow-2xl rounded-2xl p-4 backdrop-blur-md flex items-start gap-3"
+          >
+            <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
+              <Check size={20} className="stroke-[3]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-black text-sm text-emerald-400">{toastNotification.title}</h4>
+              <p className="text-xs text-slate-300 mt-0.5 leading-relaxed font-medium">{toastNotification.message}</p>
+            </div>
+            <button
+              onClick={() => setToastNotification(prev => ({ ...prev, show: false }))}
+              className="text-slate-400 hover:text-white text-xs p-1 cursor-pointer"
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

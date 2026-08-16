@@ -48,6 +48,8 @@ export function AttendanceTracker({
   const [expandedStudentNotes, setExpandedStudentNotes] = useState<Record<string, boolean>>({});
   const [filterBySchedule, setFilterBySchedule] = useState(false);
   const [selectedMissingStudent, setSelectedMissingStudent] = useState<string>('');
+  const [isDirty, setIsDirty] = useState<boolean>(false);
+  const [lastLoadedDate, setLastLoadedDate] = useState<string>('');
 
   const [toastNotification, setToastNotification] = useState<{
     show: boolean;
@@ -112,40 +114,61 @@ export function AttendanceTracker({
     return s.name.toLowerCase().includes(recordSearchQuery.toLowerCase());
   });
 
-  // Load existing attendance for selectedDate
+  // Load existing attendance for selectedDate safely without overwriting unsaved user edits
   useEffect(() => {
-    const existingForDate = attendance.filter(a => a.date === selectedDate);
-    
-    const initialMap: Record<string, { status: 'present' | 'absent' | 'permission'; notes: string }> = {};
-    
-    activeStudents.forEach(student => {
-      const record = existingForDate.find(r => r.studentId === student.id);
-      if (record) {
-        initialMap[student.id] = {
-          status: record.status,
-          notes: record.notes || ''
-        };
-      } else {
-        // Default to 'present' for untracked active students
-        initialMap[student.id] = {
-          status: 'present',
-          notes: ''
-        };
-      }
-    });
+    // Only re-sync if the selected date changed, or if user hasn't modified state (isDirty=false), or after save completed
+    if (lastLoadedDate !== selectedDate || !isDirty || saveStatus === 'saved') {
+      const existingForDate = attendance.filter(a => a.date === selectedDate);
+      
+      const initialMap: Record<string, { status: 'present' | 'absent' | 'permission'; notes: string }> = {};
+      
+      activeStudents.forEach(student => {
+        const record = existingForDate.find(r => r.studentId === student.id);
+        if (record) {
+          initialMap[student.id] = {
+            status: record.status,
+            notes: record.notes || ''
+          };
+        } else {
+          // Default to 'present' for untracked active students
+          initialMap[student.id] = {
+            status: 'present',
+            notes: ''
+          };
+        }
+      });
 
-    setAttendanceMap(initialMap);
-    setSaveStatus('idle');
-  }, [selectedDate, students, attendance]);
+      setAttendanceMap(initialMap);
+      setLastLoadedDate(selectedDate);
+      if (saveStatus === 'saved') {
+        setIsDirty(false);
+      } else {
+        setSaveStatus('idle');
+      }
+    }
+  }, [selectedDate, students, attendance, saveStatus]);
 
   const handleStatusChange = (studentId: string, status: 'present' | 'absent' | 'permission') => {
-    setAttendanceMap(prev => ({
-      ...prev,
-      [studentId]: {
-        ...prev[studentId],
-        status
-      }
-    }));
+    setAttendanceMap(prev => {
+      const current = prev[studentId] || { status: 'present', notes: '' };
+      return {
+        ...prev,
+        [studentId]: {
+          ...current,
+          status
+        }
+      };
+    });
+
+    // Auto-expand notes input whenever student status is set to 'permission' or toggled
+    if (status === 'permission') {
+      setExpandedStudentNotes(prev => ({
+        ...prev,
+        [studentId]: true
+      }));
+    }
+
+    setIsDirty(true);
     setSaveStatus('idle');
   };
 
@@ -155,48 +178,79 @@ export function AttendanceTracker({
       permission: 'absent',
       absent: 'present'
     };
-    handleStatusChange(studentId, nextStatusMap[currentStatus]);
+    const nextStatus = nextStatusMap[currentStatus];
+    handleStatusChange(studentId, nextStatus);
   };
 
   const handleNoteChange = (studentId: string, notes: string) => {
-    setAttendanceMap(prev => ({
+    setAttendanceMap(prev => {
+      const current = prev[studentId] || { status: 'present', notes: '' };
+      return {
+        ...prev,
+        [studentId]: {
+          ...current,
+          notes
+        }
+      };
+    });
+    setIsDirty(true);
+    setSaveStatus('idle');
+  };
+
+  const handleAppendNotePill = (studentId: string, textToAppend: string) => {
+    setAttendanceMap(prev => {
+      const current = prev[studentId] || { status: 'permission', notes: '' };
+      const existingNote = current.notes ? current.notes.trim() : '';
+      const newNote = existingNote ? `${existingNote}, ${textToAppend}` : textToAppend;
+      return {
+        ...prev,
+        [studentId]: {
+          ...current,
+          notes: newNote
+        }
+      };
+    });
+    setExpandedStudentNotes(prev => ({
       ...prev,
-      [studentId]: {
-        ...prev[studentId],
-        notes
-      }
+      [studentId]: true
     }));
+    setIsDirty(true);
     setSaveStatus('idle');
   };
 
   const handleMarkAllPresent = () => {
     const updated = { ...attendanceMap };
-    scheduledActiveStudents.forEach(student => {
+    activeStudents.forEach(student => {
       updated[student.id] = {
-        ...updated[student.id],
+        ...(updated[student.id] || { notes: '' }),
         status: 'present'
       };
     });
     setAttendanceMap(updated);
+    setIsDirty(true);
     setSaveStatus('idle');
   };
 
   const handleSave = async () => {
     setSaveStatus('saving');
-    const recordsToSave = scheduledActiveStudents.map(student => {
+
+    // Save ALL active students to ensure no student records are lost regardless of current filter
+    const recordsToSave = activeStudents.map(student => {
       const state = attendanceMap[student.id] || { status: 'present', notes: '' };
       return {
         studentId: student.id,
         studentName: student.name,
         date: selectedDate,
         status: state.status,
-        notes: state.notes
+        notes: state.notes ? state.notes.trim() : '',
+        branch: student.branch || 'Pusat'
       };
     });
 
     try {
       await onAddAttendanceBatch(recordsToSave);
       setSaveStatus('saved');
+      setIsDirty(false);
       setSavedRecordsCount(recordsToSave.length);
       setShowSuccessModal(true);
       
@@ -210,11 +264,11 @@ export function AttendanceTracker({
 
       triggerToast(
         'Presensi Berhasil Disimpan! 🎉',
-        `${recordsToSave.length} data kehadiran siswa untuk tanggal ${formattedDateText} telah tersimpan ke database.`,
+        `${recordsToSave.length} data kehadiran siswa tanggal ${formattedDateText} telah tersimpan ke database.`,
         'success'
       );
 
-      setTimeout(() => setSaveStatus('idle'), 3500);
+      setTimeout(() => setSaveStatus('idle'), 4000);
     } catch (err) {
       console.error(err);
       setSaveStatus('idle');
@@ -650,7 +704,7 @@ export function AttendanceTracker({
                   ) : (
                     filteredActiveStudents.map((student, index) => {
                       const state = attendanceMap[student.id] || { status: 'present', notes: '' };
-                      const isExpanded = !!expandedStudentNotes[student.id];
+                      const isExpanded = !!expandedStudentNotes[student.id] || state.status === 'permission' || !!state.notes;
                     
                       return (
                         <div key={student.id} className={`p-4 sm:p-5 transition duration-150 ${
@@ -692,7 +746,7 @@ export function AttendanceTracker({
                               <button
                                 type="button"
                                 onClick={() => toggleNotes(student.id)}
-                                className={`p-2.5 rounded-xl border transition duration-150 shrink-0 ${
+                                className={`p-2.5 rounded-xl border transition duration-150 shrink-0 relative ${
                                   isExpanded
                                     ? 'bg-emerald-600 text-white border-emerald-600'
                                     : isLight
@@ -702,6 +756,9 @@ export function AttendanceTracker({
                                 title="Tulis Catatan / Kirim WA"
                               >
                                 <MessageSquare size={15} />
+                                {state.notes && (
+                                  <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-amber-400 border-2 border-slate-900 animate-pulse" />
+                                )}
                               </button>
 
                               {/* One-Tap Cycle Trigger Circle (Innovative mobile UX) */}
@@ -761,67 +818,95 @@ export function AttendanceTracker({
                             </div>
 
                             {/* Desktop Controls */}
-                            <div className="flex flex-row items-center gap-3 shrink-0">
-                              <div className={`flex p-1 rounded-xl border ${
-                                isLight ? 'bg-slate-100 border-slate-250' : 'bg-slate-950/40 border-slate-800/60'
-                              }`}>
-                                <button
-                                  type="button"
-                                  onClick={() => handleStatusChange(student.id, 'present')}
-                                  className={`py-1.5 px-3 rounded-lg text-xs font-bold transition duration-150 flex items-center justify-center gap-1.5 ${
-                                    state.status === 'present'
-                                      ? 'bg-emerald-600 text-white shadow-md font-extrabold'
-                                      : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                                  }`}
-                                >
-                                  <Check size={14} />
-                                  <span>Hadir</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleStatusChange(student.id, 'permission')}
-                                  className={`py-1.5 px-3 rounded-lg text-xs font-bold transition duration-150 flex items-center justify-center gap-1.5 ${
-                                    state.status === 'permission'
-                                      ? 'bg-amber-500 text-white shadow-md font-extrabold'
-                                      : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                                  }`}
-                                >
-                                  <Calendar size={13} />
-                                  <span>Izin</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleStatusChange(student.id, 'absent')}
-                                  className={`py-1.5 px-3 rounded-lg text-xs font-bold transition duration-150 flex items-center justify-center gap-1.5 ${
-                                    state.status === 'absent'
-                                      ? 'bg-rose-500 text-white shadow-md font-extrabold'
-                                      : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                                  }`}
-                                >
-                                  <X size={14} />
-                                  <span>Absen</span>
-                                </button>
+                            <div className="flex flex-col items-end gap-1.5 shrink-0">
+                              <div className="flex flex-row items-center gap-3">
+                                <div className={`flex p-1 rounded-xl border ${
+                                  isLight ? 'bg-slate-100 border-slate-250' : 'bg-slate-950/40 border-slate-800/60'
+                                }`}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStatusChange(student.id, 'present')}
+                                    className={`py-1.5 px-3 rounded-lg text-xs font-bold transition duration-150 flex items-center justify-center gap-1.5 ${
+                                      state.status === 'present'
+                                        ? 'bg-emerald-600 text-white shadow-md font-extrabold'
+                                        : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                    }`}
+                                  >
+                                    <Check size={14} />
+                                    <span>Hadir</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStatusChange(student.id, 'permission')}
+                                    className={`py-1.5 px-3 rounded-lg text-xs font-bold transition duration-150 flex items-center justify-center gap-1.5 ${
+                                      state.status === 'permission'
+                                        ? 'bg-amber-500 text-white shadow-md font-extrabold'
+                                        : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                    }`}
+                                  >
+                                    <Calendar size={13} />
+                                    <span>Izin</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStatusChange(student.id, 'absent')}
+                                    className={`py-1.5 px-3 rounded-lg text-xs font-bold transition duration-150 flex items-center justify-center gap-1.5 ${
+                                      state.status === 'absent'
+                                        ? 'bg-rose-500 text-white shadow-md font-extrabold'
+                                        : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                    }`}
+                                  >
+                                    <X size={14} />
+                                    <span>Absen</span>
+                                  </button>
+                                </div>
+
+                                {/* Desktop always visible notes and WA block */}
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="text"
+                                    placeholder="Catatan..."
+                                    value={state.notes}
+                                    onChange={(e) => handleNoteChange(student.id, e.target.value)}
+                                    className={`px-3 py-1.5 border rounded-xl text-xs w-44 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder-slate-500 ${
+                                      isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950/30 border-slate-800 text-white'
+                                    }`}
+                                  />
+
+                                  <button
+                                    type="button"
+                                    onClick={() => sendWhatsAppNotification(student)}
+                                    className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-500/25 transition duration-150 flex items-center justify-center shrink-0"
+                                    title="Kirim Konfirmasi WA Orang Tua"
+                                  >
+                                    <Send size={13} />
+                                  </button>
+                                </div>
                               </div>
 
-                              {/* Desktop always visible notes and WA block */}
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="text"
-                                  placeholder="Catatan..."
-                                  value={state.notes}
-                                  onChange={(e) => handleNoteChange(student.id, e.target.value)}
-                                  className={`px-3 py-1.5 border rounded-xl text-xs w-36 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder-slate-500 ${
-                                    isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950/30 border-slate-800 text-white'
-                                  }`}
-                                />
-
+                              {/* Desktop Quick Note Pills */}
+                              <div className="flex items-center gap-1.5 flex-wrap justify-end pt-0.5">
+                                <span className="text-[9.5px] text-slate-500 font-semibold">Pintasan Catatan:</span>
                                 <button
                                   type="button"
-                                  onClick={() => sendWhatsAppNotification(student)}
-                                  className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-500/25 transition duration-150 flex items-center justify-center shrink-0"
-                                  title="Kirim Konfirmasi WA Orang Tua"
+                                  onClick={() => handleAppendNotePill(student.id, 'Izin makan')}
+                                  className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 transition cursor-pointer"
                                 >
-                                  <Send size={13} />
+                                  + Izin Makan
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAppendNotePill(student.id, 'Hadir kembali')}
+                                  className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 transition cursor-pointer"
+                                >
+                                  + Hadir Kembali
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAppendNotePill(student.id, 'Izin sakit')}
+                                  className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 transition cursor-pointer"
+                                >
+                                  + Izin Sakit
                                 </button>
                               </div>
                             </div>
@@ -829,25 +914,64 @@ export function AttendanceTracker({
 
                           {/* === COLLAPSIBLE OPTION PANEL (For Mobile notes & WhatsApp trigger when expanded) === */}
                           {isExpanded && (
-                            <div className="md:hidden mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-stretch gap-2.5 w-full">
+                            <div className="md:hidden mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2.5 w-full">
                               <div className="flex-1">
-                                <label className="block text-[10px] font-bold text-slate-400 mb-1">Catatan Kehadiran</label>
+                                <div className="flex items-center justify-between mb-1">
+                                  <label className="block text-[10px] font-bold text-amber-500 uppercase tracking-wider">
+                                    Catatan Kehadiran Siswa
+                                  </label>
+                                  {state.notes && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleNoteChange(student.id, '')}
+                                      className="text-[10px] text-rose-400 hover:text-rose-300 underline"
+                                    >
+                                      Hapus Catatan
+                                    </button>
+                                  )}
+                                </div>
                                 <input
                                   type="text"
-                                  placeholder="Tulis catatan (misal: telat 10 menit)..."
+                                  placeholder="Tulis catatan (misal: Izin makan, telat 10 menit)..."
                                   value={state.notes}
                                   onChange={(e) => handleNoteChange(student.id, e.target.value)}
                                   className={`px-3 py-2 border rounded-xl text-xs w-full focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder-slate-550 ${
                                     isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950/30 border-slate-800 text-white'
                                   }`}
                                 />
+
+                                {/* Mobile Quick Note Pills */}
+                                <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                                  <span className="text-[9.5px] text-slate-400 font-semibold">Pilihan Cepat:</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAppendNotePill(student.id, 'Izin makan')}
+                                    className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-300 border border-amber-500/25 transition cursor-pointer active:scale-95"
+                                  >
+                                    + Izin Makan
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAppendNotePill(student.id, 'Hadir kembali')}
+                                    className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-300 border border-emerald-500/25 transition cursor-pointer active:scale-95"
+                                  >
+                                    + Hadir Kembali
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAppendNotePill(student.id, 'Izin sakit')}
+                                    className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-600 dark:text-indigo-300 border border-indigo-500/25 transition cursor-pointer active:scale-95"
+                                  >
+                                    + Izin Sakit
+                                  </button>
+                                </div>
                               </div>
 
-                              <div className="flex items-end">
+                              <div className="flex items-center gap-2">
                                 <button
                                   type="button"
                                   onClick={() => sendWhatsAppNotification(student)}
-                                  className="w-full py-2.5 px-4 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/25 transition duration-150 flex items-center gap-2 justify-center shrink-0"
+                                  className="flex-1 py-2.5 px-4 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/25 transition duration-150 flex items-center gap-2 justify-center shrink-0 cursor-pointer"
                                   title="Kirim Konfirmasi WA Orang Tua"
                                 >
                                   <Send size={13} />

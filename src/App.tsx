@@ -105,6 +105,12 @@ export default function App() {
   const [scanDate, setScanDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [scanSuccess, setScanSuccess] = useState<boolean>(false);
   const [scanSaving, setScanSaving] = useState<boolean>(false);
+  const [scanToast, setScanToast] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error';
+  }>({ show: false, title: '', message: '', type: 'success' });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -267,6 +273,22 @@ export default function App() {
     importBackupData
   } = useMathFinggersDb();
 
+  // Sync existing attendance when scanned student or scan date changes
+  useEffect(() => {
+    if (scannedStudentId) {
+      const existing = attendance.find(
+        a => a.studentId === scannedStudentId && a.date === scanDate
+      );
+      if (existing) {
+        setScanStatus(existing.status);
+        setScanNotes(existing.notes || '');
+      } else {
+        setScanStatus('present');
+        setScanNotes('');
+      }
+    }
+  }, [scannedStudentId, scanDate, attendance]);
+
   useEffect(() => {
     if (settings?.appIcon) {
       updateDynamicPwaIcon(settings.appIcon);
@@ -383,24 +405,37 @@ export default function App() {
       const defaultBranchName = branches[0]?.name || 'Pusat';
       const branchToSet = student.branch || currentUser?.branch || defaultBranchName;
       
+      const finalNotes = scanNotes.trim() || (scanStatus === 'permission' ? 'Izin Bimbingan' : 'Presensi Scan QR');
+
       const record = {
         studentId: student.id,
         studentName: student.name,
         date: scanDate,
         status: scanStatus,
-        notes: scanNotes,
+        notes: finalNotes,
         branch: branchToSet
       };
 
       await addAttendanceBatch([record]);
       setScanSuccess(true);
+
+      const statusLabel = scanStatus === 'permission' ? 'IZIN' : scanStatus === 'present' ? 'HADIR' : 'ALPA';
+
+      setScanToast({
+        show: true,
+        title: 'Presensi QR Berhasil Disimpan! 🎉',
+        message: `Status ${student.name} tanggal ${scanDate} tersimpan sebagai ${statusLabel}${finalNotes ? ` (${finalNotes})` : ''}.`,
+        type: 'success'
+      });
+      setTimeout(() => setScanToast(prev => ({ ...prev, show: false })), 4000);
+
       setTimeout(() => {
         window.history.replaceState({}, document.title, window.location.pathname);
         setScannedStudentId(null);
         setScanSuccess(false);
         setScanNotes('');
         setScanStatus('present');
-      }, 2000);
+      }, 2500);
     } catch (err) {
       console.error(err);
       alert('Gagal mencatat presensi QR!');
@@ -1051,10 +1086,24 @@ export default function App() {
                   <div className="w-16 h-16 rounded-full bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 flex items-center justify-center mx-auto mb-4 animate-bounce">
                     <CheckCircle className="w-10 h-10" />
                   </div>
-                  <h3 className="font-black text-xl text-emerald-500">Presensi Berhasil!</h3>
+                  <h3 className="font-black text-xl text-emerald-500">
+                    {scanStatus === 'permission' ? 'Izin Berhasil Dicatat!' : scanStatus === 'present' ? 'Presensi Berhasil!' : 'Alpa Dicatat!'}
+                  </h3>
                   <p className="text-sm text-slate-400 mt-1">
                     Data kehadiran untuk <strong>{student.name}</strong> berhasil dicatat pada tanggal {scanDate}.
                   </p>
+                  <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs font-bold">
+                    <span>Status:</span>
+                    <span className={`px-2 py-0.5 rounded text-[11px] ${
+                      scanStatus === 'permission'
+                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                        : scanStatus === 'present'
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                    }`}>
+                      {scanStatus === 'permission' ? 'IZIN' : scanStatus === 'present' ? 'HADIR' : 'ALPA'}
+                    </span>
+                  </div>
                 </div>
               ) : (
                 <div>
@@ -1125,7 +1174,7 @@ export default function App() {
                       <div className="grid grid-cols-3 gap-2">
                         {[
                           { value: 'present', label: 'Hadir', activeClass: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30 font-bold' },
-                          { value: 'permission', label: 'Izin', activeClass: 'bg-blue-500/10 text-blue-500 border-blue-500/30 font-bold' },
+                          { value: 'permission', label: 'Izin', activeClass: 'bg-amber-500/10 text-amber-500 border-amber-500/30 font-bold' },
                           { value: 'absent', label: 'Alpa', activeClass: 'bg-rose-500/10 text-rose-500 border-rose-500/30 font-bold' }
                         ].map(opt => {
                           const isActive = scanStatus === opt.value;
@@ -1152,13 +1201,48 @@ export default function App() {
                       <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Catatan (Opsional)</label>
                       <input
                         type="text"
-                        placeholder="Contoh: Datang terlambat, lupa bawa modul..."
+                        placeholder="Contoh: Datang terlambat, Izin makan..."
                         value={scanNotes}
                         onChange={(e) => setScanNotes(e.target.value)}
                         className={`w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-500 ${
                           isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-850 text-white'
                         }`}
                       />
+                      
+                      {/* Quick Note Pills */}
+                      <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                        <span className="text-[10px] text-slate-400 font-semibold">Pintasan Catatan:</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setScanNotes(prev => prev ? `${prev.trim()}, Izin makan` : 'Izin makan');
+                            setScanStatus('permission');
+                          }}
+                          className="px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-300 border border-amber-500/25 transition cursor-pointer active:scale-95"
+                        >
+                          + Izin Makan
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setScanNotes(prev => prev ? `${prev.trim()}, Hadir kembali` : 'Hadir kembali');
+                            setScanStatus('present');
+                          }}
+                          className="px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-300 border border-emerald-500/25 transition cursor-pointer active:scale-95"
+                        >
+                          + Hadir Kembali
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setScanNotes(prev => prev ? `${prev.trim()}, Izin sakit` : 'Izin sakit');
+                            setScanStatus('permission');
+                          }}
+                          className="px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-600 dark:text-indigo-300 border border-indigo-500/25 transition cursor-pointer active:scale-95"
+                        >
+                          + Izin Sakit
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1223,6 +1307,32 @@ export default function App() {
           setIsUpdateModalOpen(false);
         }}
       />
+
+      {/* Floating Scan Toast Notification */}
+      <AnimatePresence>
+        {scanToast.show && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="fixed top-5 left-1/2 -translate-x-1/2 z-[100] max-w-md w-[92%] bg-slate-900/95 text-white border border-emerald-500/35 shadow-2xl rounded-2xl p-4 backdrop-blur-md flex items-start gap-3"
+          >
+            <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
+              <CheckCircle2 size={20} className="stroke-[2.5]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-black text-sm text-emerald-400">{scanToast.title}</h4>
+              <p className="text-xs text-slate-300 mt-0.5 leading-relaxed font-medium">{scanToast.message}</p>
+            </div>
+            <button
+              onClick={() => setScanToast(prev => ({ ...prev, show: false }))}
+              className="text-slate-400 hover:text-white text-xs p-1 cursor-pointer"
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

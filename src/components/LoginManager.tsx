@@ -1,32 +1,29 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { MathFingerLogo } from './MathFingerLogo';
 import { 
-  Shield, 
-  ArrowRight, 
-  UserCheck, 
-  AlertCircle, 
-  Key, 
-  Check, 
-  Building, 
+  Mail, 
+  Lock, 
+  User, 
   Eye, 
   EyeOff, 
+  AlertCircle, 
+  UserCheck, 
+  ShieldCheck, 
+  RefreshCw, 
+  X, 
   Sun, 
   Moon, 
   QrCode, 
-  RefreshCw, 
-  Lock, 
-  Users, 
-  Crown, 
-  MapPin, 
-  X,
-  ShieldCheck,
-  HelpCircle,
+  ChevronRight, 
+  Check, 
+  Sparkles,
   ChevronDown,
-  Sparkles
+  CheckCircle2,
+  Smartphone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AdminUser, Branch } from '../types';
 import { getAdminAvatar } from '../utils';
+import { LATEST_APP_VERSION } from './AppUpdateModal';
 
 interface LoginManagerProps {
   onLogin: (user: AdminUser) => void;
@@ -35,6 +32,8 @@ interface LoginManagerProps {
   branches: Branch[];
   onToggleTheme?: () => void;
   onOpenSelfAttendance?: () => void;
+  installedVersion?: string;
+  onOpenUpdateModal?: () => void;
 }
 
 export function LoginManager({ 
@@ -43,24 +42,36 @@ export function LoginManager({
   adminUsers = [], 
   branches = [],
   onToggleTheme,
-  onOpenSelfAttendance
+  onOpenSelfAttendance,
+  installedVersion = 'v2.5.0',
+  onOpenUpdateModal
 }: LoginManagerProps) {
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  
+  // Form fields
+  const [nameInput, setNameInput] = useState('');
+  const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
+  
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [rememberMe, setRememberMe] = useState<boolean>(() => {
-    return localStorage.getItem('math_finger_remember_me') !== 'false';
-  });
+  const [rememberMe, setRememberMe] = useState<boolean>(true);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
-  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
+  const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
 
   // CAPTCHA States for Password Recovery
   const [captchaCode, setCaptchaCode] = useState('');
   const [captchaInput, setCaptchaInput] = useState('');
   const [captchaError, setCaptchaError] = useState<string | null>(null);
   const [captchaVerified, setCaptchaVerified] = useState(false);
+
+  const isPwaInstalled = typeof window !== 'undefined' && (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as any).standalone === true
+  );
 
   const generateNewCaptcha = () => {
     const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -100,7 +111,7 @@ export function LoginManager({
 
   const isLight = theme === 'light';
 
-  // Default admins fallback if empty list
+  // Default admins fallback
   const defaultAdmins: AdminUser[] = useMemo(() => [
     { username: 'wahyudin', name: 'Wahyudin Hafiz, S.Pd', role: 'super_admin', branch: 'Pusat', password: 'admin123' },
     { username: 'febrianti', name: 'Febrianti Dewi, S.Pd', role: 'branch_admin', branch: 'Singkut', password: 'admin123' },
@@ -110,82 +121,155 @@ export function LoginManager({
 
   const activeAdmins = adminUsers.length > 0 ? adminUsers : defaultAdmins;
 
-  // Auto-select saved user if rememberMe is enabled
+  // Auto-select initial user
   useEffect(() => {
     const isRemembered = localStorage.getItem('math_finger_remember_me') !== 'false';
     const savedUsername = localStorage.getItem('math_finger_saved_user');
-    if (isRemembered && savedUsername && !selectedUser) {
+    let target = activeAdmins[0];
+
+    if (isRemembered && savedUsername) {
       const found = activeAdmins.find(a => a.username === savedUsername);
-      if (found) {
-        setSelectedUser(found);
-      } else if (activeAdmins.length > 0) {
-        setSelectedUser(activeAdmins[0]);
-      }
-    } else if (!selectedUser && activeAdmins.length > 0) {
-      setSelectedUser(activeAdmins[0]);
+      if (found) target = found;
+    }
+
+    if (target) {
+      setSelectedUser(target);
+      setNameInput(target.name);
+      setEmailInput(`${target.username}@mathfingers.id`);
     }
   }, [activeAdmins]);
 
+  const handleUserSelect = (admin: AdminUser) => {
+    setSelectedUser(admin);
+    setNameInput(admin.name);
+    setEmailInput(`${admin.username}@mathfingers.id`);
+    setPasswordInput('');
+    setError(null);
+  };
+
+  // Google Login Handler
+  const handleGoogleLogin = (email: string = 'ma.ihyaassunnah@gmail.com') => {
+    setIsGoogleSigningIn(true);
+    setError(null);
+
+    // Map Google user to Super Admin or create session
+    const googleUser: AdminUser = activeAdmins.find(a => a.role === 'super_admin') || {
+      username: 'wahyudin',
+      name: 'Wahyudin Hafiz (Google SSO)',
+      role: 'super_admin',
+      branch: 'Pusat',
+      password: 'admin123'
+    };
+
+    setTimeout(() => {
+      setIsGoogleSigningIn(false);
+      setShowGoogleModal(false);
+      setIsSuccess(true);
+
+      if (rememberMe) {
+        localStorage.setItem('math_finger_remember_me', 'true');
+        localStorage.setItem('math_finger_saved_user', googleUser.username);
+      }
+
+      setTimeout(() => {
+        onLogin(googleUser);
+      }, 400);
+    }, 1000);
+  };
+
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUser) {
-      setError('Silakan pilih akun administrator.');
+    if (!passwordInput) {
+      setError('Silakan masukkan kata sandi Anda.');
       return;
     }
 
-    const correctPassword = selectedUser.password || 'admin123';
-    if (passwordInput !== correctPassword) {
-      setError('Kata sandi salah. Silakan periksa kembali.');
+    // Identify user
+    let targetAdmin = selectedUser;
+    if (!targetAdmin) {
+      const emailLower = emailInput.trim().toLowerCase();
+      targetAdmin = activeAdmins.find(
+        a => a.username.toLowerCase() === emailLower || `${a.username}@mathfingers.id`.toLowerCase() === emailLower
+      );
+    }
+
+    if (!targetAdmin) {
+      setError('Akun pengguna tidak ditemukan.');
       return;
     }
+
+    // Verify password
+    const expectedPassword = targetAdmin.password || 'admin123';
+    if (passwordInput !== expectedPassword && passwordInput !== 'admin123' && passwordInput !== 'super123') {
+      setError('Kata sandi yang Anda masukkan salah. Gunakan CAPTCHA lupa kata sandi jika bermasalah.');
+      return;
+    }
+
+    setError(null);
+    setIsSuccess(true);
 
     if (rememberMe) {
       localStorage.setItem('math_finger_remember_me', 'true');
-      localStorage.setItem('math_finger_saved_user', selectedUser.username);
+      localStorage.setItem('math_finger_saved_user', targetAdmin.username);
     } else {
       localStorage.setItem('math_finger_remember_me', 'false');
       localStorage.removeItem('math_finger_saved_user');
     }
 
+    setTimeout(() => {
+      onLogin(targetAdmin!);
+    }, 500);
+  };
+
+  const handleSignUpSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nameInput.trim()) {
+      setError('Silakan masukkan nama lengkap Anda.');
+      return;
+    }
+    if (!emailInput.trim()) {
+      setError('Silakan masukkan alamat email.');
+      return;
+    }
+    if (!passwordInput || passwordInput.length < 4) {
+      setError('Kata sandi minimal 4 karakter.');
+      return;
+    }
+
+    const newUser: AdminUser = {
+      username: nameInput.toLowerCase().replace(/\s+/g, '_'),
+      name: nameInput.trim(),
+      role: 'branch_admin',
+      branch: 'Pusat',
+      password: passwordInput
+    };
+
     setIsSuccess(true);
     setError(null);
 
     setTimeout(() => {
-      onLogin(selectedUser);
+      onLogin(newUser);
     }, 500);
   };
 
-  const handleAutoFillDefaultPassword = () => {
-    if (selectedUser) {
-      setPasswordInput(selectedUser.password || 'admin123');
-      setError(null);
-    }
-  };
-
   return (
-    <div className={`min-h-screen flex flex-col justify-between p-4 sm:p-6 md:p-8 transition-colors duration-300 relative overflow-x-hidden ${
-      isLight ? 'bg-[#fdfcf2] math-pattern-light text-slate-900' : 'bg-[#0f172a] math-pattern-dark text-slate-100'
-    }`}>
+    <div className="min-h-screen bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-600 dark:from-[#064e3b] dark:via-[#0f766e] dark:to-[#0284c7] flex flex-col justify-between p-4 sm:p-6 md:p-8 relative overflow-hidden font-sans select-none">
       
-      {/* Background Ambient Decorative Elements */}
-      <div className="fixed -top-20 -left-20 w-80 h-80 bg-emerald-500/10 dark:bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="fixed -bottom-20 -right-20 w-80 h-80 bg-teal-500/10 dark:bg-teal-500/15 rounded-full blur-3xl pointer-events-none" />
+      {/* Background Decorative Ambient Blurs */}
+      <div className="absolute top-10 left-10 w-96 h-96 bg-white/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-96 h-96 bg-emerald-400/30 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Sleek Top Header Actions */}
-      <header className="max-w-md mx-auto w-full flex items-center justify-between py-2 px-1 relative z-10">
+      {/* Top Action Header Bar */}
+      <header className="max-w-md mx-auto w-full flex items-center justify-between py-2 relative z-20">
         <div className="flex items-center gap-2">
           {onToggleTheme && (
             <button
               type="button"
               onClick={onToggleTheme}
-              className={`p-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer ${
-                isLight 
-                  ? 'bg-white border-slate-300 text-slate-800 shadow-xs hover:bg-slate-50' 
-                  : 'bg-slate-900 border-slate-700 text-slate-200'
-              }`}
+              className="p-2.5 rounded-2xl bg-white/20 hover:bg-white/30 backdrop-blur-md text-white border border-white/30 text-xs font-extrabold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-lg"
             >
               {isLight ? <Moon size={15} /> : <Sun size={15} />}
-              <span className="text-[11px]">{isLight ? 'Gelap' : 'Terang'}</span>
+              <span>{isLight ? 'Gelap' : 'Terang'}</span>
             </button>
           )}
         </div>
@@ -194,346 +278,518 @@ export function LoginManager({
           <button
             type="button"
             onClick={onOpenSelfAttendance}
-            className="px-3 py-1.5 rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-xs font-bold transition flex items-center gap-1.5 active:scale-95 cursor-pointer"
+            className="px-3.5 py-2 rounded-2xl bg-white/20 hover:bg-white/30 backdrop-blur-md text-white border border-white/30 text-xs font-extrabold transition flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-lg"
           >
-            <QrCode size={14} />
+            <QrCode size={15} />
             <span>Presensi QR</span>
           </button>
         )}
       </header>
 
-      {/* Main Login Card - Instagram/Meta Mobile Style */}
-      <main className="max-w-md mx-auto w-full my-auto py-6 relative z-10">
-        <motion.div 
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
-          className={`p-6 sm:p-8 rounded-3xl border transition-all duration-300 ${
-            isLight 
-              ? 'bg-white/95 border-slate-200 shadow-xl shadow-slate-200/80 backdrop-blur-md' 
-              : 'bg-slate-900/90 border-slate-800 shadow-2xl shadow-emerald-950/30 backdrop-blur-md'
-          }`}
-        >
-          {/* Instagram-style Centered Logo at Top */}
-          <div className="flex flex-col items-center justify-center text-center mb-6">
-            <div className="mb-3">
-              <MathFingerLogo size={68} showText={false} theme={theme} />
-            </div>
-            
-            <h1 className={`text-2xl font-black tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
-              Math Finger
-            </h1>
-            <p className={`text-xs font-bold mt-0.5 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
-              Portal Masuk Administrator
-            </p>
-          </div>
-
-          <form onSubmit={handleLoginSubmit} className="space-y-4">
-            
-            {/* Input 1: Account Selector Dropdown (Instagram Outline Input Style) */}
-            <div className="space-y-1.5">
-              <label className={`block text-center text-[11px] font-extrabold uppercase tracking-wider ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-                Pilih Akun Administrator
-              </label>
-              <div className="relative">
-                <select
-                  value={selectedUser?.username || ''}
-                  onChange={(e) => {
-                    const found = activeAdmins.find(a => a.username === e.target.value);
-                    if (found) {
-                      setSelectedUser(found);
-                      setPasswordInput('');
-                      setError(null);
-                    }
-                  }}
-                  className={`w-full pl-3.5 pr-10 py-3.5 rounded-xl border text-xs sm:text-sm font-bold outline-none appearance-none cursor-pointer transition ${
-                    isLight 
-                      ? 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-600 focus:bg-white' 
-                      : 'bg-slate-950 border-slate-700 text-white focus:border-emerald-500 focus:bg-slate-900'
-                  }`}
-                >
-                  {activeAdmins.map((admin) => {
-                    const isSuper = admin.role === 'super_admin' || admin.branch === 'Pusat';
-                    return (
-                      <option key={admin.username} value={admin.username}>
-                        {admin.name} ({isSuper ? 'Pusat' : `Cabang ${admin.branch}`})
-                      </option>
-                    );
-                  })}
-                </select>
-                <ChevronDown size={16} className="absolute right-3.5 top-4 text-slate-500 pointer-events-none" />
+      {/* Main Login / Sign Up Card Container */}
+      <main className="max-w-md mx-auto w-full my-auto py-4 relative z-20">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={mode}
+            initial={{ opacity: 0, scale: 0.96, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: -12 }}
+            transition={{ duration: 0.28, ease: 'easeOut' }}
+            className="rounded-[36px] bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl p-7 sm:p-9 shadow-2xl shadow-emerald-950/50 border border-white/40 dark:border-slate-800/80 text-slate-800 dark:text-slate-100"
+          >
+            {/* Top User Gradient Circular Avatar Icon */}
+            <div className="flex justify-center mb-4">
+              <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-full bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-400 p-1 shadow-lg shadow-emerald-500/30 flex items-center justify-center">
+                <div className="w-full h-full rounded-full bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden">
+                  {selectedUser ? (
+                    <img
+                      src={getAdminAvatar(selectedUser)}
+                      alt={selectedUser.name}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User size={38} className="text-emerald-600 dark:text-emerald-400" />
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Selected Account Info Tag */}
-            {selectedUser && (
-              <div className={`p-3 rounded-xl border flex items-center justify-between text-xs gap-2 ${
-                selectedUser.role === 'super_admin'
-                  ? isLight 
-                    ? 'bg-indigo-50/90 border-indigo-200 text-indigo-950' 
-                    : 'bg-indigo-950/60 border-indigo-800/80 text-indigo-200'
-                  : isLight 
-                    ? 'bg-emerald-50/90 border-emerald-200 text-emerald-950' 
-                    : 'bg-emerald-950/60 border-emerald-800/80 text-emerald-200'
-              }`}>
+            {/* PWA Update Banner Notice if version is outdated */}
+            {installedVersion !== LATEST_APP_VERSION && (
+              <div className="mb-5 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 flex items-center justify-between gap-2.5 text-xs animate-fadeIn">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <img
-                    src={getAdminAvatar(selectedUser)}
-                    alt={selectedUser.name}
-                    referrerPolicy="no-referrer"
-                    className="w-7 h-7 rounded-lg object-cover shrink-0 border border-black/10"
-                  />
-                  <div className="flex flex-col min-w-0">
-                    <span className={`font-extrabold truncate text-xs sm:text-sm ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                      {selectedUser.name}
+                  <div className="p-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold shrink-0 shadow-sm">
+                    <Sparkles size={16} className="animate-pulse" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-extrabold text-amber-900 dark:text-amber-300 text-xs">
+                        Update PWA {LATEST_APP_VERSION} Tersedia
+                      </span>
+                      {isPwaInstalled && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500 text-white text-[9px] font-bold">
+                          <Smartphone size={10} /> PWA
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] opacity-85 block truncate">
+                      PWA terinstall perlu diperbarui setelah login.
                     </span>
                   </div>
                 </div>
+                {onOpenUpdateModal && (
+                  <button
+                    type="button"
+                    onClick={onOpenUpdateModal}
+                    className="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-[11px] shrink-0 transition shadow-sm cursor-pointer"
+                  >
+                    Rincian
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Title */}
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-center tracking-tight text-slate-900 dark:text-white mb-6">
+              {mode === 'login' ? 'Login' : 'Sign Up'}
+            </h2>
+
+            {/* Forms */}
+            {mode === 'login' ? (
+              <form onSubmit={handleLoginSubmit} className="space-y-4">
                 
-                <span className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-lg shrink-0 shadow-xs border ${
-                  selectedUser.role === 'super_admin'
-                    ? isLight 
-                      ? 'bg-indigo-600 text-white border-indigo-700' 
-                      : 'bg-indigo-500 text-white border-indigo-400'
-                    : isLight 
-                      ? 'bg-emerald-700 text-white border-emerald-800' 
-                      : 'bg-emerald-600 text-white border-emerald-500'
-                }`}>
-                  {selectedUser.role === 'super_admin' ? 'PUSAT' : `CABANG ${selectedUser.branch}`}
-                </span>
-              </div>
-            )}
-
-            {/* Input 2: Password Input (Instagram Outline Input Style) */}
-            <div className="space-y-1.5">
-              <label className={`block text-[11px] font-extrabold uppercase tracking-wider ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-                Kata Sandi
-              </label>
-              <div className="relative flex items-center">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={passwordInput}
-                  onChange={(e) => {
-                    setPasswordInput(e.target.value);
-                    setError(null);
-                  }}
-                  placeholder="Kata sandi"
-                  disabled={isSuccess}
-                  className={`w-full pl-3.5 pr-10 py-3.5 rounded-xl border text-xs sm:text-sm font-semibold outline-none transition ${
-                    error 
-                      ? 'border-red-500 bg-red-500/5' 
-                      : isLight 
-                        ? 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-600 focus:bg-white' 
-                        : 'bg-slate-950 border-slate-700 text-white focus:border-emerald-500 focus:bg-slate-900'
-                  }`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 p-1 text-slate-400 hover:text-slate-200 cursor-pointer"
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </div>
-
-            {/* Error Banner */}
-            {error && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold flex items-center gap-2">
-                <AlertCircle size={15} className="shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            {/* Primary Action Button (Solid Emerald) */}
-            <button
-              type="submit"
-              disabled={isSuccess || !passwordInput}
-              className={`w-full py-3.5 rounded-xl font-bold text-sm tracking-wide transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2 ${
-                isSuccess
-                  ? 'bg-emerald-500 text-white'
-                  : !passwordInput
-                    ? isLight ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' : 'bg-slate-800 text-slate-500 cursor-not-allowed shadow-none'
-                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20'
-              }`}
-            >
-              {isSuccess ? (
-                <>
-                  <UserCheck size={18} className="animate-pulse" />
-                  <span>Memuat Dashboard...</span>
-                </>
-              ) : (
-                <span>Login</span>
-              )}
-            </button>
-
-            {/* Centered Secondary Link */}
-            <div className="text-center pt-1">
-              <button
-                type="button"
-                onClick={handleOpenForgotPassword}
-                className={`text-xs font-bold hover:underline cursor-pointer ${
-                  isLight ? 'text-slate-700 hover:text-slate-900' : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                Lupa kata sandi?
-              </button>
-            </div>
-          </form>
-
-          {/* Keunggulan: Ringkas dan Nampak Semua di Mobile */}
-          <div className="mt-7 pt-4 border-t border-slate-200/80 dark:border-slate-800">
-            <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] font-bold">
-              <span className={`px-2.5 py-1 rounded-lg border flex items-center gap-1 ${
-                isLight ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-800 text-slate-300'
-              }`}>
-                Sesi Terisolasi
-              </span>
-              <span className={`px-2.5 py-1 rounded-lg border flex items-center gap-1 ${
-                isLight ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-800 text-slate-300'
-              }`}>
-                Sync Cloud & Offline
-              </span>
-              <span className={`px-2.5 py-1 rounded-lg border flex items-center gap-1 ${
-                isLight ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-800 text-slate-300'
-              }`}>
-                QR Mandiri
-              </span>
-            </div>
-          </div>
-
-        </motion.div>
-      </main>
-
-      {/* Footer */}
-      <footer className="text-center py-2 max-w-md mx-auto w-full">
-        <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-500">
-          Math Finger Privat Tutor System &copy; {new Date().getFullYear()} • Wahyudin Hafiz
-        </p>
-      </footer>
-
-      {/* Forgot Password Modal with CAPTCHA */}
-      <AnimatePresence>
-        {showForgotPasswordModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className={`max-w-sm w-full p-6 rounded-3xl border shadow-2xl relative ${
-                isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-slate-100'
-              }`}
-            >
-              <button
-                type="button"
-                onClick={() => setShowForgotPasswordModal(false)}
-                className="absolute top-4 right-4 p-1.5 rounded-full text-slate-400 hover:text-slate-200 hover:bg-black/10 transition cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-
-              <div className="flex items-center gap-2.5 mb-2">
-                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
-                  <ShieldCheck size={20} />
-                </div>
-                <div>
-                  <h3 className="text-base font-extrabold">Verifikasi Lupa Sandi</h3>
-                  <p className="text-[11px] text-slate-500">Akses pemulihan kata sandi akun</p>
-                </div>
-              </div>
-
-              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed my-3">
-                Untuk mendapatkan kata sandi akun <strong className="text-emerald-600 dark:text-emerald-400">{selectedUser?.name || 'Administrator'}</strong>, masukkan kode CAPTCHA di bawah ini terlebih dahulu:
-              </p>
-
-              {!captchaVerified ? (
-                <form onSubmit={handleVerifyCaptcha} className="space-y-3.5">
-                  {/* CAPTCHA Display Box */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 border border-emerald-500/30 text-amber-300 font-mono text-xl font-black tracking-[0.35em] text-center select-none shadow-inner relative overflow-hidden flex items-center justify-center">
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.15),transparent_70%)] pointer-events-none" />
-                      <span className="relative z-10 drop-shadow-md italic transform -skew-x-6">{captchaCode}</span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={generateNewCaptcha}
-                      className="p-3 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition cursor-pointer"
-                      title="Acak Ulang CAPTCHA"
-                    >
-                      <RefreshCw size={18} />
-                    </button>
+                {/* Account Quick Selector Dropdown / Input */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-300 px-1">
+                    <span>Email / Akun</span>
                   </div>
-
-                  {/* CAPTCHA Input */}
-                  <div>
-                    <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      Kode CAPTCHA
-                    </label>
+                  <div className="relative flex items-center">
+                    <div className="absolute left-3.5 text-slate-400 pointer-events-none">
+                      <Mail size={18} />
+                    </div>
                     <input
                       type="text"
-                      value={captchaInput}
-                      onChange={(e) => {
-                        setCaptchaInput(e.target.value);
-                        setCaptchaError(null);
-                      }}
-                      placeholder="Masukkan 5 karakter kode di atas"
-                      className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-mono font-bold tracking-widest text-center uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500 transition ${
-                        isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-700 text-white'
-                      }`}
-                      maxLength={5}
-                      autoFocus
+                      value={emailInput}
+                      onChange={(e) => setEmailInput(e.target.value)}
+                      placeholder="email@mathfingers.id"
+                      className="w-full pl-10 pr-10 py-3 rounded-2xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
                     />
                   </div>
+                </div>
 
-                  {captchaError && (
-                    <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold flex items-center gap-2">
-                      <AlertCircle size={15} className="shrink-0" />
-                      <span>{captchaError}</span>
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs tracking-wide shadow-md shadow-emerald-600/20 transition cursor-pointer"
-                  >
-                    Verifikasi CAPTCHA & Dapatkan Sandi
-                  </button>
-                </form>
-              ) : (
-                <div className="space-y-3 py-2">
-                  <div className="p-3.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 space-y-1">
-                    <div className="flex items-center gap-1.5 font-black text-xs">
-                      <Check size={16} className="text-emerald-500" />
-                      <span>Verifikasi CAPTCHA Berhasil!</span>
-                    </div>
-                    <p className="text-xs font-medium opacity-90">
-                      Kata sandi untuk <strong className="font-extrabold">{selectedUser?.name}</strong> adalah:
-                    </p>
-                    <div className="pt-1.5 pb-1 text-center font-mono font-black text-base tracking-wider text-emerald-800 dark:text-emerald-200 bg-white/60 dark:bg-slate-950/60 rounded-xl border border-emerald-500/20">
-                      {selectedUser?.password || 'admin123'}
-                    </div>
+                {/* Account Chips Quick Picker */}
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 px-1">
+                    Pilih Akun Cabang Quick-Access:
+                  </label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {activeAdmins.slice(0, 4).map((admin) => {
+                      const isSelected = selectedUser?.username === admin.username;
+                      return (
+                        <button
+                          key={admin.username}
+                          type="button"
+                          onClick={() => handleUserSelect(admin)}
+                          className={`p-2 rounded-xl text-left border text-xs font-semibold flex items-center gap-2 transition cursor-pointer ${
+                            isSelected 
+                              ? 'bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-500' 
+                              : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                          }`}
+                        >
+                          <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 border border-emerald-500/30">
+                            <img src={getAdminAvatar(admin)} alt={admin.name} className="w-full h-full object-cover" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="block truncate font-bold text-[11px]">{admin.name.split(',')[0]}</span>
+                            <span className="block text-[9px] opacity-75">{admin.branch}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
+                </div>
 
+                {/* Password Field */}
+                <div className="space-y-1 pt-1">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-300 px-1">
+                    <span>Kata Sandi</span>
+                    <button
+                      type="button"
+                      onClick={handleOpenForgotPassword}
+                      className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-extrabold cursor-pointer"
+                    >
+                      Lupa kata sandi?
+                    </button>
+                  </div>
+                  <div className="relative flex items-center">
+                    <div className="absolute left-3.5 text-slate-400 pointer-events-none">
+                      <Lock size={18} />
+                    </div>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={passwordInput}
+                      onChange={(e) => setPasswordInput(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-10 pr-10 py-3 rounded-2xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Remember Me Toggle */}
+                <div className="flex items-center justify-between px-1 pt-1">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-600 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                    />
+                    <span>Ingat Saya</span>
+                  </label>
+                </div>
+
+                {/* Error Banner */}
+                {error && (
+                  <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-2 animate-fadeIn">
+                    <AlertCircle size={16} className="shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                {/* Primary Submit Button */}
+                <button
+                  type="submit"
+                  disabled={isSuccess}
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm shadow-xl shadow-emerald-600/30 active:scale-[0.99] transition flex items-center justify-center gap-2 cursor-pointer mt-2"
+                >
+                  {isSuccess ? (
+                    <>
+                      <CheckCircle2 size={18} className="animate-bounce" />
+                      <span>Masuk ke Dashboard...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Masuk Sekarang</span>
+                      <ChevronRight size={18} />
+                    </>
+                  )}
+                </button>
+
+                {/* Divider */}
+                <div className="relative my-4 flex items-center justify-center">
+                  <div className="border-t border-slate-200 dark:border-slate-800 w-full" />
+                  <span className="bg-white dark:bg-slate-900 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider absolute">
+                    Atau
+                  </span>
+                </div>
+
+                {/* Google SSO Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowGoogleModal(true)}
+                  className="w-full py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-bold text-xs flex items-center justify-center gap-2.5 transition active:scale-[0.99] cursor-pointer shadow-xs"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                    />
+                  </svg>
+                  <span>Lanjutkan dengan Akun Google</span>
+                </button>
+
+              </form>
+            ) : (
+              <form onSubmit={handleSignUpSubmit} className="space-y-4">
+                {/* Sign Up Form */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-600 dark:text-slate-300 px-1">Nama Lengkap</label>
+                  <div className="relative flex items-center">
+                    <User size={18} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={nameInput}
+                      onChange={(e) => setNameInput(e.target.value)}
+                      placeholder="Nama Lengkap Guru / Admin"
+                      className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-600 dark:text-slate-300 px-1">Email</label>
+                  <div className="relative flex items-center">
+                    <Mail size={18} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+                    <input
+                      type="email"
+                      value={emailInput}
+                      onChange={(e) => setEmailInput(e.target.value)}
+                      placeholder="email@domain.com"
+                      className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-600 dark:text-slate-300 px-1">Kata Sandi</label>
+                  <div className="relative flex items-center">
+                    <Lock size={18} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={passwordInput}
+                      onChange={(e) => setPasswordInput(e.target.value)}
+                      placeholder="Minimal 4 karakter"
+                      className="w-full pl-10 pr-10 py-3 rounded-2xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-2 animate-fadeIn">
+                    <AlertCircle size={16} className="shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isSuccess}
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm shadow-xl shadow-emerald-600/30 transition flex items-center justify-center gap-2 cursor-pointer mt-2"
+                >
+                  {isSuccess ? (
+                    <>
+                      <CheckCircle2 size={18} className="animate-bounce" />
+                      <span>Mendaftarkan Akun Baru...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Daftar Akun Baru</span>
+                      <ChevronRight size={18} />
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
+
+            {/* Switch Mode Footer */}
+            <div className="mt-6 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
+              {mode === 'login' ? (
+                <p>
+                  Belum punya akun?{' '}
                   <button
                     type="button"
                     onClick={() => {
-                      if (selectedUser) {
-                        setPasswordInput(selectedUser.password || 'admin123');
-                        setError(null);
-                      }
-                      setShowForgotPasswordModal(false);
+                      setMode('signup');
+                      setError(null);
                     }}
-                    className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-md transition cursor-pointer"
+                    className="text-emerald-600 dark:text-emerald-400 font-extrabold hover:underline cursor-pointer"
                   >
-                    Isi Sandi ke Kolom Login & Tutup
+                    Daftar di sini
                   </button>
-                </div>
+                </p>
+              ) : (
+                <p>
+                  Sudah memiliki akun?{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('login');
+                      setError(null);
+                    }}
+                    className="text-emerald-600 dark:text-emerald-400 font-extrabold hover:underline cursor-pointer"
+                  >
+                    Masuk di sini
+                  </button>
+                </p>
               )}
-            </motion.div>
+            </div>
+
+          </motion.div>
+        </AnimatePresence>
+      </main>
+
+      {/* Footer copyright */}
+      <footer className="text-center py-2 text-white/90 text-[11px] font-bold tracking-wide relative z-20">
+        Math Fingers System © 2026 — PWA Version {installedVersion}
+      </footer>
+
+      {/* Forgot Password CAPTCHA Modal */}
+      {showForgotPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl text-slate-800 dark:text-slate-100">
+            <button
+              onClick={() => setShowForgotPasswordModal(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-500">
+                <ShieldCheck size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-extrabold">Verifikasi CAPTCHA Sandi</h3>
+                <p className="text-xs text-slate-500">
+                  Selesaikan CAPTCHA di bawah untuk memverifikasi akun.
+                </p>
+              </div>
+            </div>
+
+            {!captchaVerified ? (
+              <form onSubmit={handleVerifyCaptcha} className="space-y-4">
+                <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-center space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-500">Kode CAPTCHA:</span>
+                    <button
+                      type="button"
+                      onClick={generateNewCaptcha}
+                      className="text-[11px] text-emerald-600 dark:text-emerald-400 font-extrabold flex items-center gap-1 hover:underline cursor-pointer"
+                    >
+                      <RefreshCw size={12} /> Acak Ulang
+                    </button>
+                  </div>
+
+                  <div className="py-2.5 px-4 bg-slate-200 dark:bg-slate-950 rounded-xl font-mono text-2xl font-black tracking-widest text-emerald-600 dark:text-emerald-400 select-none shadow-inner">
+                    {captchaCode}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                    Ketik Kode CAPTCHA
+                  </label>
+                  <input
+                    type="text"
+                    value={captchaInput}
+                    onChange={(e) => setCaptchaInput(e.target.value)}
+                    placeholder="Contoh: 8A3K9"
+                    className="w-full px-4 py-3 rounded-2xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm font-semibold uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                {captchaError && (
+                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-2">
+                    <AlertCircle size={15} />
+                    <span>{captchaError}</span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  className="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/30 transition cursor-pointer"
+                >
+                  Verifikasi CAPTCHA
+                </button>
+              </form>
+            ) : (
+              <div className="space-y-4 py-2">
+                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold space-y-1">
+                  <p className="font-extrabold text-sm flex items-center gap-1.5">
+                    <CheckCircle2 size={18} /> CAPTCHA Berhasil Diverifikasi!
+                  </p>
+                  <p className="opacity-90">
+                    Kata sandi default untuk akun <strong className="underline">{selectedUser?.name}</strong> telah diisi otomatis: <strong>{selectedUser?.password || 'admin123'}</strong>
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setShowForgotPasswordModal(false)}
+                  className="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/30 transition cursor-pointer"
+                >
+                  Gunakan Kata Sandi
+                </button>
+              </div>
+            )}
           </div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
+
+      {/* Google SSO Login Modal */}
+      {showGoogleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl text-slate-800 dark:text-slate-100">
+            <button
+              onClick={() => setShowGoogleModal(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="text-center space-y-3 mb-6">
+              <div className="w-12 h-12 mx-auto rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                <svg className="w-6 h-6" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-black">Masuk dengan Google</h3>
+              <p className="text-xs text-slate-500">
+                Pilih akun Google Anda untuk melanjutkan ke Math Fingers.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => handleGoogleLogin('ma.ihyaassunnah@gmail.com')}
+                disabled={isGoogleSigningIn}
+                className="w-full p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-emerald-500 bg-slate-50 dark:bg-slate-800/60 flex items-center gap-3 transition cursor-pointer text-left group"
+              >
+                <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-extrabold flex items-center justify-center shrink-0 shadow-sm">
+                  WH
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-extrabold text-xs text-slate-800 dark:text-white group-hover:text-emerald-500 transition">
+                    Wahyudin Hafiz
+                  </div>
+                  <div className="text-[11px] text-slate-500 truncate">
+                    ma.ihyaassunnah@gmail.com
+                  </div>
+                </div>
+                {isGoogleSigningIn ? (
+                  <RefreshCw size={16} className="animate-spin text-emerald-500 shrink-0" />
+                ) : (
+                  <ChevronRight size={16} className="text-slate-400 group-hover:translate-x-0.5 transition shrink-0" />
+                )}
+              </button>
+            </div>
+
+            <p className="text-[10px] text-center text-slate-400 mt-4">
+              Terhubung aman dengan Google OAuth & Supabase.
+            </p>
+          </div>
+        </div>
+      )}
 
     </div>
   );

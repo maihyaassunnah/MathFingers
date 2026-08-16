@@ -832,29 +832,56 @@ export default function App() {
 
   if (!currentUser) {
     return (
-      <LoginManager 
-        onLogin={(adminUser) => {
-          setCurrentUser(adminUser);
-          try {
-            localStorage.setItem('math_finggers_current_user_obj', JSON.stringify(adminUser));
-            localStorage.setItem('math_finggers_current_user', adminUser.name);
-          } catch (err) {
-            console.warn('LocalStorage quota exceeded when storing user session:', err);
+      <>
+        <LoginManager 
+          onLogin={(adminUser) => {
+            setCurrentUser(adminUser);
             try {
-              const lightweightUser = { ...adminUser, avatarUrl: adminUser.avatarUrl?.startsWith('data:') ? '' : adminUser.avatarUrl };
-              localStorage.setItem('math_finggers_current_user_obj', JSON.stringify(lightweightUser));
+              localStorage.setItem('math_finggers_current_user_obj', JSON.stringify(adminUser));
               localStorage.setItem('math_finggers_current_user', adminUser.name);
-            } catch {
-              // Ignore if localStorage is completely full
+            } catch (err) {
+              console.warn('LocalStorage quota exceeded when storing user session:', err);
+              try {
+                const lightweightUser = { ...adminUser, avatarUrl: adminUser.avatarUrl?.startsWith('data:') ? '' : adminUser.avatarUrl };
+                localStorage.setItem('math_finggers_current_user_obj', JSON.stringify(lightweightUser));
+                localStorage.setItem('math_finggers_current_user', adminUser.name);
+              } catch {
+                // Ignore if localStorage is completely full
+              }
             }
-          }
-        }} 
-        adminUsers={adminUsers}
-        branches={branches}
-        theme={theme}
-        onToggleTheme={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
-        onOpenSelfAttendance={() => setIsSelfAttendanceMode(true)}
-      />
+
+            // Immediately check version for logged in user & open update modal if outdated
+            const userKey = `math_finggers_installed_version_user_${adminUser.username}`;
+            const branchKey = `math_finggers_installed_version_branch_${adminUser.branch}`;
+            const savedVer = localStorage.getItem(branchKey) || localStorage.getItem(userKey) || localStorage.getItem('math_finggers_installed_version') || 'v2.5.0';
+            setInstalledVersion(savedVer);
+            if (savedVer !== LATEST_APP_VERSION) {
+              setIsUpdateModalOpen(true);
+            }
+          }} 
+          adminUsers={adminUsers}
+          branches={branches}
+          theme={theme}
+          onToggleTheme={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
+          onOpenSelfAttendance={() => setIsSelfAttendanceMode(true)}
+          installedVersion={installedVersion}
+          onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
+        />
+
+        <AppUpdateModal
+          isOpen={isUpdateModalOpen}
+          onClose={() => setIsUpdateModalOpen(false)}
+          currentUser={null}
+          theme={theme}
+          isMandatory={installedVersion !== LATEST_APP_VERSION}
+          installedVersion={installedVersion}
+          onUpdateSuccess={() => {
+            setInstalledVersion(LATEST_APP_VERSION);
+            localStorage.setItem('math_finggers_installed_version', LATEST_APP_VERSION);
+            setIsUpdateModalOpen(false);
+          }}
+        />
+      </>
     );
   }
 

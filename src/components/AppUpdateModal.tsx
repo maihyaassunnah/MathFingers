@@ -14,7 +14,8 @@ import {
   QrCode,
   Receipt,
   Check,
-  AlertTriangle
+  AlertTriangle,
+  Smartphone
 } from 'lucide-react';
 import { AdminUser } from '../types';
 
@@ -46,6 +47,12 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
 
   const isLight = theme === 'light';
 
+  // Detect standalone PWA mode
+  const isPwaInstalled = typeof window !== 'undefined' && (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as any).standalone === true
+  );
+
   useEffect(() => {
     if (isOpen) {
       setUpdateStatus('prompt');
@@ -58,7 +65,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
   const handleStartUpdate = () => {
     setUpdateStatus('updating');
     setProgress(10);
-    setStatusText('Mengunduh paket fitur & komponen terbaru...');
+    setStatusText('Mengunduh paket PWA & modul komponen terbaru...');
 
     const interval = setInterval(() => {
       setProgress((prev) => {
@@ -66,20 +73,37 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
           clearInterval(interval);
           setTimeout(() => {
             setProgress(100);
-            setStatusText('Menyelesaikan instalasi & sinkronisasi database...');
+            setStatusText('Memperbarui Service Worker Cache & melesetkan data lokal...');
+            
             setTimeout(() => {
-              // Save installed version
+              // Save installed version for global, user-level, and branch-level keys
               localStorage.setItem('math_finggers_installed_version', LATEST_APP_VERSION);
+              if (currentUser?.username) {
+                localStorage.setItem(`math_finggers_installed_version_user_${currentUser.username}`, LATEST_APP_VERSION);
+              }
+              if (currentUser?.branch) {
+                localStorage.setItem(`math_finggers_installed_version_branch_${currentUser.branch}`, LATEST_APP_VERSION);
+              }
               localStorage.setItem('math_finggers_update_timestamp', new Date().toISOString());
+
+              // Trigger Service Worker Cache Updates if SW is supported
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then((registrations) => {
+                  for (let registration of registrations) {
+                    registration.update();
+                  }
+                }).catch((err) => console.warn('Service worker update call skipped:', err));
+              }
+
               setUpdateStatus('success');
               if (onUpdateSuccess) onUpdateSuccess();
             }, 600);
           }, 300);
           return 90;
         }
-        if (prev < 40) setStatusText('Memperbarui modul presensi, QR Code & laporan keuangan...');
-        else if (prev < 70) setStatusText('Mengoptimalkan cache lokal & performa grafik analitik...');
-        else setStatusText('Memverifikasi integritas data cabang...');
+        if (prev < 40) setStatusText('Memperbarui Service Worker cache, QR Scanner & komponen UI...');
+        else if (prev < 70) setStatusText('Mengoptimalkan database offline & latensi jaringan...');
+        else setStatusText('Memverifikasi integritas versi PWA cabang...');
         return prev + 15;
       });
     }, 250);
@@ -91,7 +115,6 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn"
       onClick={(e) => {
-        // Prevent closing backdrop click if mandatory
         if (isMandatory && updateStatus !== 'success') {
           e.stopPropagation();
         }
@@ -124,23 +147,32 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
           <div className="flex items-center gap-2 mb-2 flex-wrap">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-black tracking-wider uppercase border border-white/30">
               <Sparkles size={13} className="text-amber-300 animate-pulse" />
-              <span>Update Aplikasi System</span>
+              <span>Update PWA Application</span>
             </span>
+            
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-400 text-slate-950 text-xs font-black shadow-xs">
               {LATEST_APP_VERSION}
             </span>
+
+            {isPwaInstalled && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-400 text-slate-950 text-[10px] font-black uppercase tracking-wider shadow-xs">
+                <Smartphone size={12} />
+                <span>PWA Terinstall</span>
+              </span>
+            )}
+
             {isMandatory && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-600 text-white text-[10px] font-black uppercase tracking-wider animate-pulse">
-                Pembaruan Wajib
+                Wajib Update
               </span>
             )}
           </div>
 
           <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white drop-shadow-sm">
-            Pembaruan Sistem Math Fingers Terbaru
+            Pembaruan PWA Math Fingers Terbaru ({LATEST_APP_VERSION})
           </h2>
           <p className="text-xs sm:text-sm text-emerald-100/90 font-medium mt-1">
-            Khusus untuk <span className="font-extrabold underline decoration-amber-300 decoration-2">{branchName}</span> — Wajib perbarui untuk melanjutkan akses.
+            Akun Login: <span className="font-extrabold underline decoration-amber-300 decoration-2">{currentUser?.name || 'Administrator'}</span> ({branchName}) — Perbarui untuk melanjutkan.
           </p>
         </div>
 
@@ -148,7 +180,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
         <div className="p-6 sm:p-8 space-y-6 max-h-[75vh] overflow-y-auto">
           {updateStatus === 'prompt' && (
             <>
-              {/* Alert notice for outdated branch */}
+              {/* Alert notice for outdated PWA */}
               <div className={`p-4 rounded-2xl border flex items-start gap-3.5 ${
                 isMandatory
                   ? isLight 
@@ -164,19 +196,11 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                 <div className="text-xs space-y-1">
                   <div className="flex items-center gap-2">
                     <h4 className="font-extrabold text-sm">
-                      Status: {isMandatory ? 'Versi Lama Terdeteksi - Wajib Update' : `Perlu Diperbarui (${LATEST_APP_VERSION})`}
+                      PWA Versi {installedVersion} Terdeteksi — Perlu Update ke {LATEST_APP_VERSION}
                     </h4>
                   </div>
                   <p className="opacity-95 leading-relaxed font-medium">
-                    {isMandatory ? (
-                      <>
-                        Anda sedang menggunakan aplikasi versi lama (<strong>{installedVersion}</strong>). Anda <strong>tidak dapat melanjutkan</strong> penggunaan aplikasi sebelum melakukan pembaruan ke versi terbaru <strong>{LATEST_APP_VERSION}</strong>.
-                      </>
-                    ) : (
-                      <>
-                        Aplikasi di cabang Anda belum menggunakan versi Rilis Terbaru ({LATEST_APP_VERSION}). Melakukan pembaruan akan mengaktifkan fitur visualisasi grafik keuangan, QR Code scanner, serta perbaikan sinkronisasi data otomatis.
-                      </>
-                    )}
+                    Aplikasi PWA yang terpasang pada perangkat Anda belum menggunakan versi Rilis Terbaru (<strong>{LATEST_APP_VERSION}</strong>). Silakan tekan tombol <strong>"Update PWA Sekarang"</strong> di bawah untuk memasang komponen terbaru.
                   </p>
                 </div>
               </div>
@@ -184,7 +208,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
               {/* Changelog & Feature List */}
               <div className="space-y-3">
                 <h3 className={`text-xs font-black uppercase tracking-wider ${isLight ? 'text-slate-600' : 'text-slate-400'} flex items-center justify-between`}>
-                  <span>Fitur & Peningkatan Terbaru di Versi {LATEST_APP_VERSION}:</span>
+                  <span>Fitur & Peningkatan PWA di Versi {LATEST_APP_VERSION}:</span>
                   <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">Terverifikasi Stabil</span>
                 </h3>
 
@@ -249,10 +273,10 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                     </div>
                     <div>
                       <h4 className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>
-                        Kecepatan 3x & Mode Offline
+                        Kecepatan PWA & Cache Offlining
                       </h4>
                       <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
-                        Auto-sync Supabase, latensi rendah, & akses tanpa kendala meskipun internet lambat.
+                        Service worker pintar dengan auto-sync data saat koneksi terhubung kembali.
                       </p>
                     </div>
                   </div>
@@ -277,7 +301,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                   className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm shadow-xl shadow-emerald-600/30 hover:shadow-emerald-600/50 transition-all flex items-center justify-center gap-2 group cursor-pointer"
                 >
                   <Download size={18} className="group-hover:translate-y-0.5 transition-transform" />
-                  <span>Update Aplikasi Sekarang</span>
+                  <span>Update PWA Sekarang</span>
                   <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
                 </button>
 
@@ -308,7 +332,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
 
               <div className="space-y-2 max-w-md mx-auto">
                 <h3 className={`text-lg font-extrabold ${isLight ? 'text-slate-800' : 'text-white'}`}>
-                  Memperbarui Aplikasi ke {LATEST_APP_VERSION}...
+                  Memperbarui Aplikasi PWA ke {LATEST_APP_VERSION}...
                 </h3>
                 <p className="text-xs text-slate-500 font-medium animate-pulse">
                   {statusText}
@@ -330,7 +354,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
               </div>
 
               <p className="text-[11px] text-slate-400 italic">
-                Mohon tunggu sebentar, jangan menutup halaman ini...
+                Mohon tunggu sebentar, Service Worker sedang meng-update berkas lokal...
               </p>
             </div>
           )}
@@ -343,13 +367,13 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
 
               <div className="space-y-2 max-w-md mx-auto">
                 <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-full text-xs font-extrabold">
-                  Pembaruan Sukses 🎉
+                  Pembaruan PWA Sukses 🎉
                 </span>
                 <h3 className={`text-xl font-black ${isLight ? 'text-slate-800' : 'text-white'}`}>
-                  Aplikasi Berhasil Diperbarui!
+                  Aplikasi PWA Berhasil Diperbarui!
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Cabang <span className="font-bold text-emerald-500">{branchName}</span> kini resmi menjalankan Math Fingers <span className="font-extrabold text-amber-500">{LATEST_APP_VERSION}</span>. Semua fitur baru siap digunakan!
+                  PWA Math Fingers di perangkat Anda kini resmi menggunakan versi <span className="font-extrabold text-amber-500">{LATEST_APP_VERSION}</span>.
                 </p>
               </div>
 
@@ -357,10 +381,10 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                 isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/50 border-slate-800'
               }`}>
                 <h4 className="font-bold flex items-center gap-1.5 text-emerald-500">
-                  <Check size={14} /> Status Modul Terverifikasi:
+                  <Check size={14} /> Status Modul PWA Terverifikasi:
                 </h4>
                 <ul className="grid grid-cols-2 gap-1.5 text-[11px] text-slate-400 font-medium">
-                  <li className="flex items-center gap-1">✓ Visualisasi Grafik Analytics</li>
+                  <li className="flex items-center gap-1">✓ Cache Service Worker Aktif</li>
                   <li className="flex items-center gap-1">✓ Scanner QR Code Siswa</li>
                   <li className="flex items-center gap-1">✓ Invoice & Kuitansi PDF</li>
                   <li className="flex items-center gap-1">✓ Engine Offline Supabase</li>
@@ -370,12 +394,11 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
               <button
                 onClick={() => {
                   onClose();
-                  // Trigger a fresh reload to apply all assets cleanly
                   window.location.reload();
                 }}
-                className="w-full max-w-md py-3.5 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/30 transition-all"
+                className="w-full max-w-md py-3.5 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/30 transition-all cursor-pointer"
               >
-                Buka Aplikasi Versi {LATEST_APP_VERSION}
+                Buka Aplikasi PWA Versi {LATEST_APP_VERSION}
               </button>
             </div>
           )}

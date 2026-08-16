@@ -208,7 +208,19 @@ export function useMathFinggersDb() {
       }
 
       // Set state and save locally for offline capabilities
-      const loadedStudents = studentsData || [];
+      const rawStudents = studentsData || [];
+      const localStudents = getLocalData<Student[]>('students', []);
+      const localPhotoMap: Record<string, string> = {};
+      localStudents.forEach(s => {
+        if (s.photoUrl) localPhotoMap[s.id] = s.photoUrl;
+      });
+
+      const loadedStudents = rawStudents.map((s: Student) => {
+        if (!s.photoUrl && localPhotoMap[s.id]) {
+          return { ...s, photoUrl: localPhotoMap[s.id] };
+        }
+        return s;
+      });
       
       // Deduplicate pre-existing records to ensure one attendance per day per student
       const rawAttendance = attendanceData || [];

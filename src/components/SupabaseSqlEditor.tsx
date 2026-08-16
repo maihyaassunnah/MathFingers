@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
-import { Database, Terminal, Check, Copy, AlertTriangle, Play, HelpCircle, Code, List, Info, RefreshCw, Award, ArrowRight } from 'lucide-react';
+import { Database, Terminal, Check, Copy, AlertTriangle, Play, HelpCircle, Code, List, Info, RefreshCw, Award, ArrowRight, Camera } from 'lucide-react';
 import { Student, Branch, AdminUser } from '../types';
 
 interface SupabaseSqlEditorProps {
@@ -793,7 +793,8 @@ ALTER TABLE students ADD COLUMN IF NOT EXISTS alamat TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Pusat';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "hariLes" TEXT DEFAULT 'Hari Jumat dan Ahad';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "uniqueCode" TEXT;
-ALTER TABLE students ADD COLUMN IF NOT EXISTS kelas TEXT;`,
+ALTER TABLE students ADD COLUMN IF NOT EXISTS kelas TEXT;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS "photoUrl" TEXT;`,
 
     invoices: `-- Melengkapi kolom invoice untuk Cicilan & Riwayat Pembayaran & Kategori Pembayaran
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "amountPaid" NUMERIC DEFAULT 0;
@@ -935,6 +936,39 @@ CREATE POLICY "Allow public read-write for demo" ON finance_expenses FOR ALL USI
           <RefreshCw size={13} className={isTesting ? 'animate-spin' : ''} />
           <span>{isTesting ? 'Memeriksa...' : 'Pindai Skema Tabel'}</span>
         </button>
+      </div>
+
+      {/* Photo Column Fix Callout Banner */}
+      <div className={`p-4 rounded-2xl border flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
+        isLight ? 'bg-amber-500/10 border-amber-500/30 text-amber-900' : 'bg-amber-500/10 border-amber-500/30 text-amber-200'
+      }`}>
+        <div className="flex items-start gap-3 w-full">
+          <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 shrink-0 mt-0.5">
+            <Camera size={20} />
+          </div>
+          <div className="space-y-1.5 flex-1 min-w-0">
+            <h4 className="font-bold text-sm text-amber-400 flex items-center gap-1.5">
+              <span>Solusi Foto Siswa Tidak Tersimpan di Supabase</span>
+            </h4>
+            <p className="text-xs text-slate-300 leading-relaxed font-medium">
+              Jika tabel <code className="text-amber-300 bg-slate-950 px-1 py-0.5 rounded font-mono">students</code> sudah ada sebelumnya di Supabase, perintah <code className="text-amber-300 bg-slate-950 px-1 py-0.5 rounded font-mono">CREATE TABLE IF NOT EXISTS</code> akan dilewati sehingga kolom <code className="text-amber-300 bg-slate-950 px-1 py-0.5 rounded font-mono">photoUrl</code> belum terbuat.
+            </p>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Silakan salin dan jalankan skrip di bawah ini di menu <strong className="text-emerald-400">SQL Editor</strong> Supabase Anda untuk menambahkan kolom foto secara instan tanpa merusak data siswa yang sudah ada:
+            </p>
+            <div className="p-2.5 rounded-lg bg-slate-950 text-emerald-400 font-mono text-xs border border-slate-800 mt-2 flex items-center justify-between gap-2 overflow-x-auto">
+              <code className="whitespace-nowrap">ALTER TABLE students ADD COLUMN IF NOT EXISTS "photoUrl" TEXT;</code>
+              <button
+                type="button"
+                onClick={() => handleCopy('ALTER TABLE students ADD COLUMN IF NOT EXISTS "photoUrl" TEXT;', 'photo-fix-cmd')}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold px-3 py-1.5 rounded-md shrink-0 transition flex items-center gap-1 cursor-pointer"
+              >
+                {copiedIndex === 'photo-fix-cmd' ? <Check size={13} /> : <Copy size={13} />}
+                <span>{copiedIndex === 'photo-fix-cmd' ? 'Disalin!' : 'Salin SQL Foto'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Grid of Sub-sections */}

@@ -133,7 +133,8 @@ CREATE TABLE IF NOT EXISTS students (
   branch TEXT DEFAULT 'Pusat',
   "hariLes" TEXT DEFAULT 'Hari Jumat dan Ahad',
   "uniqueCode" TEXT,
-  kelas TEXT
+  kelas TEXT,
+  "photoUrl" TEXT
 );
 
 -- Enable RLS & Bypass for simple usage
@@ -409,7 +410,8 @@ ON CONFLICT (id) DO NOTHING;`;
   branch TEXT DEFAULT 'Pusat',
   "hariLes" TEXT DEFAULT 'Hari Jumat dan Ahad',
   "uniqueCode" TEXT,
-  kelas TEXT
+  kelas TEXT,
+  "photoUrl" TEXT
 );`,
     classes: `CREATE TABLE IF NOT EXISTS classes (
   id TEXT PRIMARY KEY,
@@ -636,6 +638,7 @@ ALTER TABLE students ADD COLUMN IF NOT EXISTS "activeMaterialId" TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "hariLes" TEXT DEFAULT 'Hari Jumat dan Ahad';
 ALTER TABLE students ADD COLUMN IF NOT EXISTS "uniqueCode" TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS kelas TEXT;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS "photoUrl" TEXT;
 ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS "avatarUrl" TEXT;
 
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "amountPaid" NUMERIC DEFAULT 0;

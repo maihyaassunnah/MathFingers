@@ -517,34 +517,53 @@ export function StudentProgressReport({
 
                 {/* Student Info Card */}
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 text-xs sm:text-sm text-slate-700 space-y-4">
-                  <div className="font-extrabold text-slate-900 border-b border-slate-200 pb-2.5 text-sm uppercase tracking-wider flex items-center gap-2">
-                    <UserCheck size={18} className="text-emerald-600" />
-                    <span>INFORMASI SISWA</span>
+                  <div className="font-extrabold text-slate-900 border-b border-slate-200 pb-2.5 text-sm uppercase tracking-wider flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <UserCheck size={18} className="text-emerald-600" />
+                      <span>INFORMASI SISWA</span>
+                    </div>
+                    {currentStudent.photoUrl && (
+                      <span className="text-[11px] font-normal text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                        Foto Terverifikasi
+                      </span>
+                    )}
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-                    <div>
-                      <span className="text-slate-400 inline-block w-32">Nama Lengkap</span>
-                      <strong className="text-slate-900">: {currentStudent.name}</strong>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 inline-block w-32">Kelas Bimbingan</span>
-                      <strong className="text-emerald-700">: {currentStudent.kelas || '-'}</strong>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 inline-block w-32">Wali / Orang Tua</span>
-                      <span className="font-semibold text-slate-800">: {currentStudent.parentName}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 inline-block w-32">Level Bimbingan</span>
-                      <span className="font-semibold text-slate-800">: {currentStudent.level}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 inline-block w-32">Nomor Kontak</span>
-                      <span className="font-semibold text-slate-800">: {currentStudent.parentPhone}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 inline-block w-32">Mulai Bergabung</span>
-                      <span className="font-semibold text-slate-800">: {currentStudent.joinDate}</span>
+                  <div className="flex flex-col sm:flex-row gap-5 items-start">
+                    {currentStudent.photoUrl && (
+                      <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-emerald-500/30 bg-white shrink-0 shadow-sm">
+                        <img 
+                          src={currentStudent.photoUrl} 
+                          alt={currentStudent.name} 
+                          className="w-full h-full object-cover" 
+                          referrerPolicy="no-referrer" 
+                        />
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 flex-1">
+                      <div>
+                        <span className="text-slate-400 inline-block w-32">Nama Lengkap</span>
+                        <strong className="text-slate-900">: {currentStudent.name}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 inline-block w-32">Kelas Bimbingan</span>
+                        <strong className="text-emerald-700">: {currentStudent.kelas || '-'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 inline-block w-32">Wali / Orang Tua</span>
+                        <span className="font-semibold text-slate-800">: {currentStudent.parentName}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 inline-block w-32">Level Bimbingan</span>
+                        <span className="font-semibold text-slate-800">: {currentStudent.level}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 inline-block w-32">Nomor Kontak</span>
+                        <span className="font-semibold text-slate-800">: {currentStudent.parentPhone}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 inline-block w-32">Mulai Bergabung</span>
+                        <span className="font-semibold text-slate-800">: {currentStudent.joinDate}</span>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Student, TeacherNote } from '../types';
+import { Student, TeacherNote, ClassGroup } from '../types';
 import { formatRupiah, getWhatsAppLink } from '../utils';
 import { 
   History, 
@@ -10,21 +10,32 @@ import {
   Send, 
   Award,
   Clock,
-  Sparkles
+  Sparkles,
+  Layers
 } from 'lucide-react';
 import { CustomDropdown } from './CustomDropdown';
 
 interface JournalHistoryProps {
   students: Student[];
   notes: TeacherNote[];
+  classes?: ClassGroup[] | { id?: string; name: string }[];
   theme?: string;
 }
 
-export function JournalHistory({ students, notes, theme = 'dark' }: JournalHistoryProps) {
+export function JournalHistory({ students, notes, classes = [], theme = 'dark' }: JournalHistoryProps) {
   const isLight = theme === 'light';
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedClass, setSelectedClass] = useState('All');
   const [selectedStudentId, setSelectedStudentId] = useState('All');
   const [selectedMonth, setSelectedMonth] = useState('All');
+
+  // Available classes
+  const availableClasses = Array.from(
+    new Set([
+      ...classes.map(c => c.name),
+      ...students.map(s => s.kelas).filter(Boolean) as string[]
+    ])
+  ).filter(Boolean).sort();
 
   // Utility to map color classes based on accent
   const getAccentBgClass = () => 'bg-emerald-500';
@@ -51,6 +62,15 @@ export function JournalHistory({ students, notes, theme = 'dark' }: JournalHisto
       studentName.toLowerCase().includes(searchQuery.toLowerCase());
       
     const matchesStudent = selectedStudentId === 'All' || note.studentId === selectedStudentId;
+
+    let matchesClass = true;
+    if (selectedClass !== 'All') {
+      if (selectedClass === 'Unassigned') {
+        matchesClass = !student?.kelas;
+      } else {
+        matchesClass = student?.kelas === selectedClass;
+      }
+    }
     
     let noteMonth = '';
     try {
@@ -59,7 +79,14 @@ export function JournalHistory({ students, notes, theme = 'dark' }: JournalHisto
     
     const matchesMonth = selectedMonth === 'All' || noteMonth === selectedMonth;
 
-    return matchesSearch && matchesStudent && matchesMonth;
+    return matchesSearch && matchesStudent && matchesClass && matchesMonth;
+  });
+
+  // Students for dropdown
+  const dropdownFilteredStudents = students.filter(s => {
+    if (selectedClass === 'All') return true;
+    if (selectedClass === 'Unassigned') return !s.kelas;
+    return s.kelas === selectedClass;
   });
 
   // Calculate stats
@@ -136,7 +163,7 @@ export function JournalHistory({ students, notes, theme = 'dark' }: JournalHisto
       <div className={`p-4 rounded-2xl border ${
         isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
       }`}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           {/* Search Input */}
           <div className="relative">
             <Search className="absolute left-3 top-3.5 text-slate-400" size={16} />
@@ -151,14 +178,34 @@ export function JournalHistory({ students, notes, theme = 'dark' }: JournalHisto
             />
           </div>
 
+          {/* Class Filter */}
+          <div className="w-full">
+            <CustomDropdown
+              id="history-filter-class"
+              value={selectedClass}
+              onChange={(val) => {
+                setSelectedClass(val);
+                setSelectedStudentId('All');
+              }}
+              options={[
+                { value: 'All', label: 'Semua Kelas' },
+                ...availableClasses.map(cls => ({ value: cls, label: `Kelas: ${cls}` })),
+                { value: 'Unassigned', label: 'Belum Ada Kelas' }
+              ]}
+              theme={theme}
+              className="w-full"
+            />
+          </div>
+
           {/* Student Filter */}
           <div className="w-full">
             <CustomDropdown
+              id="history-filter-student"
               value={selectedStudentId}
               onChange={(val) => setSelectedStudentId(val)}
               options={[
                 { value: 'All', label: 'Semua Siswa' },
-                ...students.map(student => ({ value: student.id, label: student.name }))
+                ...dropdownFilteredStudents.map(student => ({ value: student.id, label: student.name }))
               ]}
               theme={theme}
               className="w-full"
@@ -168,6 +215,7 @@ export function JournalHistory({ students, notes, theme = 'dark' }: JournalHisto
           {/* Month Filter */}
           <div className="w-full">
             <CustomDropdown
+              id="history-filter-month"
               value={selectedMonth}
               onChange={(val) => setSelectedMonth(val)}
               options={[
@@ -207,9 +255,15 @@ export function JournalHistory({ students, notes, theme = 'dark' }: JournalHisto
                     {/* Date and Student Details */}
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="font-extrabold text-sm text-emerald-500 flex items-center gap-1.5">
+                        <div className="font-extrabold text-sm text-emerald-500 flex items-center gap-1.5 flex-wrap">
                           <Sparkles size={14} />
                           <span>{note.studentName}</span>
+                          {student?.kelas && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                              <Layers size={10} />
+                              <span>{student.kelas}</span>
+                            </span>
+                          )}
                         </div>
                         <div className={`text-xs flex items-center gap-1 mt-0.5 font-medium ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
                           <Calendar size={11} />
@@ -237,7 +291,7 @@ export function JournalHistory({ students, notes, theme = 'dark' }: JournalHisto
 
                     {/* Teacher Notes Content */}
                     <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-700 font-medium' : 'text-slate-300'}`}>
-                      {note.content}
+                      "{note.content}"
                     </p>
                   </div>
 
@@ -262,3 +316,4 @@ export function JournalHistory({ students, notes, theme = 'dark' }: JournalHisto
     </div>
   );
 }
+

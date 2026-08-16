@@ -18,6 +18,7 @@ export interface Student {
   hariLes?: string; // e.g. "Hari Jumat dan Ahad", "Sabtu dan Ahad"
   uniqueCode?: string; // 5-digit random/unique code
   kelas?: string; // e.g. "Kelas Reguler A (Senin & Rabu)"
+  photoUrl?: string; // Profile photo URL or base64 data URI
 }
 
 export interface Attendance {
@@ -103,6 +104,17 @@ export interface AppSettings {
   appIcon?: string;
   branch?: string;
   branches?: string;
+  // Custom Mobile App Experience Settings (Diatur oleh Super Admin)
+  mobileHeroTitle?: string;
+  mobileHeroSubtitle?: string;
+  mobileHeroBannerUrl?: string;
+  mobileHeroBadgeText?: string;
+  mobileHeroPrimaryBtnText?: string;
+  mobileHeroPrimaryBtnAction?: string;
+  mobileHeroSecondaryBtnText?: string;
+  mobileHeroSecondaryBtnAction?: string;
+  mobilePopularServicesTitle?: string;
+  mobileRecommendedTitle?: string;
 }
 
 export interface DashboardTask {

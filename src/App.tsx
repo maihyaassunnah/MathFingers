@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useMathFinggersDb } from './hooks/useMathFinggersDb';
+import { useMediaQuery } from './hooks/useMediaQuery';
 import { supabase } from './supabase';
 import { DashboardOverview } from './components/DashboardOverview';
 import { StudentManager } from './components/StudentManager';
@@ -23,6 +24,8 @@ import FinanceManager from './components/FinanceManager';
 import { StudentSelfAttendanceView } from './components/StudentSelfAttendanceView';
 import { StudentQrCards } from './components/StudentQrCards';
 import { AppUpdateModal, LATEST_APP_VERSION } from './components/AppUpdateModal';
+import { MobileBottomNavigation } from './components/MobileBottomNavigation';
+import { MobileDrawer } from './components/MobileDrawer';
 import { AdminUser, Branch } from './types';
 import { getAdminAvatar, updateDynamicPwaIcon, getStudentUniqueCode } from './utils';
 
@@ -146,6 +149,7 @@ export default function App() {
   const [activeBranch, setActiveBranch] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const isDesktop = useMediaQuery('(min-width: 768px)');
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('math_finggers_theme') as 'light' | 'dark') || 'dark';
   });
@@ -588,6 +592,8 @@ export default function App() {
             classes={filteredClasses}
             branches={branches}
             attendance={attendance}
+            notes={notes}
+            currentUser={currentUser}
             onAddAttendanceBatch={addAttendanceBatch}
             theme={theme}
             isSuperAdmin={isSuperAdmin}
@@ -635,6 +641,7 @@ export default function App() {
           <TeacherNotes 
             students={filteredStudents} 
             notes={filteredNotes} 
+            classes={filteredClasses}
             onAddNote={handleAddTeacherNote} 
             onAddNotesBatch={handleAddTeacherNotesBatch}
             onDeleteNote={deleteTeacherNote} 
@@ -646,6 +653,7 @@ export default function App() {
           <JournalHistory 
             students={filteredStudents} 
             notes={filteredNotes} 
+            classes={filteredClasses}
             theme={theme}
           />
         );
@@ -848,336 +856,242 @@ export default function App() {
     <div className={`min-h-screen flex flex-col md:flex-row transition-colors duration-150 relative ${theme === 'dark' ? 'bg-[#0f172a] math-pattern-dark text-slate-300' : 'bg-[#fdfcf2] math-pattern-light text-slate-700'}`}>
       
       {/* 1. TOP NAVBAR (MOBILE ONLY) */}
-      <header className={`md:hidden px-4 pt-7 pb-3 flex items-center justify-between sticky top-0 z-40 shadow-sm border-b transition-colors duration-150 ${
-        theme === 'dark' ? 'bg-[#020617] border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-800'
-      }`}>
-        <MathFingerLogo size={36} textSize="sm" theme={theme} />
+      {!isDesktop && (
+        <header className={`px-4 pt-7 pb-3 flex items-center justify-between sticky top-0 z-40 shadow-sm border-b transition-colors duration-150 ${
+          theme === 'dark' ? 'bg-[#020617] border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-800'
+        }`}>
+          <MathFingerLogo size={36} textSize="sm" theme={theme} />
 
-        <div className="flex items-center gap-2">
-          {/* Light/Dark Toggle (Mobile) */}
-          <button
-            onClick={toggleTheme}
-            className={`p-2 rounded-xl transition ${theme === 'dark' ? 'text-amber-400 hover:bg-slate-800/50' : 'text-slate-600 hover:bg-slate-100'}`}
-            title={theme === 'dark' ? 'Aktifkan Mode Terang' : 'Aktifkan Mode Gelap'}
-          >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Light/Dark Toggle (Mobile) */}
+            <button
+              onClick={toggleTheme}
+              className={`p-2 rounded-xl transition ${theme === 'dark' ? 'text-amber-400 hover:bg-slate-800/50' : 'text-slate-600 hover:bg-slate-100'}`}
+              title={theme === 'dark' ? 'Aktifkan Mode Terang' : 'Aktifkan Mode Gelap'}
+            >
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
 
-          {/* Mobile Offline Status indicator with real-time ping latency and rating */}
-          {isOfflineFallback || pingLatency === null ? (
-            <span className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 text-amber-500 dark:text-amber-400 border border-amber-500/20 rounded-xl text-xs shadow-xs" title="Koneksi Terputus - Mode Penyimpanan Lokal Aktif">
-              <CloudLightning size={14} className="animate-pulse text-amber-500" />
-              <span className="font-extrabold text-[10px] tracking-wider uppercase">Lokal Safe</span>
-            </span>
-          ) : (
-            (() => {
-              const rating = pingLatency < 100 ? { label: 'Sangat Baik', colorClass: 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/20', pingColor: 'bg-emerald-400' } :
-                             pingLatency < 250 ? { label: 'Cukup', colorClass: 'bg-amber-500/10 text-amber-500 dark:text-amber-400 border-amber-500/20', pingColor: 'bg-amber-400' } :
-                             { label: 'Lambat', colorClass: 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/20', pingColor: 'bg-rose-400' };
-              return (
-                <span className={`flex items-center gap-1.5 px-2.5 py-1 border rounded-xl text-xs transition-all shadow-xs ${rating.colorClass}`} title={`Supabase Terhubung - Latensi: ${pingLatency}ms (${rating.label})`}>
-                  <span className="relative flex h-2 w-2">
-                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${rating.pingColor}`}></span>
-                    <span className={`relative inline-flex rounded-full h-2 w-2 ${rating.pingColor.replace('400', '500')}`}></span>
-                  </span>
-                  <Wifi size={14} />
-                  <span className="font-extrabold text-[10px]">{pingLatency} ms</span>
-                  <span className="text-[8px] opacity-75 font-bold uppercase tracking-wider hidden xs:inline">({rating.label})</span>
-                </span>
-              );
-            })()
-          )}
-        </div>
-      </header>
-
-      {/* 2. SIDEBAR (DESKTOP ONLY) */}
-      <aside className={`hidden md:flex flex-col w-64 border-r sticky top-0 h-screen overflow-y-auto transition-colors duration-150 ${
-        theme === 'dark' ? 'bg-[#020617] border-slate-800' : 'bg-white border-slate-200'
-      }`}>
-        {/* Brand Identity */}
-        <div className={`p-5 border-b flex flex-col items-center text-center space-y-3 ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'}`}>
-          <MathFingerLogo size={64} textSize="md" theme={theme} />
-          
-          {/* Light/Dark Toggle (Desktop) */}
-          <button
-            onClick={toggleTheme}
-            className={`mt-1.5 flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
-              theme === 'dark' 
-                ? 'bg-slate-900 border-slate-800 text-amber-400 hover:text-white hover:bg-slate-800' 
-                : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            {theme === 'dark' ? (
-              <>
-                <Sun size={14} />
-                <span>Mode Terang</span>
-              </>
-            ) : (
-              <>
-                <Moon size={14} />
-                <span>Mode Gelap</span>
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Database Sync Status */}
-        <div className={`px-6 py-2.5 border-b flex items-center justify-between text-xs ${theme === 'dark' ? 'bg-slate-950/40 border-slate-800/60' : 'bg-slate-50 border-slate-200'}`}>
-          <span className="text-slate-500 font-medium">Database:</span>
-          {isOfflineFallback || pingLatency === null ? (
-            <span className="inline-flex items-center gap-1 font-semibold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
-              <CloudLightning size={10} className="animate-pulse" />
-              <span>Offline / Lokal</span>
-            </span>
-          ) : (
-            (() => {
-              const rating = pingLatency < 100 ? { label: 'Cepat', colorClass: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20', pingColor: 'bg-emerald-400' } :
-                             pingLatency < 250 ? { label: 'Sedang', colorClass: 'text-amber-500 bg-amber-500/10 border-amber-500/20', pingColor: 'bg-amber-400' } :
-                             { label: 'Lambat', colorClass: 'text-rose-500 bg-rose-500/10 border-rose-500/20', pingColor: 'bg-rose-400' };
-              return (
-                <span className={`inline-flex items-center gap-1.5 font-semibold px-2 py-0.5 rounded-lg border transition-all ${rating.colorClass}`} title={`Latensi Ping: ${pingLatency}ms (${rating.label})`}>
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${rating.pingColor}`}></span>
-                    <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${rating.pingColor.replace('400', '500')}`}></span>
-                  </span>
-                  <Wifi size={10} />
-                  <span>Cloud ({pingLatency} ms - {rating.label})</span>
-                </span>
-              );
-            })()
-          )}
-        </div>
-
-        {/* App Version / Update Status in Sidebar */}
-        <div className={`px-5 py-2 border-b flex items-center justify-between text-xs ${theme === 'dark' ? 'bg-slate-950/60 border-slate-800/60' : 'bg-slate-100/70 border-slate-200'}`}>
-          <span className="text-slate-400 font-medium text-[11px]">Versi App:</span>
-          <button
-            type="button"
-            onClick={() => setIsUpdateModalOpen(true)}
-            className={`inline-flex items-center gap-1 font-bold text-[10px] px-2 py-0.5 rounded-lg border transition cursor-pointer ${
-              installedVersion === LATEST_APP_VERSION
-                ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/25'
-                : 'bg-amber-500/15 text-amber-500 border-amber-500/30 hover:bg-amber-500/25'
-            }`}
-            title="Klik untuk membuka rincian rilis aplikasi"
-          >
-            {installedVersion === LATEST_APP_VERSION ? (
-              <>
-                <CheckCircle2 size={10} className="text-emerald-500" />
-                <span>{LATEST_APP_VERSION} (Terbaru)</span>
-              </>
-            ) : (
-              <>
-                <Sparkles size={10} className="animate-pulse text-amber-500" />
-                <span>{LATEST_APP_VERSION} (Update!)</span>
-              </>
-            )}
-          </button>
-        </div>
-        <nav className="flex-1 p-4 space-y-1">
-          {navigationItems.map((item) => {
-            const IconComponent = item.icon;
-            const isActive = activeTab === item.id;
-            const isDivider2 = item.id === 'branches_mgmt' || (item.id === 'settings' && currentUser?.role !== 'super_admin');
-
-            return (
-              <div key={item.id} className="space-y-1">
-                {item.id === 'attendance' && (
-                  <div className="pt-4 pb-1.5 px-3">
-                    <div className={`border-t ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'} mb-2.5`} />
-                    <span className={`text-[10px] font-bold tracking-wider uppercase block ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
-                      Akademik & Operasional
-                    </span>
-                  </div>
-                )}
-                {isDivider2 && (
-                  <div className="pt-4 pb-1.5 px-3">
-                    <div className={`border-t ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'} mb-2.5`} />
-                    <span className={`text-[10px] font-bold tracking-wider uppercase block ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
-                      Administrasi & Sistem
-                    </span>
-                  </div>
-                )}
-                <button
-                  onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-150 relative ${
-                    isActive 
-                      ? getAccentBgClass() 
-                      : theme === 'dark'
-                        ? 'text-slate-400 hover:text-white hover:bg-slate-800/30'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  <IconComponent size={18} className={isActive ? 'text-white dark:text-slate-950' : theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} />
-                  <span className="whitespace-nowrap truncate">{item.name}</span>
-                  {isActive && (
-                    <span className="absolute right-3 top-4.5 w-1.5 h-1.5 bg-white dark:bg-slate-950 rounded-full" />
-                  )}
-                </button>
-              </div>
-            );
-          })}
-        </nav>
-
-        {/* Admin Profile & Logout (Desktop) */}
-        <div className={`p-4 border-t flex flex-col gap-3.5 ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'}`}>
-          <div className="flex items-center gap-3">
-            <div className="relative shrink-0">
-              <img
-                src={getAdminAvatar(currentUser || { username: 'guest' })}
-                alt={currentUser?.name}
-                referrerPolicy="no-referrer"
-                className="w-10 h-10 rounded-xl object-cover border border-slate-250 dark:border-slate-700 shadow-xs"
-              />
-              <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-white dark:border-slate-900 ${
-                currentUser?.role === 'super_admin' ? 'bg-indigo-500' : 'bg-amber-500'
-              }`} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h4 className={`text-xs font-bold truncate ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>{currentUser?.name}</h4>
-              <span className="text-[10px] text-slate-500 font-medium block">
-                {currentUser?.role === 'super_admin' ? 'Super Admin' : `Admin Cabang ${currentUser?.branch}`}
+            {/* Mobile Offline Status indicator with real-time ping latency and rating */}
+            {isOfflineFallback || pingLatency === null ? (
+              <span className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 text-amber-500 dark:text-amber-400 border border-amber-500/20 rounded-xl text-xs shadow-xs" title="Koneksi Terputus - Mode Penyimpanan Lokal Aktif">
+                <CloudLightning size={14} className="animate-pulse text-amber-500" />
+                <span className="font-extrabold text-[10px] tracking-wider uppercase">Lokal Safe</span>
               </span>
-            </div>
-          </div>
-          
-          <button
-            onClick={() => {
-              setCurrentUser(null);
-              localStorage.removeItem('math_finggers_current_user_obj');
-              localStorage.removeItem('math_finggers_current_user');
-            }}
-            className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold border transition ${
-              theme === 'dark'
-                ? 'bg-red-500/5 hover:bg-red-500/10 border-red-500/10 text-red-400 hover:text-red-300'
-                : 'bg-red-50/50 hover:bg-red-100/50 border-red-200/50 text-red-600'
-            }`}
-          >
-            <LogOut size={13} />
-            <span>Keluar Sesi</span>
-          </button>
-
-          <div className="text-[9px] text-slate-500 text-center mt-1">
-            &copy; {new Date().getFullYear()} Math Fingers System v1.1.0
-          </div>
-        </div>
-      </aside>
-
-      {/* 3. MOBILE MENU SIDE-DRAWER OVERLAY */}
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex">
-          {/* Backdrop */}
-          <div 
-            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm"
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
-
-          {/* Drawer menu content */}
-          <div className={`relative w-72 max-w-[80vw] h-full shadow-2xl flex flex-col z-10 border-r animate-slide-right ${
-            theme === 'dark' ? 'bg-[#020617] border-slate-800' : 'bg-white border-slate-200'
-          }`}>
-            <div className={`p-5 border-b flex items-center justify-between ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
-              <div className="flex items-center gap-2">
-                <Sparkles className="text-emerald-500" size={20} />
-                <span className={`font-bold text-sm ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Navigasi Aplikasi</span>
-              </div>
-              <button 
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="text-slate-400 hover:text-white font-medium"
-              >
-                ✕
-              </button>
-            </div>
-
-            <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-              {navigationItems.filter(item => !visibleMobileTabIds.includes(item.id)).map((item) => {
-                const IconComponent = item.icon;
-                const isActive = activeTab === item.id;
-                const isDivider2 = item.id === 'branches_mgmt' || (item.id === 'settings' && currentUser?.role !== 'super_admin');
-
+            ) : (
+              (() => {
+                const rating = pingLatency < 100 ? { label: 'Sangat Baik', colorClass: 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/20', pingColor: 'bg-emerald-400' } :
+                               pingLatency < 250 ? { label: 'Cukup', colorClass: 'bg-amber-500/10 text-amber-500 dark:text-amber-400 border-amber-500/20', pingColor: 'bg-amber-400' } :
+                               { label: 'Lambat', colorClass: 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/20', pingColor: 'bg-rose-400' };
                 return (
-                  <div key={item.id} className="space-y-1">
-                    {item.id === 'attendance' && (
-                      <div className="pt-4 pb-1.5 px-3">
-                        <div className={`border-t ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'} mb-2.5`} />
-                        <span className={`text-[10px] font-bold tracking-wider uppercase block ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
-                          Akademik & Operasional
-                        </span>
-                      </div>
-                    )}
-                    {isDivider2 && (
-                      <div className="pt-4 pb-1.5 px-3">
-                        <div className={`border-t ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'} mb-2.5`} />
-                        <span className={`text-[10px] font-bold tracking-wider uppercase block ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
-                          Administrasi & Sistem
-                        </span>
-                      </div>
-                    )}
-                    <button
-                      onClick={() => {
-                        setActiveTab(item.id);
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl font-bold text-xs transition ${
-                        isActive 
-                          ? getAccentBgClass() 
-                          : theme === 'dark'
-                            ? 'text-slate-400 hover:text-white hover:bg-slate-800/30'
-                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                      }`}
-                    >
-                      <IconComponent size={16} className={isActive ? 'text-white dark:text-slate-950' : theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} />
-                      <span>{item.name}</span>
-                    </button>
-                  </div>
-                );
-              })}
-            </nav>
-
-            {/* Admin Profile & Logout (Mobile Drawer) */}
-            <div className={`p-4 border-t flex flex-col gap-3 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
-              <div className="flex items-center gap-3">
-                <div className="relative shrink-0">
-                  <img
-                    src={getAdminAvatar(currentUser || { username: 'guest' })}
-                    alt={currentUser?.name}
-                    referrerPolicy="no-referrer"
-                    className="w-8 h-8 rounded-lg object-cover border border-slate-250 dark:border-slate-700 shadow-xs"
-                  />
-                  <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-white dark:border-slate-900 ${
-                    currentUser?.role === 'super_admin' ? 'bg-indigo-500' : 'bg-amber-500'
-                  }`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className={`text-xs font-bold truncate ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>{currentUser?.name}</h4>
-                  <span className="text-[9px] text-slate-500">
-                    {currentUser?.role === 'super_admin' ? 'Super Admin' : `Admin Cabang ${currentUser?.branch}`}
+                  <span className={`flex items-center gap-1.5 px-2.5 py-1 border rounded-xl text-xs transition-all shadow-xs ${rating.colorClass}`} title={`Supabase Terhubung - Latensi: ${pingLatency}ms (${rating.label})`}>
+                    <span className="relative flex h-2 w-2">
+                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${rating.pingColor}`}></span>
+                      <span className={`relative inline-flex rounded-full h-2 w-2 ${rating.pingColor.replace('400', '500')}`}></span>
+                    </span>
+                    <Wifi size={14} />
+                    <span className="font-extrabold text-[10px]">{pingLatency} ms</span>
+                    <span className="text-[8px] opacity-75 font-bold uppercase tracking-wider hidden xs:inline">({rating.label})</span>
                   </span>
+                );
+              })()
+            )}
+          </div>
+        </header>
+      )}
+
+      {/* 2. SIDEBAR (DESKTOP ONLY via isDesktop) */}
+      {isDesktop && (
+        <aside className={`flex flex-col w-64 border-r sticky top-0 h-screen overflow-y-auto transition-colors duration-150 ${
+          theme === 'dark' ? 'bg-[#020617] border-slate-800' : 'bg-white border-slate-200'
+        }`}>
+          {/* Brand Identity */}
+          <div className={`p-5 border-b flex flex-col items-center text-center space-y-3 ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'}`}>
+            <MathFingerLogo size={64} textSize="md" theme={theme} />
+            
+            {/* Light/Dark Toggle (Desktop) */}
+            <button
+              onClick={toggleTheme}
+              className={`mt-1.5 flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
+                theme === 'dark' 
+                  ? 'bg-slate-900 border-slate-800 text-amber-400 hover:text-white hover:bg-slate-800' 
+                  : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              {theme === 'dark' ? (
+                <>
+                  <Sun size={14} />
+                  <span>Mode Terang</span>
+                </>
+              ) : (
+                <>
+                  <Moon size={14} />
+                  <span>Mode Gelap</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Database Sync Status */}
+          <div className={`px-6 py-2.5 border-b flex items-center justify-between text-xs ${theme === 'dark' ? 'bg-slate-950/40 border-slate-800/60' : 'bg-slate-50 border-slate-200'}`}>
+            <span className="text-slate-500 font-medium">Database:</span>
+            {isOfflineFallback || pingLatency === null ? (
+              <span className="inline-flex items-center gap-1 font-semibold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
+                <CloudLightning size={10} className="animate-pulse" />
+                <span>Offline / Lokal</span>
+              </span>
+            ) : (
+              (() => {
+                const rating = pingLatency < 100 ? { label: 'Cepat', colorClass: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20', pingColor: 'bg-emerald-400' } :
+                               pingLatency < 250 ? { label: 'Sedang', colorClass: 'text-amber-500 bg-amber-500/10 border-amber-500/20', pingColor: 'bg-amber-400' } :
+                               { label: 'Lambat', colorClass: 'text-rose-500 bg-rose-500/10 border-rose-500/20', pingColor: 'bg-rose-400' };
+                return (
+                  <span className={`inline-flex items-center gap-1.5 font-semibold px-2 py-0.5 rounded-lg border transition-all ${rating.colorClass}`} title={`Latensi Ping: ${pingLatency}ms (${rating.label})`}>
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${rating.pingColor}`}></span>
+                      <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${rating.pingColor.replace('400', '500')}`}></span>
+                    </span>
+                    <Wifi size={10} />
+                    <span>Cloud ({pingLatency} ms - {rating.label})</span>
+                  </span>
+                );
+              })()
+            )}
+          </div>
+
+          {/* App Version / Update Status in Sidebar */}
+          <div className={`px-5 py-2 border-b flex items-center justify-between text-xs ${theme === 'dark' ? 'bg-slate-950/60 border-slate-800/60' : 'bg-slate-100/70 border-slate-200'}`}>
+            <span className="text-slate-400 font-medium text-[11px]">Versi App:</span>
+            <button
+              type="button"
+              onClick={() => setIsUpdateModalOpen(true)}
+              className={`inline-flex items-center gap-1 font-bold text-[10px] px-2 py-0.5 rounded-lg border transition cursor-pointer ${
+                installedVersion === LATEST_APP_VERSION
+                  ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/25'
+                  : 'bg-amber-500/15 text-amber-500 border-amber-500/30 hover:bg-amber-500/25'
+              }`}
+              title="Klik untuk membuka rincian rilis aplikasi"
+            >
+              {installedVersion === LATEST_APP_VERSION ? (
+                <>
+                  <CheckCircle2 size={10} className="text-emerald-500" />
+                  <span>{LATEST_APP_VERSION} (Terbaru)</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={10} className="animate-pulse text-amber-500" />
+                  <span>{LATEST_APP_VERSION} (Update!)</span>
+                </>
+              )}
+            </button>
+          </div>
+          <nav className="flex-1 p-4 space-y-1">
+            {navigationItems.map((item) => {
+              const IconComponent = item.icon;
+              const isActive = activeTab === item.id;
+              const isDivider2 = item.id === 'branches_mgmt' || (item.id === 'settings' && currentUser?.role !== 'super_admin');
+
+              return (
+                <div key={item.id} className="space-y-1">
+                  {item.id === 'attendance' && (
+                    <div className="pt-4 pb-1.5 px-3">
+                      <div className={`border-t ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'} mb-2.5`} />
+                      <span className={`text-[10px] font-bold tracking-wider uppercase block ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                        Akademik & Operasional
+                      </span>
+                    </div>
+                  )}
+                  {isDivider2 && (
+                    <div className="pt-4 pb-1.5 px-3">
+                      <div className={`border-t ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'} mb-2.5`} />
+                      <span className={`text-[10px] font-bold tracking-wider uppercase block ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                        Administrasi & Sistem
+                      </span>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-150 relative ${
+                      isActive 
+                        ? getAccentBgClass() 
+                        : theme === 'dark'
+                          ? 'text-slate-400 hover:text-white hover:bg-slate-800/30'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
+                  >
+                    <IconComponent size={18} className={isActive ? 'text-white dark:text-slate-950' : theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} />
+                    <span className="whitespace-nowrap truncate">{item.name}</span>
+                    {isActive && (
+                      <span className="absolute right-3 top-4.5 w-1.5 h-1.5 bg-white dark:bg-slate-950 rounded-full" />
+                    )}
+                  </button>
                 </div>
+              );
+            })}
+          </nav>
+
+          {/* Admin Profile & Logout (Desktop) */}
+          <div className={`p-4 border-t flex flex-col gap-3.5 ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'}`}>
+            <div className="flex items-center gap-3">
+              <div className="relative shrink-0">
+                <img
+                  src={getAdminAvatar(currentUser || { username: 'guest' })}
+                  alt={currentUser?.name}
+                  referrerPolicy="no-referrer"
+                  className="w-10 h-10 rounded-xl object-cover border border-slate-250 dark:border-slate-700 shadow-xs"
+                />
+                <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-white dark:border-slate-900 ${
+                  currentUser?.role === 'super_admin' ? 'bg-indigo-500' : 'bg-amber-500'
+                }`} />
               </div>
-              
-              <button
-                onClick={() => {
-                  setCurrentUser(null);
-                  localStorage.removeItem('math_finggers_current_user_obj');
-                  localStorage.removeItem('math_finggers_current_user');
-                }}
-                className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold border transition ${
-                  theme === 'dark'
-                    ? 'bg-red-500/5 hover:bg-red-500/10 border-red-500/10 text-red-400'
-                    : 'bg-red-50/50 hover:bg-red-100/50 border-red-200/50 text-red-600'
-                }`}
-              >
-                <LogOut size={12} />
-                <span>Keluar Sesi</span>
-              </button>
-              
-              <div className="text-[8px] text-slate-500 text-center mt-1">
-                Math Fingers Privat Tutor
+              <div className="flex-1 min-w-0">
+                <h4 className={`text-xs font-bold truncate ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>{currentUser?.name}</h4>
+                <span className="text-[10px] text-slate-500 font-medium block">
+                  {currentUser?.role === 'super_admin' ? 'Super Admin' : `Admin Cabang ${currentUser?.branch}`}
+                </span>
               </div>
             </div>
+            
+            <button
+              onClick={() => {
+                setCurrentUser(null);
+                localStorage.removeItem('math_finggers_current_user_obj');
+                localStorage.removeItem('math_finggers_current_user');
+              }}
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold border transition ${
+                theme === 'dark'
+                  ? 'bg-red-500/5 hover:bg-red-500/10 border-red-500/10 text-red-400 hover:text-red-300'
+                  : 'bg-red-50/50 hover:bg-red-100/50 border-red-200/50 text-red-600'
+              }`}
+            >
+              <LogOut size={13} />
+              <span>Keluar Sesi</span>
+            </button>
+
+            <div className="text-[9px] text-slate-500 text-center mt-1">
+              &copy; {new Date().getFullYear()} Math Fingers System v1.1.0
+            </div>
           </div>
-        </div>
+        </aside>
+      )}
+
+      {/* 3. MOBILE MENU SIDE-DRAWER OVERLAY (ONLY ON NON-DESKTOP) */}
+      {!isDesktop && (
+        <MobileDrawer
+          isOpen={isMobileMenuOpen}
+          onClose={() => setIsMobileMenuOpen(false)}
+          navigationItems={navigationItems}
+          activeTab={activeTab}
+          onSelectTab={(tabId) => setActiveTab(tabId)}
+          currentUser={currentUser}
+          onLogout={() => {
+            setCurrentUser(null);
+            localStorage.removeItem('math_finggers_current_user_obj');
+            localStorage.removeItem('math_finggers_current_user');
+          }}
+          theme={theme}
+          accentBgClass={getAccentBgClass()}
+        />
       )}
 
       {/* 4. MAIN WORKSPACE CONTENT WINDOW */}
@@ -1195,129 +1109,18 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      {/* 5. MOBILE BOTTOM NAVIGATION */}
-      <div className={`md:hidden fixed bottom-0 left-0 right-0 z-40 border-t backdrop-blur-lg transition-colors duration-150 ${
-        theme === 'dark' ? 'bg-[#020617]/90 border-slate-850 text-white' : 'bg-white/95 border-slate-200 text-slate-800'
-      } pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.08)]`}>
-        <div className="flex items-center justify-around py-2.5 px-1">
-          {isSuperAdmin ? (
-            <>
-              {/* Statistik Shortcut */}
-              <button
-                onClick={() => setActiveTab('overview')}
-                className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
-                  activeTab === 'overview' 
-                    ? getAccentTextClass() 
-                    : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
-                }`}
-              >
-                <Home size={20} className={activeTab === 'overview' ? 'scale-110 transition-transform' : 'transition-transform'} />
-                <span className="text-[10px] font-bold tracking-tight">Statistik</span>
-              </button>
-
-              {/* Data Cabang Shortcut */}
-              <button
-                onClick={() => setActiveTab('branches_mgmt')}
-                className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
-                  activeTab === 'branches_mgmt' 
-                    ? getAccentTextClass() 
-                    : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
-                }`}
-              >
-                <Building size={20} className={activeTab === 'branches_mgmt' ? 'scale-110 transition-transform' : 'transition-transform'} />
-                <span className="text-[10px] font-bold tracking-tight">Data Cabang</span>
-              </button>
-
-              {/* Backup / Pengaturan Shortcut */}
-              <button
-                onClick={() => setActiveTab('settings')}
-                className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
-                  activeTab === 'settings' 
-                    ? getAccentTextClass() 
-                    : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
-                }`}
-              >
-                <Settings size={20} className={activeTab === 'settings' ? 'scale-110 transition-transform' : 'transition-transform'} />
-                <span className="text-[10px] font-bold tracking-tight">Pengaturan</span>
-              </button>
-            </>
-          ) : (
-            <>
-              {/* Dashboard Shortcut */}
-              <button
-                onClick={() => setActiveTab('overview')}
-                className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
-                  activeTab === 'overview' 
-                    ? getAccentTextClass() 
-                    : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
-                }`}
-              >
-                <Home size={20} className={activeTab === 'overview' ? 'scale-110 transition-transform' : 'transition-transform'} />
-                <span className="text-[10px] font-bold tracking-tight">Dashboard</span>
-              </button>
-
-              {/* Siswa Shortcut */}
-              <button
-                onClick={() => setActiveTab('students')}
-                className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
-                  activeTab === 'students' 
-                    ? getAccentTextClass() 
-                    : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
-                }`}
-              >
-                <Users size={20} className={activeTab === 'students' ? 'scale-110 transition-transform' : 'transition-transform'} />
-                <span className="text-[10px] font-bold tracking-tight">Siswa</span>
-              </button>
-
-              {/* Absensi Shortcut */}
-              <button
-                onClick={() => setActiveTab('attendance')}
-                className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
-                  activeTab === 'attendance' 
-                    ? getAccentTextClass() 
-                    : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
-                }`}
-              >
-                <CheckSquare size={20} className={activeTab === 'attendance' ? 'scale-110 transition-transform' : 'transition-transform'} />
-                <span className="text-[10px] font-bold tracking-tight">Absensi</span>
-              </button>
-
-              {/* Input Nilai Shortcut */}
-              <button
-                onClick={() => setActiveTab('grades')}
-                className={`flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
-                  activeTab === 'grades' 
-                    ? getAccentTextClass() 
-                    : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
-                }`}
-              >
-                <Award size={20} className={activeTab === 'grades' ? 'scale-110 transition-transform' : 'transition-transform'} />
-                <span className="text-[10px] font-bold tracking-tight text-center">Input Nilai</span>
-              </button>
-            </>
-          )}
-
-          {/* Menu Lainnya Button */}
-          <button
-            onClick={() => setIsMobileMenuOpen(true)}
-            className={`relative flex flex-col items-center gap-1 flex-1 py-1 px-1 transition-all ${
-              isMobileMenuOpen 
-                ? getAccentTextClass() 
-                : 'text-slate-400 hover:text-slate-300 dark:text-slate-500'
-            }`}
-          >
-            <div className="relative">
-              <Menu size={20} className="transition-transform" />
-              {hiddenMobileItemsCount > 0 && (
-                <span className="absolute -top-1.5 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white ring-1.5 ring-white dark:ring-[#020617] scale-90 animate-pulse">
-                  {hiddenMobileItemsCount}
-                </span>
-              )}
-            </div>
-            <span className="text-[10px] font-bold tracking-tight">Lainnya</span>
-          </button>
-        </div>
-      </div>
+      {/* 5. MOBILE BOTTOM NAVIGATION (ONLY ON NON-DESKTOP) */}
+      {!isDesktop && (
+        <MobileBottomNavigation
+          activeTab={activeTab}
+          onSelectTab={(tabId) => setActiveTab(tabId)}
+          onOpenDrawer={() => setIsMobileMenuOpen(true)}
+          isSuperAdmin={isSuperAdmin}
+          theme={theme}
+          accentClass={getAccentTextClass()}
+          hiddenCount={hiddenMobileItemsCount}
+        />
+      )}
 
       {/* SCAN STUDENT QR ATTENDANCE MODAL OVERLAY */}
       {scannedStudentId && (() => {

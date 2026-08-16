@@ -1,7 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Student, ClassGroup, Branch } from '../types';
+import { Student, ClassGroup, Branch, AdminUser, TeacherNote } from '../types';
 import { CustomDropdown } from './CustomDropdown';
 import { getStudentUniqueCode } from '../utils';
+import { 
+  generateStudentQrCardPDF, 
+  generateBatchStudentQrCardsPDF, 
+  getTeacherSignatureName 
+} from '../utils/pdfGenerator';
 import jsQR from 'jsqr';
 import { 
   Search, 
@@ -22,7 +27,9 @@ import {
   Scissors,
   CheckCircle2,
   Maximize2,
-  Minimize2
+  Minimize2,
+  FileText,
+  UserCheck
 } from 'lucide-react';
 
 interface StudentQrCardsProps {
@@ -30,6 +37,8 @@ interface StudentQrCardsProps {
   classes?: ClassGroup[];
   branches?: Branch[];
   attendance?: any[];
+  notes?: TeacherNote[];
+  currentUser?: AdminUser | null;
   onAddAttendanceBatch?: (records: any[]) => Promise<void>;
   theme?: string;
   isSuperAdmin?: boolean;
@@ -40,6 +49,8 @@ export function StudentQrCards({
   classes = [],
   branches = [],
   attendance = [],
+  notes = [],
+  currentUser = null,
   onAddAttendanceBatch,
   theme = 'dark',
   isSuperAdmin = false
@@ -52,6 +63,8 @@ export function StudentQrCards({
   const [classFilter, setClassFilter] = useState('All');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [downloadingCardId, setDownloadingCardId] = useState<string | null>(null);
+  const [downloadingPdfId, setDownloadingPdfId] = useState<string | null>(null);
+  const [downloadingBatchPdf, setDownloadingBatchPdf] = useState(false);
 
   // Print Setup Options
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -219,30 +232,63 @@ export function StudentQrCards({
     return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(dataUrl)}&color=${qrColor}`;
   };
 
-  // Generate and download student card as a transparent PNG
+  // Download single student card as official vector PDF matching visual preview
+  const handleDownloadSinglePdf = async (student: Student) => {
+    if (downloadingPdfId) return;
+    setDownloadingPdfId(student.id);
+    try {
+      await generateStudentQrCardPDF(student, currentUser, notes, false);
+    } catch (err) {
+      console.error('Error generating single student QR PDF:', err);
+      alert('Gagal membuat dokumen PDF kartu QR siswa.');
+    } finally {
+      setDownloadingPdfId(null);
+    }
+  };
+
+  // Download all filtered student QR cards into multi-card A4 PDF
+  const handleDownloadBatchPdf = async () => {
+    if (downloadingBatchPdf || filteredStudents.length === 0) return;
+    setDownloadingBatchPdf(true);
+    try {
+      await generateBatchStudentQrCardsPDF(filteredStudents, currentUser, notes, printInkSaver);
+    } catch (err) {
+      console.error('Error generating batch student QR PDF:', err);
+      alert('Gagal membuat dokumen PDF massal.');
+    } finally {
+      setDownloadingBatchPdf(false);
+    }
+  };
+
+  // Generate and download student card as a transparent/high-res PNG matching visual preview
   const handleDownloadCardPng = async (student: Student) => {
     if (downloadingCardId) return;
     setDownloadingCardId(student.id);
 
+    const studentNotes = (notes || []).filter(n => n.studentId === student.id);
+    const teacherSignature = getTeacherSignatureName(student, currentUser, studentNotes);
+
     try {
       const canvas = document.createElement('canvas');
       canvas.width = 600;
-      canvas.height = 800;
+      canvas.height = 960;
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Canvas context not available');
 
-      // Create QR Code Image with crossOrigin enabled to avoid tained canvas security issues
+      // Create QR Code Image with crossOrigin enabled to avoid tainted canvas security issues
       const qrImg = new Image();
       qrImg.crossOrigin = 'anonymous';
-      qrImg.src = getQrImgSrc(student, 300);
+      qrImg.src = getQrImgSrc(student, 320);
 
       await new Promise((resolve, reject) => {
         qrImg.onload = resolve;
         qrImg.onerror = () => reject(new Error('Failed to load QR code image'));
       });
 
-      // Clear rect for transparent background
-      ctx.clearRect(0, 0, 600, 800);
+      // Clear rect for background
+      ctx.clearRect(0, 0, 600, 960);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 600, 960);
 
       // Helper function to draw rounded rectangles
       const drawRoundedRect = (
@@ -274,107 +320,176 @@ export function StudentQrCards({
       // 1. Draw outer border (Emerald solid line)
       ctx.strokeStyle = '#059669'; // Emerald-600
       ctx.lineWidth = 5;
-      drawRoundedRect(20, 20, 560, 760, 28, false, true, false);
+      drawRoundedRect(20, 20, 560, 920, 28, false, true, false);
 
       // 2. Draw inner border (Emerald-400 dashed line)
       ctx.strokeStyle = '#34d399'; // Emerald-400
       ctx.lineWidth = 2;
-      drawRoundedRect(32, 32, 536, 736, 20, false, true, true);
+      drawRoundedRect(32, 32, 536, 896, 20, false, true, true);
 
-      // 3. Header: "Math Fingers"
+      // 3. Header: "MATH FINGERS"
       ctx.fillStyle = '#059669';
-      ctx.font = '900 40px system-ui, -apple-system, sans-serif';
+      ctx.font = '900 38px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Math Fingers', 300, 85);
+      ctx.fillText('MATH FINGERS', 300, 82);
 
-      // 4. Subtitle: "KARTU PRESENSI SISWA"
-      ctx.fillStyle = '#64748b'; // Slate-400
+      // 4. Subtitle: "Berhitung Cepat & Akurat Tanpa Alat"
+      ctx.fillStyle = '#64748b'; // Slate-500
       ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
-      ctx.fillText('KARTU PRESENSI SISWA', 300, 115);
+      ctx.fillText('Berhitung Cepat & Akurat Tanpa Alat', 300, 108);
 
-      // 5. White container specifically behind the QR Code for maximum readability on dark image viewers
+      // Badge: KARTU PRESENSI RESMI
+      ctx.fillStyle = '#059669';
+      drawRoundedRect(190, 120, 220, 28, 8, true, false);
       ctx.fillStyle = '#ffffff';
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.08)';
-      ctx.shadowBlur = 15;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 4;
-      drawRoundedRect(150, 150, 300, 300, 16, true, false, false);
+      ctx.font = 'bold 12px system-ui, -apple-system, sans-serif';
+      ctx.fillText('KARTU PRESENSI RESMI', 300, 139);
 
-      // Reset shadows
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 0;
+      // 5. White container specifically behind the QR Code
+      ctx.fillStyle = '#f0fdf4';
+      ctx.strokeStyle = '#bbf7d0';
+      ctx.lineWidth = 2;
+      drawRoundedRect(170, 164, 260, 260, 18, true, true, false);
 
       // Draw loaded QR Code image
-      ctx.drawImage(qrImg, 170, 170, 260, 260);
+      ctx.drawImage(qrImg, 185, 179, 230, 230);
 
       // 6. Student Name
-      ctx.fillStyle = '#1e293b'; // Slate-800
-      ctx.font = '900 34px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = '#0f172a'; // Slate-900
+      ctx.font = '900 30px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(student.name, 300, 510);
+      ctx.fillText(student.name, 300, 462);
 
       // 7. Student ID Code Badge
       const idText = `ID: #${getStudentUniqueCode(student)}`;
-      ctx.font = 'bold 18px monospace';
+      ctx.font = 'bold 16px monospace';
       const textWidth = ctx.measureText(idText).width;
-      const badgeW = textWidth + 24;
-      const badgeH = 34;
+      const badgeW = textWidth + 28;
+      const badgeH = 30;
       const badgeX = 300 - badgeW / 2;
-      const badgeY = 535;
+      const badgeY = 478;
 
-      ctx.fillStyle = '#f1f5f9'; // Slate-100
-      ctx.beginPath();
-      ctx.moveTo(badgeX + 6, badgeY);
-      ctx.lineTo(badgeX + badgeW - 6, badgeY);
-      ctx.quadraticCurveTo(badgeX + badgeW, badgeY, badgeX + badgeW, badgeY + 6);
-      ctx.lineTo(badgeX + badgeW, badgeY + badgeH - 6);
-      ctx.quadraticCurveTo(badgeX + badgeW, badgeY + badgeH, badgeX + badgeW - 6, badgeY + badgeH);
-      ctx.lineTo(badgeX + 6, badgeY + badgeH);
-      ctx.quadraticCurveTo(badgeX, badgeY + badgeH, badgeX, badgeY + badgeH - 6);
-      ctx.lineTo(badgeX, badgeY + 6);
-      ctx.quadraticCurveTo(badgeX, badgeY, badgeX + 6, badgeY);
-      ctx.closePath();
-      ctx.fill();
+      ctx.fillStyle = '#f1f5f9';
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      drawRoundedRect(badgeX, badgeY, badgeW, badgeH, 6, true, true);
 
-      ctx.fillStyle = '#475569'; // Slate-600
-      ctx.fillText(idText, 300, 558);
+      ctx.fillStyle = '#475569';
+      ctx.fillText(idText, 300, 499);
 
-      // 8. Separator Line
-      ctx.strokeStyle = '#e2e8f0'; // Slate-200
+      // 8. Info Details Card
+      const infoBoxX = 50;
+      const infoBoxY = 522;
+      const infoBoxW = 500;
+      const infoBoxH = 175;
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1.5;
+      drawRoundedRect(infoBoxX, infoBoxY, infoBoxW, infoBoxH, 12, true, true);
+
+      // Row details
+      ctx.font = '16px system-ui, -apple-system, sans-serif';
+
+      // Row 1: Cabang & Kelas
+      ctx.fillStyle = '#64748b';
+      ctx.textAlign = 'left';
+      ctx.fillText('Cabang:', infoBoxX + 16, infoBoxY + 34);
+      ctx.fillStyle = '#1e293b';
+      ctx.font = 'bold 16px system-ui, -apple-system, sans-serif';
+      ctx.fillText(student.branch || 'Pusat', infoBoxX + 90, infoBoxY + 34);
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '16px system-ui, -apple-system, sans-serif';
+      ctx.fillText('Kelas:', infoBoxX + 270, infoBoxY + 34);
+      ctx.fillStyle = '#059669';
+      ctx.font = 'bold 16px system-ui, -apple-system, sans-serif';
+      ctx.fillText(student.kelas || '-', infoBoxX + 325, infoBoxY + 34);
+
+      // Row 2: Level & Status
+      ctx.fillStyle = '#64748b';
+      ctx.font = '16px system-ui, -apple-system, sans-serif';
+      ctx.fillText('Level:', infoBoxX + 16, infoBoxY + 68);
+      ctx.fillStyle = '#1e293b';
+      ctx.font = 'bold 16px system-ui, -apple-system, sans-serif';
+      const lvlText = student.level ? student.level.split(':')[0] : 'Dasar';
+      ctx.fillText(lvlText, infoBoxX + 90, infoBoxY + 68);
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '16px system-ui, -apple-system, sans-serif';
+      ctx.fillText('Status:', infoBoxX + 270, infoBoxY + 68);
+      ctx.fillStyle = student.status === 'active' ? '#059669' : '#64748b';
+      ctx.font = 'bold 16px system-ui, -apple-system, sans-serif';
+      ctx.fillText(student.status === 'active' ? 'Aktif' : 'Nonaktif', infoBoxX + 330, infoBoxY + 68);
+
+      // Row 3: Wali / Orang Tua
+      ctx.fillStyle = '#64748b';
+      ctx.font = '16px system-ui, -apple-system, sans-serif';
+      ctx.fillText('Wali / Ortu:', infoBoxX + 16, infoBoxY + 102);
+      ctx.fillStyle = '#1e293b';
+      ctx.font = 'bold 16px system-ui, -apple-system, sans-serif';
+      ctx.fillText(student.parentName || '-', infoBoxX + 110, infoBoxY + 102);
+
+      // Row 4: No. Kontak
+      ctx.fillStyle = '#64748b';
+      ctx.font = '16px system-ui, -apple-system, sans-serif';
+      ctx.fillText('No. Kontak:', infoBoxX + 16, infoBoxY + 136);
+      ctx.fillStyle = '#1e293b';
+      ctx.font = 'bold 16px system-ui, -apple-system, sans-serif';
+      ctx.fillText(student.parentPhone || '-', infoBoxX + 110, infoBoxY + 136);
+
+      // Row 5: Mulai Gabung
+      ctx.fillStyle = '#64748b';
+      ctx.font = '14px system-ui, -apple-system, sans-serif';
+      ctx.fillText('Bergabung:', infoBoxX + 16, infoBoxY + 163);
+      ctx.fillStyle = '#475569';
+      ctx.fillText(student.joinDate || '-', infoBoxX + 110, infoBoxY + 163);
+
+      // 9. Parent & Teacher Signature Space
+      ctx.strokeStyle = '#e2e8f0';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(60, 595);
-      ctx.lineTo(540, 595);
+      ctx.moveTo(50, 715);
+      ctx.lineTo(550, 715);
       ctx.stroke();
 
-      // 9. Student Details Rows (Omit Level as requested!)
-      ctx.font = 'bold 20px system-ui, -apple-system, sans-serif';
+      // Signature Headers
+      ctx.fillStyle = '#64748b';
+      ctx.font = '14px system-ui, -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Orang Tua / Wali Siswa', 170, 740);
+      ctx.fillText('Pengajar / Tutor Math Fingers', 430, 740);
 
-      // Row A: Cabang
-      ctx.fillStyle = '#64748b'; // Label color
-      ctx.textAlign = 'left';
-      ctx.fillText('Cabang:', 70, 640);
+      // Signature Lines
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(80, 835);
+      ctx.lineTo(260, 835);
+      ctx.stroke();
 
-      ctx.fillStyle = '#334155'; // Value color
-      ctx.textAlign = 'right';
-      ctx.fillText(student.branch || 'Pusat', 530, 640);
+      ctx.beginPath();
+      ctx.moveTo(340, 835);
+      ctx.lineTo(520, 835);
+      ctx.stroke();
 
-      // Row B: Kelas
-      ctx.fillStyle = '#64748b'; // Label color
-      ctx.textAlign = 'left';
-      ctx.fillText('Kelas:', 70, 695);
+      // Signature Names
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
+      ctx.fillText(`( ${student.parentName || '................................'} )`, 170, 825);
+      ctx.fillText(`( ${teacherSignature} )`, 430, 825);
 
-      ctx.fillStyle = '#059669'; // Emerald Value color
-      ctx.textAlign = 'right';
-      ctx.fillText(student.kelas || '-', 530, 695);
+      // 10. Footer Notice
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'italic 12px system-ui, -apple-system, sans-serif';
+      ctx.fillText('Simpan kartu ini di ID Card holder atau tempel pada buku modul siswa.', 300, 875);
+      ctx.fillText('Math Fingers - Berhitung Cepat & Akurat Tanpa Alat.', 300, 895);
 
       // Generate Data URL and Trigger download link
       const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.href = dataUrl;
-      link.download = `Kartu_${student.name.replace(/\s+/g, '_')}_MathFingers.png`;
+      link.download = `Kartu_QR_${student.name.replace(/\s+/g, '_')}_MathFingers.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -721,125 +836,189 @@ export function StudentQrCards({
   // PRINT ENGINES (Supporting Single, Responsive Grid, and specialized A4 templates)
   const handlePrintSingle = (student: Student) => {
     const qrSrc = getQrImgSrc(student, 300);
+    const studentNotes = (notes || []).filter(n => n.studentId === student.id);
+    const teacherSignature = getTeacherSignatureName(student, currentUser, studentNotes);
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
     printWindow.document.write(`
       <html>
         <head>
-          <title>Cetak Kartu QR - ${student.name}</title>
+          <title>Cetak Kartu Presensi QR - ${student.name}</title>
           <style>
+            @page {
+              size: A4 portrait;
+              margin: 10mm;
+            }
+            * {
+              box-sizing: border-box;
+            }
             body {
-              font-family: system-ui, -apple-system, sans-serif;
+              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
               display: flex;
               align-items: center;
               justify-content: center;
-              min-height: 95vh;
+              min-height: 98vh;
               margin: 0;
               background-color: #f8fafc;
+              color: #0f172a;
             }
             .card {
-              border: 3px solid #059669;
-              border-radius: 20px;
-              padding: 24px;
-              width: 320px;
+              border: 3.5px solid #059669;
+              border-radius: 24px;
+              padding: 24px 20px 18px 20px;
+              width: 360px;
               text-align: center;
-              background: white;
-              box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+              background: #ffffff;
+              box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.1);
               position: relative;
             }
             .card::before {
               content: '';
               position: absolute;
-              inset: 4px;
-              border: 1px dashed #059669;
-              border-radius: 16px;
+              inset: 5px;
+              border: 1.5px dashed #34d399;
+              border-radius: 18px;
               pointer-events: none;
             }
             .logo {
-              font-size: 20px;
+              font-size: 22px;
               font-weight: 900;
               color: #059669;
               margin-bottom: 2px;
               letter-spacing: -0.5px;
-            }
-            .subtitle {
-              font-size: 10px;
-              color: #64748b;
-              font-weight: bold;
               text-transform: uppercase;
-              letter-spacing: 1px;
-              margin-bottom: 16px;
+            }
+            .tagline {
+              font-size: 9px;
+              color: #64748b;
+              font-style: italic;
+              margin-bottom: 8px;
+            }
+            .badge-resmi {
+              display: inline-block;
+              background-color: #059669;
+              color: #ffffff;
+              font-size: 8.5px;
+              font-weight: 800;
+              letter-spacing: 0.8px;
+              text-transform: uppercase;
+              padding: 3px 12px;
+              border-radius: 6px;
+              margin-bottom: 12px;
             }
             .qr-container {
               background: #f0fdf4;
-              border: 1px solid #bbf7d0;
+              border: 1.5px solid #bbf7d0;
               padding: 12px;
-              border-radius: 12px;
+              border-radius: 16px;
               display: inline-block;
-              margin: 10px 0;
+              margin: 4px 0 10px 0;
             }
             .qr-image {
-              width: 180px;
-              height: 180px;
+              width: 170px;
+              height: 170px;
               display: block;
             }
             .student-name {
               font-size: 18px;
-              font-weight: 850;
-              color: #1e293b;
-              margin: 12px 0 4px 0;
+              font-weight: 900;
+              color: #0f172a;
+              margin: 6px 0 2px 0;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
             }
             .student-code {
-              font-family: monospace;
-              font-size: 12px;
+              font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+              font-size: 11px;
               font-weight: bold;
-              background: #e2e8f0;
+              background: #f1f5f9;
               color: #475569;
-              padding: 3px 8px;
+              padding: 3px 10px;
               border-radius: 6px;
+              border: 1px solid #cbd5e1;
               display: inline-block;
               margin-bottom: 12px;
             }
             .info-box {
               background: #f8fafc;
-              border-radius: 8px;
-              padding: 10px;
+              border-radius: 10px;
+              padding: 10px 14px;
               font-size: 11px;
               border: 1px solid #e2e8f0;
               text-align: left;
+              margin-bottom: 14px;
             }
             .info-row {
               display: flex;
               justify-content: space-between;
-              margin-bottom: 4px;
+              margin-bottom: 5px;
+            }
+            .info-row:last-child {
+              margin-bottom: 0;
             }
             .label {
               color: #64748b;
-            }
-            .value {
-              color: #334155;
-              font-weight: 700;
-            }
-            .footer {
-              font-size: 9px;
-              color: #94a3b8;
-              margin-top: 14px;
               font-weight: 500;
             }
+            .value {
+              color: #1e293b;
+              font-weight: 700;
+            }
+            .value-emerald {
+              color: #059669;
+              font-weight: 800;
+            }
+            
+            /* Tanda Tangan Section */
+            .signature-divider {
+              border-top: 1px solid #e2e8f0;
+              margin: 12px 0 10px 0;
+            }
+            .signature-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 12px;
+              margin-top: 6px;
+              text-align: center;
+            }
+            .signature-title {
+              font-size: 9.5px;
+              color: #64748b;
+              font-weight: 600;
+              margin-bottom: 34px;
+            }
+            .signature-name {
+              font-size: 10px;
+              font-weight: 800;
+              color: #0f172a;
+              border-top: 1px solid #94a3b8;
+              padding-top: 3px;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            
+            .footer {
+              font-size: 8.5px;
+              color: #94a3b8;
+              margin-top: 12px;
+              font-style: italic;
+              line-height: 1.3;
+            }
             @media print {
-              body { background: white; }
-              .card { box-shadow: none; border: 3px solid #059669; }
+              body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .card { box-shadow: none; border: 3.5px solid #059669; }
             }
           </style>
         </head>
         <body>
           <div class="card">
             <div class="logo">Math Fingers</div>
-            <div class="subtitle">Kartu Presensi Siswa</div>
+            <div class="tagline">Berhitung Cepat & Akurat Tanpa Alat</div>
+            <div class="badge-resmi">Kartu Presensi Resmi</div>
             
             <div class="qr-container">
               <img class="qr-image" src="${qrSrc}" alt="QR Code" />
@@ -855,20 +1034,41 @@ export function StudentQrCards({
               </div>
               <div class="info-row">
                 <span class="label">Kelas:</span>
-                <span class="value">${student.kelas || '-'}</span>
+                <span class="value-emerald">${student.kelas || '-'}</span>
               </div>
               <div class="info-row">
                 <span class="label">Level:</span>
                 <span class="value">${student.level ? student.level.split(':')[0] : 'Dasar'}</span>
               </div>
+              <div class="info-row">
+                <span class="label">Wali / Ortu:</span>
+                <span class="value">${student.parentName || '-'}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">No. Kontak:</span>
+                <span class="value">${student.parentPhone || '-'}</span>
+              </div>
             </div>
 
-            <div class="footer">Tempel kartu ini pada buku modul les atau simpan di ID Card holder Anda.</div>
+            <div class="signature-divider"></div>
+
+            <div class="signature-grid">
+              <div>
+                <div class="signature-title">Orang Tua / Wali Siswa</div>
+                <div class="signature-name">( ${student.parentName || '................................'} )</div>
+              </div>
+              <div>
+                <div class="signature-title">Pengajar / Tutor</div>
+                <div class="signature-name">( ${teacherSignature} )</div>
+              </div>
+            </div>
+
+            <div class="footer">Simpan kartu ini di ID Card holder atau tempel pada buku modul siswa.</div>
           </div>
           <script>
             window.onload = function() {
               window.print();
-              setTimeout(function() { window.close(); }, 500);
+              setTimeout(function() { window.close(); }, 600);
             };
           </script>
         </body>
@@ -1408,12 +1608,32 @@ export function StudentQrCards({
                   </span>
                 </div>
 
-                <h4 className={`font-extrabold text-base truncate ${isLight ? 'text-slate-900' : 'text-white'}`} title={student.name}>
-                  {student.name}
-                </h4>
+                <div className="flex items-center gap-2.5 mb-1.5">
+                  <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 border border-emerald-500/20 bg-slate-100 dark:bg-slate-800 flex items-center justify-center shadow-xs">
+                    {student.photoUrl ? (
+                      <img 
+                        src={student.photoUrl} 
+                        alt={student.name} 
+                        className="w-full h-full object-cover" 
+                        referrerPolicy="no-referrer" 
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-emerald-500/20 to-teal-500/30 text-emerald-600 dark:text-emerald-400 font-bold text-xs flex items-center justify-center">
+                        {student.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className={`font-extrabold text-sm sm:text-base truncate ${isLight ? 'text-slate-900' : 'text-white'}`} title={student.name}>
+                      {student.name}
+                    </h4>
+                    <div className="text-[11px] text-slate-450 truncate">
+                      Kelas: <span className="text-emerald-500 font-bold">{student.kelas || 'Tanpa Kelas'}</span>
+                    </div>
+                  </div>
+                </div>
                 
                 <div className="mt-1 space-y-0.5 text-xs text-slate-450 font-medium">
-                  <div>Kelas: <span className="text-emerald-500 font-bold">{student.kelas || 'Tanpa Kelas'}</span></div>
                   <div className="truncate">Level: <span className={isLight ? 'text-slate-650' : 'text-slate-350'}>{student.level ? student.level.split(':')[0] : 'Dasar'}</span></div>
                 </div>
               </div>
@@ -1458,128 +1678,212 @@ export function StudentQrCards({
 
       {/* SINGLE STUDENT PREVIEW MODAL */}
       {selectedStudent && (
-        <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-4 sm:pt-12 md:pt-16 overflow-y-auto">
-          <div className={`rounded-3xl w-full max-w-sm shadow-2xl border p-6 sm:p-7 relative ${
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-start justify-center p-3 sm:p-5 md:p-6 overflow-y-auto">
+          <div className={`rounded-3xl w-full max-w-md shadow-2xl border p-5 sm:p-6 relative my-auto animate-page-fade-in ${
             isLight ? 'bg-white border-slate-200 text-slate-850' : 'bg-[#090d16] border-slate-800 text-white'
           }`}>
             {/* Close Button */}
             <button
               onClick={() => setSelectedStudent(null)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-200 transition"
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 rounded-xl transition cursor-pointer"
+              title="Tutup Preview"
             >
               <X size={20} />
             </button>
 
-            {/* Print Card Template Preview */}
-            <div className="text-center">
-              <span className="text-[10px] font-extrabold tracking-widest text-emerald-500 uppercase px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/15 mb-3.5 inline-block">
-                PREVIEW KARTU SISWA
-              </span>
+            {/* Modal Header */}
+            <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-200 dark:border-slate-800">
+              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                <QrCode size={20} />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-base">Pratinjau Kartu QR Siswa</h3>
+                <p className="text-xs text-slate-400">
+                  {selectedStudent.name} • #{getStudentUniqueCode(selectedStudent)}
+                </p>
+              </div>
+            </div>
 
-              {/* CARD PREVIEW DESIGN */}
-              <div className={`p-5 rounded-2xl border text-center shadow-inner relative overflow-hidden my-3 max-w-[280px] mx-auto ${
-                isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/50 border-slate-850/80'
-              }`}>
-                {/* Dashed Inner border */}
-                <div className="absolute inset-1.5 border border-dashed border-emerald-500/30 rounded-xl pointer-events-none" />
+            {/* CARD PREVIEW CANVAS (Exact Match with PDF and Print Output) */}
+            <div className="w-full max-w-[320px] mx-auto bg-white border-[3px] border-emerald-600 rounded-3xl p-4 sm:p-5 relative shadow-xl text-center text-slate-900">
+              {/* Inner Dashed Border */}
+              <div className="absolute inset-1.5 border-[1.5px] border-dashed border-emerald-400 rounded-2xl pointer-events-none" />
 
-                <div className="text-emerald-500 font-black text-lg tracking-tight mb-0.5 z-10 relative">
-                  Math Fingers
-                </div>
-                <div className="text-[9px] text-slate-450 uppercase font-bold tracking-wider mb-3 z-10 relative">
-                  Kartu Presensi Siswa
-                </div>
+              {/* Branding Header */}
+              <div className="relative z-10">
+                <h3 className="text-emerald-600 font-black text-xl tracking-tight uppercase">Math Fingers</h3>
+                <p className="text-[9.5px] text-slate-500 italic -mt-0.5">Berhitung Cepat & Akurat Tanpa Alat</p>
+                <span className="inline-block bg-emerald-600 text-white text-[8.5px] font-black uppercase tracking-wider px-3 py-0.5 rounded-md mt-1.5 shadow-xs">
+                  Kartu Presensi Resmi
+                </span>
+              </div>
 
-                {/* QR Image in Card */}
-                <div className="bg-white p-3 rounded-xl border border-slate-200 inline-block my-1 z-10 relative shadow-sm">
+              {/* QR Code & Photo container */}
+              <div className="my-2 flex items-center justify-center gap-3 relative z-10">
+                {selectedStudent.photoUrl && (
+                  <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-emerald-500/40 shadow-sm shrink-0 bg-slate-100">
+                    <img
+                      src={selectedStudent.photoUrl}
+                      alt={selectedStudent.name}
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                )}
+                <div className="bg-emerald-50 border border-emerald-200 p-2 rounded-2xl inline-block shadow-sm">
                   <img
-                    src={getQrImgSrc(selectedStudent, 200)}
+                    src={getQrImgSrc(selectedStudent, 220)}
                     alt="QR Code Preview"
-                    className="w-36 h-36 object-contain"
+                    className={`${selectedStudent.photoUrl ? 'w-24 h-24' : 'w-32 h-32'} object-contain`}
                     referrerPolicy="no-referrer"
                   />
                 </div>
+              </div>
 
-                <div className={`font-black text-base mt-2.5 truncate z-10 relative ${isLight ? 'text-slate-900' : 'text-white'}`}>
+              {/* Student Name and ID */}
+              <div className="relative z-10">
+                <div className="font-black text-base text-slate-900 truncate" title={selectedStudent.name}>
                   {selectedStudent.name}
                 </div>
-                <div className="text-[11px] font-mono font-bold text-slate-400 mt-0.5 mb-2.5 bg-slate-150 dark:bg-slate-900 px-2 py-0.5 rounded-md inline-block z-10 relative">
+                <div className="text-[11px] font-mono font-bold text-slate-600 bg-slate-100 border border-slate-300 px-2 py-0.5 rounded-md inline-block mt-0.5">
                   ID: #{getStudentUniqueCode(selectedStudent)}
                 </div>
+              </div>
 
-                {/* Info block */}
-                <div className="text-left text-[11px] space-y-1.5 border-t border-slate-200/50 dark:border-slate-850 pt-2.5 z-10 relative">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400 font-semibold">Cabang:</span>
-                    <span className="text-slate-200 font-bold">{selectedStudent.branch || 'Pusat'}</span>
+              {/* Info Details Box */}
+              <div className="mt-2 bg-slate-50 border border-slate-200 rounded-xl p-2 text-left text-[11px] space-y-1 relative z-10">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-medium">Cabang:</span>
+                  <span className="text-slate-900 font-bold">{selectedStudent.branch || 'Pusat'}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-medium">Kelas:</span>
+                  <span className="text-emerald-600 font-black">{selectedStudent.kelas || '-'}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-medium">Level:</span>
+                  <span className="text-slate-700 font-bold truncate max-w-[130px]">
+                    {selectedStudent.level ? selectedStudent.level.split(':')[0] : 'Dasar'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-medium">Wali / Ortu:</span>
+                  <span className="text-slate-900 font-bold truncate max-w-[130px]">
+                    {selectedStudent.parentName || '-'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-medium">No. Kontak:</span>
+                  <span className="text-slate-700 font-semibold">{selectedStudent.parentPhone || '-'}</span>
+                </div>
+              </div>
+
+              {/* Tanda Tangan Section (Parent & Tutor Signature Space) */}
+              <div className="mt-2.5 pt-2 border-t border-slate-200 relative z-10">
+                <div className="grid grid-cols-2 gap-2 text-center">
+                  {/* Parent Signature */}
+                  <div>
+                    <div className="text-[9px] font-semibold text-slate-500">Orang Tua / Wali Siswa</div>
+                    <div className="h-8" />
+                    <div className="text-[9.5px] font-extrabold text-slate-900 border-t border-slate-400 pt-0.5 truncate" title={selectedStudent.parentName || 'Orang Tua / Wali'}>
+                      ( {selectedStudent.parentName || '................................'} )
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400 font-semibold">Kelas:</span>
-                    <span className="text-emerald-500 font-bold">{selectedStudent.kelas || '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400 font-semibold">Level:</span>
-                    <span className="text-slate-300 font-bold truncate max-w-[120px]" title={selectedStudent.level}>
-                      {selectedStudent.level ? selectedStudent.level.split(':')[0] : 'Dasar'}
-                    </span>
+
+                  {/* Tutor Signature (Auto-resolved from branch) */}
+                  <div>
+                    <div className="text-[9px] font-semibold text-slate-500">Pengajar / Tutor</div>
+                    <div className="h-8" />
+                    <div className="text-[9.5px] font-extrabold text-slate-900 border-t border-slate-400 pt-0.5 truncate" title={getTeacherSignatureName(selectedStudent, currentUser, (notes || []).filter(n => n.studentId === selectedStudent.id))}>
+                      ( {getTeacherSignatureName(selectedStudent, currentUser, (notes || []).filter(n => n.studentId === selectedStudent.id))} )
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col gap-2 mt-6">
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const imgUrl = getQrImgSrc(selectedStudent, 500);
-                      const link = document.createElement('a');
-                      link.href = imgUrl;
-                      link.target = '_blank';
-                      link.download = `QR_${selectedStudent.name}.png`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                    }}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-bold transition border flex items-center justify-center gap-1.5 cursor-pointer ${
-                      isLight 
-                        ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200' 
-                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
-                    }`}
-                  >
-                    <Download size={14} />
-                    <span>Unduh QR</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handlePrintSingle(selectedStudent);
-                      setSelectedStudent(null);
-                    }}
-                    className="py-2.5 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <Printer size={14} />
-                    <span>Cetak Kartu</span>
-                  </button>
-                </div>
-                
+              {/* Card Footer Notice */}
+              <p className="text-[8px] text-slate-400 italic mt-2 leading-tight relative z-10">
+                Simpan kartu ini di ID Card holder atau tempel pada buku modul siswa.
+              </p>
+            </div>
+
+            {/* Action Buttons Toolbar */}
+            <div className="flex flex-col gap-2 mt-4">
+              {/* Primary Download PDF Button */}
+              <button
+                type="button"
+                disabled={downloadingPdfId === selectedStudent.id}
+                onClick={() => handleDownloadSinglePdf(selectedStudent)}
+                className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-600/50 text-white rounded-xl text-xs font-black transition shadow-md flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {downloadingPdfId === selectedStudent.id ? (
+                  <>
+                    <RefreshCw size={15} className="animate-spin" />
+                    <span>Menyiapkan PDF Kartu...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileText size={15} />
+                    <span>Unduh PDF Kartu (Sesuai Preview & Ada TTD)</span>
+                  </>
+                )}
+              </button>
+
+              {/* Secondary Actions */}
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handlePrintSingle(selectedStudent);
+                  }}
+                  className={`py-2 px-2 rounded-xl text-xs font-bold transition border flex items-center justify-center gap-1 cursor-pointer ${
+                    isLight 
+                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200' 
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                  }`}
+                >
+                  <Printer size={13} />
+                  <span>Cetak</span>
+                </button>
+
                 <button
                   type="button"
                   disabled={downloadingCardId === selectedStudent.id}
                   onClick={() => handleDownloadCardPng(selectedStudent)}
-                  className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-600/50 text-white rounded-xl text-xs font-extrabold transition shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                  className={`py-2 px-2 rounded-xl text-xs font-bold transition border flex items-center justify-center gap-1 cursor-pointer ${
+                    isLight 
+                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200' 
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                  }`}
                 >
                   {downloadingCardId === selectedStudent.id ? (
-                    <>
-                      <RefreshCw size={14} className="animate-spin" />
-                      <span>Sedang Mengunduh...</span>
-                    </>
+                    <RefreshCw size={13} className="animate-spin" />
                   ) : (
-                    <>
-                      <FileImage size={14} />
-                      <span>Unduh Kartu PNG (Latar Transparan)</span>
-                    </>
+                    <FileImage size={13} />
                   )}
+                  <span>Unduh PNG</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const imgUrl = getQrImgSrc(selectedStudent, 600);
+                    const link = document.createElement('a');
+                    link.href = imgUrl;
+                    link.target = '_blank';
+                    link.download = `QR_${selectedStudent.name.replace(/\s+/g, '_')}.png`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                  className={`py-2 px-2 rounded-xl text-xs font-bold transition border flex items-center justify-center gap-1 cursor-pointer ${
+                    isLight 
+                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200' 
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                  }`}
+                >
+                  <Download size={13} />
+                  <span>Unduh QR</span>
                 </button>
               </div>
             </div>
@@ -1728,25 +2032,50 @@ export function StudentQrCards({
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-slate-850">
+            {/* Actions: Batch PDF & Browser Print */}
+            <div className="space-y-2 mt-6 pt-4 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
-                onClick={() => setIsPrintModalOpen(false)}
-                className={`py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' : 'bg-slate-900 hover:bg-slate-850 text-slate-400'
-                }`}
+                disabled={downloadingBatchPdf}
+                onClick={handleDownloadBatchPdf}
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-600/50 text-white rounded-xl text-xs font-black transition shadow-md flex items-center justify-center gap-2 cursor-pointer"
               >
-                Batal
+                {downloadingBatchPdf ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    <span>Menyiapkan PDF Massal ({filteredStudents.length} Siswa)...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileText size={14} />
+                    <span>Unduh PDF Massal A4 ({filteredStudents.length} Siswa)</span>
+                  </>
+                )}
               </button>
-              <button
-                type="button"
-                onClick={handlePrintBulkExecute}
-                className="py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold transition shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <Printer size={14} />
-                <span>Mulai Cetak ({filteredStudents.length})</span>
-              </button>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPrintModalOpen(false)}
+                  className={`py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                    isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' : 'bg-slate-900 hover:bg-slate-800 text-slate-400'
+                  }`}
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePrintBulkExecute}
+                  className={`py-2 rounded-xl text-xs font-bold transition border flex items-center justify-center gap-1.5 cursor-pointer ${
+                    isLight 
+                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200' 
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                  }`}
+                >
+                  <Printer size={13} />
+                  <span>Cetak Browser</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

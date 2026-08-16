@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Student, LearningMaterial, Attendance, TeacherNote, Grade, Branch, ClassGroup } from '../types';
 import { formatWhatsAppPhone, getWhatsAppLink, getStudentUniqueCode } from '../utils';
 import { generateStudentPDFReport } from '../utils/pdfGenerator';
-import { Search, Plus, UserPlus, Phone, Calendar, BookOpen, Trash2, Edit2, CheckCircle, XCircle, AlertCircle, Download, Award, Video, ExternalLink, Eye, X, Image as ImageIcon, Check, Layers, Users } from 'lucide-react';
+import { Search, Plus, UserPlus, Phone, Calendar, BookOpen, Trash2, Edit2, CheckCircle, XCircle, AlertCircle, Download, Award, Video, ExternalLink, Eye, X, Image as ImageIcon, Check, Layers, Users, Camera, Upload, RotateCcw, User, Sparkles, RefreshCw } from 'lucide-react';
 import { CustomDropdown } from './CustomDropdown';
 import { OfflineIndicator } from './OfflineIndicator';
 
@@ -63,6 +63,156 @@ export function StudentManager({
   const [hariLes, setHariLes] = useState('Hari Jumat dan Ahad');
   const [branch, setBranch] = useState(() => branches[0]?.name || 'Pusat');
   const [kelas, setKelas] = useState('');
+  const [photoUrl, setPhotoUrl] = useState<string>('');
+
+  // Camera & Photo State
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+  const [isCameraStarting, setIsCameraStarting] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [cameraDevices, setCameraDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>('');
+  const [capturedPhotoTemp, setCapturedPhotoTemp] = useState<string | null>(null);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  };
+
+  const startCamera = async (deviceId?: string) => {
+    stopCamera();
+    setIsCameraStarting(true);
+    setCameraError(null);
+    setCapturedPhotoTemp(null);
+
+    try {
+      const constraints: MediaStreamConstraints = {
+        video: deviceId 
+          ? { deviceId: { exact: deviceId }, width: { ideal: 640 }, height: { ideal: 640 } }
+          : { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } },
+        audio: false
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(e => console.log('Autoplay handled', e));
+      }
+
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevs = devices.filter(d => d.kind === 'videoinput');
+        setCameraDevices(videoDevs);
+        if (deviceId) {
+          setSelectedCameraId(deviceId);
+        } else if (videoDevs.length > 0 && !selectedCameraId) {
+          setSelectedCameraId(videoDevs[0].deviceId);
+        }
+      } catch (e) {
+        console.warn('Could not enumerate devices', e);
+      }
+    } catch (err: any) {
+      console.error('Error starting camera:', err);
+      setCameraError(
+        err?.name === 'NotAllowedError' 
+          ? 'Izin akses kamera ditolak. Silakan izinkan akses kamera di peramban (browser) Anda.'
+          : 'Tidak dapat mengakses kamera pada perangkat ini.'
+      );
+    } finally {
+      setIsCameraStarting(false);
+    }
+  };
+
+  const capturePhotoFromVideo = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    const width = video.videoWidth || 480;
+    const height = video.videoHeight || 480;
+    const size = Math.min(width, height);
+    const outSize = 360;
+    canvas.width = outSize;
+    canvas.height = outSize;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Center crop square
+    const sx = (width - size) / 2;
+    const sy = (height - size) / 2;
+    ctx.drawImage(video, sx, sy, size, size, 0, 0, outSize, outSize);
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+    setCapturedPhotoTemp(dataUrl);
+  };
+
+  const applyCapturedPhoto = () => {
+    if (capturedPhotoTemp) {
+      setPhotoUrl(capturedPhotoTemp);
+    }
+    stopCamera();
+    setIsCameraModalOpen(false);
+    setCapturedPhotoTemp(null);
+  };
+
+  const retakeCapturedPhoto = () => {
+    setCapturedPhotoTemp(null);
+    if (videoRef.current && streamRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
+  };
+
+  const closeCameraModal = () => {
+    stopCamera();
+    setIsCameraModalOpen(false);
+    setCapturedPhotoTemp(null);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDim = 360;
+        let width = img.width;
+        let height = img.height;
+        const size = Math.min(width, height);
+        canvas.width = maxDim;
+        canvas.height = maxDim;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          // Center crop square
+          const sx = (width - size) / 2;
+          const sy = (height - size) / 2;
+          ctx.drawImage(img, sx, sy, size, size, 0, 0, maxDim, maxDim);
+          setPhotoUrl(canvas.toDataURL('image/jpeg', 0.88));
+        } else {
+          setPhotoUrl(event.target?.result as string);
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
 
   // Curriculum overlay modal states
   const [selectedCurriculumMat, setSelectedCurriculumMat] = useState<LearningMaterial | null>(null);
@@ -107,6 +257,7 @@ export function StudentManager({
     setHariLes('Hari Jumat dan Ahad');
     setBranch(branches[0]?.name || 'Pusat');
     setKelas('');
+    setPhotoUrl('');
     setIsFormOpen(true);
   };
 
@@ -128,6 +279,7 @@ export function StudentManager({
     setHariLes(student.hariLes || 'Hari Jumat dan Ahad');
     setBranch(student.branch || 'Pusat');
     setKelas(student.kelas || '');
+    setPhotoUrl(student.photoUrl || '');
     setIsFormOpen(true);
   };
 
@@ -154,7 +306,8 @@ export function StudentManager({
       activeMaterialId: activeMaterialId || '',
       hariLes,
       branch,
-      kelas
+      kelas,
+      photoUrl: photoUrl || undefined
     };
 
     if (editingStudent) {
@@ -483,6 +636,91 @@ export function StudentManager({
             
             <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4">
               <OfflineIndicator theme={theme} className="mb-2" />
+
+              {/* Profile Photo Section */}
+              <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center gap-4 ${
+                isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800'
+              }`}>
+                <div className="relative group shrink-0">
+                  <div className={`w-24 h-24 rounded-2xl overflow-hidden border-2 flex items-center justify-center shadow-md ${
+                    photoUrl 
+                      ? 'border-emerald-500 bg-emerald-500/10' 
+                      : isLight ? 'border-dashed border-slate-300 bg-white' : 'border-dashed border-slate-700 bg-slate-950'
+                  }`}>
+                    {photoUrl ? (
+                      <img 
+                        src={photoUrl} 
+                        alt="Foto Profil Siswa" 
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center">
+                        <User size={30} className="text-slate-400 mb-1 opacity-70" />
+                        <span className="text-[10px] font-medium leading-tight">Belum Ada Foto</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {photoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setPhotoUrl('')}
+                      className="absolute -top-2 -right-2 p-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-full shadow-lg transition"
+                      title="Hapus Foto"
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex-1 text-center sm:text-left space-y-2 w-full">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
+                      Foto Profil Siswa
+                    </label>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Foto akan dicetak pada kartu QR siswa & raport agar lebih personal.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCameraModalOpen(true);
+                        startCamera();
+                      }}
+                      className="px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                    >
+                      <Camera size={14} />
+                      <span>{photoUrl ? 'Ganti (Kamera)' : 'Ambil Foto (Kamera)'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`px-3 py-2 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition cursor-pointer ${
+                        isLight 
+                          ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100' 
+                          : 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-750'
+                      }`}
+                    >
+                      <Upload size={14} />
+                      <span>Unggah File</span>
+                    </button>
+
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={handleFileUpload} 
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Nama Siswa *</label>
                 <input
@@ -825,63 +1063,90 @@ export function StudentManager({
                         </div>
                       </td>
                       <td className="p-4">
-                        <div className="flex items-center gap-2 flex-nowrap whitespace-nowrap overflow-x-auto no-scrollbar">
-                          <span className={`font-semibold text-sm sm:text-base ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</span>
-                          <span className="hidden sm:inline-block text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15 shrink-0" title="Nomor Unik Siswa">
-                            #{getStudentUniqueCode(student)}
-                          </span>
-                          {student.jenisKelamin && (
-                            <span className={`hidden sm:inline-block text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${
-                              student.jenisKelamin === 'Laki-laki' 
-                                ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/15'
-                                : 'bg-rose-500/10 text-rose-600 dark:text-rose-450 border border-rose-500/15'
-                            }`}>
-                              {student.jenisKelamin === 'Laki-laki' ? 'L' : 'P'}
-                            </span>
-                          )}
-                          {student.jenisPaket && (
-                            <span className="hidden sm:inline-block text-[10px] px-1.5 py-0.5 rounded font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/15 shrink-0">
-                              {student.jenisPaket}
-                            </span>
-                          )}
-                          <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 border border-fuchsia-500/15 shrink-0" title="Cabang Bimbingan">
-                            🏢 {student.branch || 'Pusat'}
-                          </span>
-                          {student.kelas && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/15 shrink-0" title="Kelas Bimbingan">
-                              🏫 {student.kelas}
-                            </span>
-                          )}
+                        <div className="flex items-center gap-3">
+                          <div 
+                            onClick={() => setSelectedDetailStudent(student)}
+                            className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-emerald-500/20 bg-slate-100 dark:bg-slate-800 flex items-center justify-center cursor-pointer hover:opacity-85 transition shadow-xs"
+                            title="Klik untuk lihat detail & foto"
+                          >
+                            {student.photoUrl ? (
+                              <img 
+                                src={student.photoUrl} 
+                                alt={student.name} 
+                                className="w-full h-full object-cover" 
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-emerald-500/20 to-teal-500/30 text-emerald-600 dark:text-emerald-400 font-bold text-sm flex items-center justify-center">
+                                {student.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-nowrap whitespace-nowrap overflow-x-auto no-scrollbar">
+                              <span 
+                                onClick={() => setSelectedDetailStudent(student)}
+                                className={`font-semibold text-sm sm:text-base cursor-pointer hover:underline ${isLight ? 'text-slate-800' : 'text-white'}`}
+                              >
+                                {student.name}
+                              </span>
+                              <span className="hidden sm:inline-block text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15 shrink-0" title="Nomor Unik Siswa">
+                                #{getStudentUniqueCode(student)}
+                              </span>
+                              {student.jenisKelamin && (
+                                <span className={`hidden sm:inline-block text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${
+                                  student.jenisKelamin === 'Laki-laki' 
+                                    ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/15'
+                                    : 'bg-rose-500/10 text-rose-600 dark:text-rose-450 border border-rose-500/15'
+                                }`}>
+                                  {student.jenisKelamin === 'Laki-laki' ? 'L' : 'P'}
+                                </span>
+                              )}
+                              {student.jenisPaket && (
+                                <span className="hidden sm:inline-block text-[10px] px-1.5 py-0.5 rounded font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/15 shrink-0">
+                                  {student.jenisPaket}
+                                </span>
+                              )}
+                              <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 border border-fuchsia-500/15 shrink-0" title="Cabang Bimbingan">
+                                🏢 {student.branch || 'Pusat'}
+                              </span>
+                              {student.kelas && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/15 shrink-0" title="Kelas Bimbingan">
+                                  🏫 {student.kelas}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Lahir & Alamat Sejajar - Hidden on mobile */}
+                            {((student.tempatLahir || student.tanggalLahir) || student.alamat) && (
+                              <div className={`hidden sm:flex text-xs mt-1 flex-wrap gap-x-2 items-center leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                                {(student.tempatLahir || student.tanggalLahir) && (
+                                  <span>
+                                    <span className="opacity-70">Lahir:</span> {student.tempatLahir || '-'}{student.tanggalLahir ? `, ${student.tanggalLahir}` : ''}
+                                  </span>
+                                )}
+                                {((student.tempatLahir || student.tanggalLahir) && student.alamat) && (
+                                  <span className="text-slate-600 dark:text-slate-500 font-bold">•</span>
+                                )}
+                                {student.alamat && (
+                                  <span className="truncate max-w-[280px]" title={student.alamat}>
+                                    <span className="opacity-70">Alamat:</span> {student.alamat}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {student.keterangan && (
+                              <div className={`hidden sm:inline-block text-xs mt-1.5 px-2 py-0.5 rounded-md border max-w-[220px] truncate ${
+                                isLight 
+                                  ? 'bg-amber-500/5 border-amber-500/20 text-amber-700' 
+                                  : 'bg-amber-500/10 border-amber-500/10 text-amber-300'
+                              }`} title={student.keterangan}>
+                                Ket: {student.keterangan}
+                              </div>
+                            )}
+                          </div>
                         </div>
-
-                        {/* Lahir & Alamat Sejajar - Hidden on mobile */}
-                        {((student.tempatLahir || student.tanggalLahir) || student.alamat) && (
-                          <div className={`hidden sm:flex text-xs mt-1 flex-wrap gap-x-2 items-center leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                            {(student.tempatLahir || student.tanggalLahir) && (
-                              <span>
-                                <span className="opacity-70">Lahir:</span> {student.tempatLahir || '-'}{student.tanggalLahir ? `, ${student.tanggalLahir}` : ''}
-                              </span>
-                            )}
-                            {((student.tempatLahir || student.tanggalLahir) && student.alamat) && (
-                              <span className="text-slate-600 dark:text-slate-500 font-bold">•</span>
-                            )}
-                            {student.alamat && (
-                              <span className="truncate max-w-[280px]" title={student.alamat}>
-                                <span className="opacity-70">Alamat:</span> {student.alamat}
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {student.keterangan && (
-                          <div className={`hidden sm:inline-block text-xs mt-1.5 px-2 py-0.5 rounded-md border max-w-[220px] truncate ${
-                            isLight 
-                              ? 'bg-amber-500/5 border-amber-500/20 text-amber-700' 
-                              : 'bg-amber-500/10 border-amber-500/10 text-amber-300'
-                          }`} title={student.keterangan}>
-                            Ket: {student.keterangan}
-                          </div>
-                        )}
                       </td>
                       <td className="p-4 space-y-1 hidden sm:table-cell">
                         <div className={`text-sm font-medium ${isLight ? 'text-slate-700' : 'text-slate-305'}`}>{student.parentName}</div>
@@ -1244,16 +1509,32 @@ export function StudentManager({
           }`}>
             {/* Header Modal */}
             <div className={`p-5 border-b flex items-center justify-between ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className={`text-lg font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>
-                    {selectedDetailStudent.name}
-                  </h3>
-                  <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                    #{getStudentUniqueCode(selectedDetailStudent)}
-                  </span>
+              <div className="flex items-center gap-3.5">
+                <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0 border-2 border-emerald-500/30 bg-slate-100 dark:bg-slate-800 flex items-center justify-center shadow-md">
+                  {selectedDetailStudent.photoUrl ? (
+                    <img 
+                      src={selectedDetailStudent.photoUrl} 
+                      alt={selectedDetailStudent.name} 
+                      className="w-full h-full object-cover" 
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-emerald-500/20 to-teal-500/30 text-emerald-600 dark:text-emerald-400 font-bold text-xl flex items-center justify-center">
+                      {selectedDetailStudent.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Detail Lengkap Profil Siswa</p>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className={`text-lg font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>
+                      {selectedDetailStudent.name}
+                    </h3>
+                    <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      #{getStudentUniqueCode(selectedDetailStudent)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Detail Lengkap Profil Siswa</p>
+                </div>
               </div>
               <button 
                 onClick={() => setSelectedDetailStudent(null)}
@@ -1512,6 +1793,158 @@ export function StudentManager({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Camera Capture Modal */}
+      {isCameraModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[60] flex items-center justify-center p-4">
+          <div className={`rounded-2xl w-full max-w-md shadow-2xl border flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${
+            isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#020617] border-slate-800 text-white'
+          }`}>
+            {/* Header */}
+            <div className={`p-4 border-b flex items-center justify-between ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
+                  <Camera size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold">Ambil Foto Siswa</h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Posisikan wajah siswa di tengah bingkai</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeCameraModal}
+                className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-rose-500 hover:text-white transition flex items-center justify-center text-slate-400 font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Video / Snapshot Viewport */}
+            <div className="p-4 flex flex-col items-center">
+              <div className="relative w-full aspect-square max-w-[320px] rounded-2xl overflow-hidden bg-black flex items-center justify-center shadow-inner border-2 border-emerald-500/30">
+                {/* Live Video */}
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={`w-full h-full object-cover ${capturedPhotoTemp ? 'hidden' : 'block'}`}
+                />
+
+                {/* Captured Photo Review */}
+                {capturedPhotoTemp && (
+                  <img
+                    src={capturedPhotoTemp}
+                    alt="Hasil Foto"
+                    className="w-full h-full object-cover"
+                  />
+                )}
+
+                {/* Camera Overlay Guide Frame */}
+                {!capturedPhotoTemp && !cameraError && (
+                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                    {/* Circular Target Frame */}
+                    <div className="w-56 h-56 rounded-full border-2 border-dashed border-emerald-400/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] flex items-center justify-center">
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-400/80 animate-ping" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Loading / Error overlay */}
+                {isCameraStarting && (
+                  <div className="absolute inset-0 bg-slate-950/80 flex flex-col items-center justify-center gap-2 text-white">
+                    <RefreshCw className="animate-spin text-emerald-400" size={28} />
+                    <span className="text-xs font-medium">Menghubungkan ke kamera...</span>
+                  </div>
+                )}
+
+                {cameraError && (
+                  <div className="absolute inset-0 bg-slate-950/90 p-4 flex flex-col items-center justify-center text-center gap-2.5 text-white">
+                    <AlertCircle className="text-rose-400" size={32} />
+                    <p className="text-xs font-medium text-rose-300">{cameraError}</p>
+                    <button
+                      type="button"
+                      onClick={() => startCamera(selectedCameraId)}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold rounded-lg shadow transition"
+                    >
+                      Coba Lagi
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Camera Switcher (if multiple cameras) */}
+              {cameraDevices.length > 1 && !capturedPhotoTemp && (
+                <div className="mt-3 w-full max-w-[320px]">
+                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Pilih Perangkat Kamera:</label>
+                  <select
+                    value={selectedCameraId}
+                    onChange={(e) => {
+                      setSelectedCameraId(e.target.value);
+                      startCamera(e.target.value);
+                    }}
+                    className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-medium border focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                      isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
+                    }`}
+                  >
+                    {cameraDevices.map((dev, idx) => (
+                      <option key={dev.deviceId || idx} value={dev.deviceId}>
+                        {dev.label || `Kamera ${idx + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Actions Footer */}
+            <div className={`p-4 border-t flex items-center justify-between gap-2 ${
+              isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+            }`}>
+              <button
+                type="button"
+                onClick={closeCameraModal}
+                className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white rounded-xl transition"
+              >
+                Batal
+              </button>
+
+              {capturedPhotoTemp ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={retakeCapturedPhoto}
+                    className={`px-3 py-2 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition ${
+                      isLight ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100' : 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700'
+                    }`}
+                  >
+                    <RotateCcw size={14} />
+                    <span>Ulangi Foto</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={applyCapturedPhoto}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 flex items-center gap-1.5 shadow-md transition"
+                  >
+                    <Check size={14} />
+                    <span>Gunakan Foto Ini</span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={isCameraStarting || !!cameraError}
+                  onClick={capturePhotoFromVideo}
+                  className="px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 flex items-center gap-2 shadow-lg hover:shadow-emerald-500/25 transition disabled:opacity-50 cursor-pointer"
+                >
+                  <Camera size={16} />
+                  <span>Ambil Foto</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

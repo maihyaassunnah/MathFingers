@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Student, Attendance, Invoice, Grade, AppSettings, DashboardTask, Branch, AdminUser } from '../types';
 import { formatRupiah, getWhatsAppLink, getStudentUniqueCode } from '../utils';
 import { MathFingerLogo } from './MathFingerLogo';
+import { MobileBranchAppView } from './MobileBranchAppView';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -16,7 +18,11 @@ import {
   Legend
 } from 'recharts';
 import { 
+  Home,
   Users, 
+  Layers,
+  QrCode,
+  GraduationCap,
   CheckSquare, 
   Receipt, 
   Award, 
@@ -33,6 +39,10 @@ import {
   Building,
   TrendingUp,
   FileText,
+  History,
+  Wallet,
+  Database,
+  Settings,
   Download,
   RefreshCw
 } from 'lucide-react';
@@ -84,7 +94,29 @@ export function DashboardOverview({
   onOpenUpdateModal,
   isUpdateAvailable = false
 }: DashboardOverviewProps) {
+  const isDesktop = useMediaQuery('(min-width: 768px)');
   const [newTaskText, setNewTaskText] = useState('');
+
+  // When on mobile view, render the dedicated Mobile Branch App experience with configurable elements
+  if (!isDesktop) {
+    return (
+      <MobileBranchAppView
+        students={students}
+        attendance={attendance}
+        invoices={invoices}
+        grades={grades}
+        settings={settings}
+        theme={theme}
+        isSuperAdmin={isSuperAdmin}
+        branches={branches}
+        activeBranch={activeBranch}
+        currentUser={currentUser}
+        onNavigate={onNavigate}
+        onOpenUpdateModal={onOpenUpdateModal}
+        isUpdateAvailable={isUpdateAvailable}
+      />
+    );
+  }
 
   // Get active admin from prop, or fallback to localStorage if null/undefined
   const getActiveUser = () => {
@@ -531,39 +563,70 @@ export function DashboardOverview({
             </p>
           </div>
 
-          {/* Quick Action Buttons - 1 Baris Saja */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-2 w-full max-w-xl mx-auto">
-            <button
-              onClick={() => onNavigate('attendance')}
-              className="flex flex-col sm:flex-row items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-[11px] sm:text-xs px-2.5 sm:px-4 py-2.5 rounded-xl transition shadow-md shadow-emerald-600/20 cursor-pointer text-center"
-            >
-              <CheckSquare size={15} className="shrink-0" />
-              <span className="truncate">Catat Absen</span>
-            </button>
-            
-            <button
-              onClick={() => onNavigate('students')}
-              className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 font-bold text-[11px] sm:text-xs px-2.5 sm:px-4 py-2.5 rounded-xl border transition active:scale-95 cursor-pointer text-center ${
-                isLight 
-                  ? 'bg-white hover:bg-slate-50 text-slate-900 border-slate-300 shadow-sm' 
-                  : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-700'
-              }`}
-            >
-              <Users size={15} className="shrink-0" />
-              <span className="truncate">Kelola Siswa</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('spp')}
-              className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 font-bold text-[11px] sm:text-xs px-2.5 sm:px-4 py-2.5 rounded-xl border transition active:scale-95 cursor-pointer text-center ${
-                isLight 
-                  ? 'bg-white hover:bg-slate-50 text-slate-900 border-slate-300 shadow-sm' 
-                  : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-700'
-              }`}
-            >
-              <Receipt size={15} className="shrink-0" />
-              <span className="truncate">Keuangan SPP</span>
-            </button>
+          {/* Menu Dashboard: 3 Kolom Kesamping, Icon Only Tanpa Keterangan Teks, Sisa Menu di Bawahnya */}
+          <div className="w-full max-w-xl mx-auto pt-3">
+            <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+              {(isSuperAdmin
+                ? [
+                    { id: 'overview', name: 'Statistik & Beranda', icon: Home },
+                    { id: 'students', name: 'Data Siswa', icon: Users },
+                    { id: 'classes', name: 'Manajemen Kelas', icon: Layers },
+                    { id: 'qr_cards', name: 'Kartu QR Siswa', icon: QrCode },
+                    { id: 'alumni', name: 'Alumni / Lulus', icon: GraduationCap },
+                    { id: 'attendance', name: 'Presensi / Absensi', icon: CheckSquare },
+                    { id: 'notes', name: 'Jurnal Guru', icon: FileText },
+                    { id: 'journal_history', name: 'Riwayat Jurnal', icon: History },
+                    { id: 'spp', name: 'Pembayaran SPP', icon: Receipt },
+                    { id: 'spp_history', name: 'Riwayat Pembayaran SPP', icon: History },
+                    { id: 'finance', name: 'Laporan Keuangan', icon: Wallet },
+                    { id: 'grades', name: 'Input Nilai & Kuis', icon: Award },
+                    { id: 'simulator', name: 'Kurikulum & Materi', icon: BookOpen },
+                    { id: 'report', name: 'Rapor Perkembangan', icon: TrendingUp },
+                    { id: 'branches_mgmt', name: 'Data Cabang & Admin', icon: Building },
+                    { id: 'supabase_sql', name: 'SQL Editor Supabase', icon: Database },
+                    { id: 'settings', name: 'Pengaturan & Backup', icon: Settings },
+                  ]
+                : [
+                    { id: 'overview', name: 'Dashboard Cabang', icon: Home },
+                    { id: 'students', name: 'Data Siswa', icon: Users },
+                    { id: 'classes', name: 'Manajemen Kelas', icon: Layers },
+                    { id: 'qr_cards', name: 'Kartu QR Siswa', icon: QrCode },
+                    { id: 'alumni', name: 'Alumni / Lulus', icon: GraduationCap },
+                    { id: 'attendance', name: 'Presensi / Absensi', icon: CheckSquare },
+                    { id: 'notes', name: 'Jurnal Guru', icon: FileText },
+                    { id: 'journal_history', name: 'Riwayat Jurnal', icon: History },
+                    { id: 'spp', name: 'Pembayaran SPP', icon: Receipt },
+                    { id: 'spp_history', name: 'Riwayat Pembayaran SPP', icon: History },
+                    { id: 'finance', name: 'Laporan Keuangan', icon: Wallet },
+                    { id: 'grades', name: 'Input Nilai & Kuis', icon: Award },
+                    { id: 'simulator', name: 'Kurikulum & Materi', icon: BookOpen },
+                    { id: 'report', name: 'Rapor Perkembangan', icon: TrendingUp },
+                    { id: 'settings', name: 'Pengaturan Cabang', icon: Settings },
+                  ]
+              ).map((item) => {
+                const IconComponent = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    id={`dashboard-menu-icon-${item.id}`}
+                    type="button"
+                    onClick={() => onNavigate(item.id)}
+                    title={item.name}
+                    aria-label={item.name}
+                    className={`h-13 sm:h-14 rounded-2xl flex items-center justify-center border transition-all duration-200 active:scale-95 cursor-pointer shadow-xs group ${
+                      isLight
+                        ? 'bg-slate-50/90 hover:bg-emerald-50/60 border-slate-200/90 hover:border-emerald-400 text-slate-700 hover:text-emerald-700 shadow-slate-200/50'
+                        : 'bg-slate-800/80 hover:bg-slate-700/80 border-slate-700/80 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-400 shadow-black/20'
+                    }`}
+                  >
+                    <IconComponent
+                      size={22}
+                      className="transition-transform duration-200 group-hover:scale-110"
+                    />
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

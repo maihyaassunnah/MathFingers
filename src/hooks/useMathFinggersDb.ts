@@ -264,7 +264,17 @@ export function useMathFinggersDb() {
             invoiceSignature: row.invoiceSignature || undefined,
             appIcon: row.appIcon || undefined,
             branch: branchKey,
-            branches: branchKey
+            branches: branchKey,
+            mobileHeroTitle: row.mobileHeroTitle || undefined,
+            mobileHeroSubtitle: row.mobileHeroSubtitle || undefined,
+            mobileHeroBannerUrl: row.mobileHeroBannerUrl || undefined,
+            mobileHeroBadgeText: row.mobileHeroBadgeText || undefined,
+            mobileHeroPrimaryBtnText: row.mobileHeroPrimaryBtnText || undefined,
+            mobileHeroPrimaryBtnAction: row.mobileHeroPrimaryBtnAction || undefined,
+            mobileHeroSecondaryBtnText: row.mobileHeroSecondaryBtnText || undefined,
+            mobileHeroSecondaryBtnAction: row.mobileHeroSecondaryBtnAction || undefined,
+            mobilePopularServicesTitle: row.mobilePopularServicesTitle || undefined,
+            mobileRecommendedTitle: row.mobileRecommendedTitle || undefined
           };
           loadedMap[branchKey] = remoteSettings;
           if (row.id) loadedMap[row.id] = remoteSettings;

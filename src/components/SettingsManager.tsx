@@ -94,6 +94,16 @@ export function SettingsManager({
   const [invoiceLogo, setInvoiceLogo] = useState<string | undefined>(settings.invoiceLogo);
   const [invoiceSignature, setInvoiceSignature] = useState<string | undefined>(settings.invoiceSignature);
   const [appIcon, setAppIcon] = useState<string | undefined>(settings.appIcon);
+  const [mobileHeroTitle, setMobileHeroTitle] = useState(settings.mobileHeroTitle || 'Bimbingan Cepat & Akurat?');
+  const [mobileHeroSubtitle, setMobileHeroSubtitle] = useState(settings.mobileHeroSubtitle || 'Sistem Jaritmatika Math Fingers siap mendampingi presensi, kuis, dan administrasi cabang Anda.');
+  const [mobileHeroBannerUrl, setMobileHeroBannerUrl] = useState(settings.mobileHeroBannerUrl || 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800');
+  const [mobileHeroBadgeText, setMobileHeroBadgeText] = useState(settings.mobileHeroBadgeText || '⚡ Operasional Cabang Siap 100%');
+  const [mobileHeroPrimaryBtnText, setMobileHeroPrimaryBtnText] = useState(settings.mobileHeroPrimaryBtnText || 'Catat Absen');
+  const [mobileHeroPrimaryBtnAction, setMobileHeroPrimaryBtnAction] = useState(settings.mobileHeroPrimaryBtnAction || 'attendance');
+  const [mobileHeroSecondaryBtnText, setMobileHeroSecondaryBtnText] = useState(settings.mobileHeroSecondaryBtnText || 'Tagihan SPP');
+  const [mobileHeroSecondaryBtnAction, setMobileHeroSecondaryBtnAction] = useState(settings.mobileHeroSecondaryBtnAction || 'spp');
+  const [mobilePopularServicesTitle, setMobilePopularServicesTitle] = useState(settings.mobilePopularServicesTitle || 'Layanan Populer Cabang');
+  const [mobileRecommendedTitle, setMobileRecommendedTitle] = useState(settings.mobileRecommendedTitle || 'Rekomendasi Aksi Cepat');
 
   useEffect(() => {
     if (getBranchSettings) {
@@ -108,6 +118,16 @@ export function SettingsManager({
       setInvoiceLogo(bSetting.invoiceLogo);
       setInvoiceSignature(bSetting.invoiceSignature);
       setAppIcon(bSetting.appIcon);
+      setMobileHeroTitle(bSetting.mobileHeroTitle || 'Bimbingan Cepat & Akurat?');
+      setMobileHeroSubtitle(bSetting.mobileHeroSubtitle || 'Sistem Jaritmatika Math Fingers siap mendampingi presensi, kuis, dan administrasi cabang Anda.');
+      setMobileHeroBannerUrl(bSetting.mobileHeroBannerUrl || 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800');
+      setMobileHeroBadgeText(bSetting.mobileHeroBadgeText || '⚡ Operasional Cabang Siap 100%');
+      setMobileHeroPrimaryBtnText(bSetting.mobileHeroPrimaryBtnText || 'Catat Absen');
+      setMobileHeroPrimaryBtnAction(bSetting.mobileHeroPrimaryBtnAction || 'attendance');
+      setMobileHeroSecondaryBtnText(bSetting.mobileHeroSecondaryBtnText || 'Tagihan SPP');
+      setMobileHeroSecondaryBtnAction(bSetting.mobileHeroSecondaryBtnAction || 'spp');
+      setMobilePopularServicesTitle(bSetting.mobilePopularServicesTitle || 'Layanan Populer Cabang');
+      setMobileRecommendedTitle(bSetting.mobileRecommendedTitle || 'Rekomendasi Aksi Cepat');
     }
   }, [targetBranch, allSettingsMap]);
   
@@ -229,7 +249,17 @@ export function SettingsManager({
       invoiceSignature,
       appIcon,
       branch: targetBranch,
-      branches: targetBranch
+      branches: targetBranch,
+      mobileHeroTitle,
+      mobileHeroSubtitle,
+      mobileHeroBannerUrl,
+      mobileHeroBadgeText,
+      mobileHeroPrimaryBtnText,
+      mobileHeroPrimaryBtnAction,
+      mobileHeroSecondaryBtnText,
+      mobileHeroSecondaryBtnAction,
+      mobilePopularServicesTitle,
+      mobileRecommendedTitle
     });
 
     updateDynamicPwaIcon(appIcon);
@@ -249,6 +279,16 @@ export function SettingsManager({
     setInvoiceLogo(undefined);
     setInvoiceSignature(undefined);
     setAppIcon(undefined);
+    setMobileHeroTitle('Bimbingan Cepat & Akurat?');
+    setMobileHeroSubtitle('Sistem Jaritmatika Math Fingers siap mendampingi presensi, kuis, dan administrasi cabang Anda.');
+    setMobileHeroBannerUrl('https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800');
+    setMobileHeroBadgeText('⚡ Operasional Cabang Siap 100%');
+    setMobileHeroPrimaryBtnText('Catat Absen');
+    setMobileHeroPrimaryBtnAction('attendance');
+    setMobileHeroSecondaryBtnText('Tagihan SPP');
+    setMobileHeroSecondaryBtnAction('spp');
+    setMobilePopularServicesTitle('Layanan Populer Cabang');
+    setMobileRecommendedTitle('Rekomendasi Aksi Cepat');
     updateDynamicPwaIcon(undefined);
   };
 
@@ -1175,6 +1215,193 @@ export function SettingsManager({
                   </div>
                 </div>
 
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* Row 1.8: Super Admin - Pengaturan Tampilan Mobile User Cabang (Modern Home App Experience) */}
+        {currentUser?.role === 'super_admin' && (
+          <div className={`p-6 rounded-2xl border shadow-sm space-y-5 ${
+            isLight ? 'bg-gradient-to-br from-white via-emerald-50/20 to-white border-emerald-200' : 'bg-gradient-to-br from-slate-900 via-emerald-950/20 to-slate-900 border-emerald-800/50'
+          }`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3 border-emerald-500/20">
+              <div>
+                <h3 className={`text-sm font-bold uppercase tracking-wider ${isLight ? 'text-emerald-950' : 'text-emerald-300'} flex items-center gap-2`}>
+                  <Sparkles size={18} className="text-emerald-500" />
+                  <span>Pengaturan Tampilan Aplikasi Mobile Cabang (Super Admin)</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Atur konten Banner Hero Promo, Tombol Aksi Cepat, Judul Layanan Populer, serta Rekomendasi yang tampil di perangkat HP Admin Cabang untuk target <b>"{targetBranch}"</b>.
+                </p>
+              </div>
+              <span className="text-[11px] font-extrabold px-3 py-1 rounded-full bg-emerald-500 text-slate-950 self-start sm:self-center shadow-xs">
+                Mobile UX Controller
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Field 1: Judul Banner Hero */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Judul Banner Utama (Hero Headline) *
+                </label>
+                <input
+                  type="text"
+                  value={mobileHeroTitle}
+                  onChange={(e) => setMobileHeroTitle(e.target.value)}
+                  placeholder="Contoh: Bimbingan Cepat & Akurat?"
+                  className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none text-sm font-bold ${
+                    isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
+                  }`}
+                />
+              </div>
+
+              {/* Field 2: Subtitle Banner */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Sub-Judul / Deskripsi Singkat Hero *
+                </label>
+                <input
+                  type="text"
+                  value={mobileHeroSubtitle}
+                  onChange={(e) => setMobileHeroSubtitle(e.target.value)}
+                  placeholder="Contoh: Sistem Jaritmatika Math Fingers siap mendampingi presensi & SPP cabang."
+                  className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none text-xs font-medium ${
+                    isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
+                  }`}
+                />
+              </div>
+
+              {/* Field 3: Badge Promo Hero */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Teks Badge Keunggulan Hero
+                </label>
+                <input
+                  type="text"
+                  value={mobileHeroBadgeText}
+                  onChange={(e) => setMobileHeroBadgeText(e.target.value)}
+                  placeholder="Contoh: ⚡ Operasional Cabang Siap 100%"
+                  className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none text-xs font-bold text-emerald-600 ${
+                    isLight ? 'bg-white border-slate-200' : 'bg-slate-950/40 border-slate-800 text-emerald-400'
+                  }`}
+                />
+              </div>
+
+              {/* Field 4: URL Gambar Latar Banner Hero */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                  URL Gambar Banner Hero Background
+                </label>
+                <input
+                  type="url"
+                  value={mobileHeroBannerUrl}
+                  onChange={(e) => setMobileHeroBannerUrl(e.target.value)}
+                  placeholder="https://images.unsplash.com/..."
+                  className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none text-xs font-mono ${
+                    isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
+                  }`}
+                />
+              </div>
+
+              {/* Field 5: Tombol Aksi 1 */}
+              <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">Tombol Utama 1 (Primary Action)</span>
+                  <span className="text-[10px] text-slate-400">Pill Hijau</span>
+                </div>
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={mobileHeroPrimaryBtnText}
+                    onChange={(e) => setMobileHeroPrimaryBtnText(e.target.value)}
+                    placeholder="Teks Tombol (misal: Catat Absen)"
+                    className={`w-full px-3 py-2 border rounded-lg text-xs font-bold ${
+                      isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-700 text-white'
+                    }`}
+                  />
+                  <select
+                    value={mobileHeroPrimaryBtnAction}
+                    onChange={(e) => setMobileHeroPrimaryBtnAction(e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-lg text-xs font-semibold ${
+                      isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
+                    }`}
+                  >
+                    <option value="attendance">Buka Menu: Presensi / Absensi</option>
+                    <option value="qr_cards">Buka Menu: Scan Kartu QR</option>
+                    <option value="spp">Buka Menu: Pembayaran SPP</option>
+                    <option value="grades">Buka Menu: Input Nilai Kuis</option>
+                    <option value="students">Buka Menu: Data Siswa</option>
+                    <option value="classes">Buka Menu: Manajemen Kelas</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Field 6: Tombol Aksi 2 */}
+              <div className="p-3.5 rounded-xl border border-slate-500/20 bg-slate-500/5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Tombol Kedua 2 (Secondary Action)</span>
+                  <span className="text-[10px] text-slate-400">Pill Transparan</span>
+                </div>
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={mobileHeroSecondaryBtnText}
+                    onChange={(e) => setMobileHeroSecondaryBtnText(e.target.value)}
+                    placeholder="Teks Tombol (misal: Tagihan SPP)"
+                    className={`w-full px-3 py-2 border rounded-lg text-xs font-bold ${
+                      isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-700 text-white'
+                    }`}
+                  />
+                  <select
+                    value={mobileHeroSecondaryBtnAction}
+                    onChange={(e) => setMobileHeroSecondaryBtnAction(e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-lg text-xs font-semibold ${
+                      isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
+                    }`}
+                  >
+                    <option value="spp">Buka Menu: Pembayaran SPP</option>
+                    <option value="attendance">Buka Menu: Presensi / Absensi</option>
+                    <option value="qr_cards">Buka Menu: Scan Kartu QR</option>
+                    <option value="grades">Buka Menu: Input Nilai Kuis</option>
+                    <option value="notes">Buka Menu: Jurnal Guru</option>
+                    <option value="report">Buka Menu: Rapor Siswa</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Field 7: Judul Layanan Populer */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Label Bagian Grid Menu
+                </label>
+                <input
+                  type="text"
+                  value={mobilePopularServicesTitle}
+                  onChange={(e) => setMobilePopularServicesTitle(e.target.value)}
+                  placeholder="Contoh: Layanan Populer Cabang"
+                  className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none text-xs font-bold ${
+                    isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
+                  }`}
+                />
+              </div>
+
+              {/* Field 8: Judul Rekomendasi */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Label Bagian Kartu Rekomendasi
+                </label>
+                <input
+                  type="text"
+                  value={mobileRecommendedTitle}
+                  onChange={(e) => setMobileRecommendedTitle(e.target.value)}
+                  placeholder="Contoh: Rekomendasi Aksi Cepat"
+                  className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none text-xs font-bold ${
+                    isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
+                  }`}
+                />
               </div>
 
             </div>

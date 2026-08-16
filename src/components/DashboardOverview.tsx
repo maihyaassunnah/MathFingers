@@ -69,6 +69,8 @@ interface DashboardOverviewProps {
   currentUser?: AdminUser | null;
   onOpenUpdateModal?: () => void;
   isUpdateAvailable?: boolean;
+  onSelectBranch?: (branchName: string) => void;
+  onToggleTheme?: () => void;
 }
 
 export function DashboardOverview({ 
@@ -92,7 +94,9 @@ export function DashboardOverview({
   allGrades = [],
   currentUser = null,
   onOpenUpdateModal,
-  isUpdateAvailable = false
+  isUpdateAvailable = false,
+  onSelectBranch,
+  onToggleTheme
 }: DashboardOverviewProps) {
   const isDesktop = useMediaQuery('(min-width: 768px)');
   const [newTaskText, setNewTaskText] = useState('');
@@ -114,6 +118,8 @@ export function DashboardOverview({
         onNavigate={onNavigate}
         onOpenUpdateModal={onOpenUpdateModal}
         isUpdateAvailable={isUpdateAvailable}
+        onSelectBranch={onSelectBranch}
+        onToggleTheme={onToggleTheme}
       />
     );
   }

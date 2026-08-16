@@ -29,7 +29,13 @@ import {
   History,
   FileSpreadsheet,
   FileDown,
-  Building
+  Building,
+  Code,
+  Copy,
+  CheckCheck,
+  ExternalLink,
+  ShieldCheck,
+  ChevronRight
 } from 'lucide-react';
 import { CustomDropdown } from './CustomDropdown';
 import { OfflineIndicator } from './OfflineIndicator';
@@ -187,6 +193,10 @@ export function SettingsManager({
   const [mobileHeroSecondaryBtnAction, setMobileHeroSecondaryBtnAction] = useState(settings.mobileHeroSecondaryBtnAction || 'spp');
   const [mobilePopularServicesTitle, setMobilePopularServicesTitle] = useState(settings.mobilePopularServicesTitle || 'Layanan Populer Cabang');
   const [mobileRecommendedTitle, setMobileRecommendedTitle] = useState(settings.mobileRecommendedTitle || 'Rekomendasi Aksi Cepat');
+  
+  // Supabase SQL Script Viewer
+  const [isSqlCopied, setIsSqlCopied] = useState(false);
+  const [showFullSql, setShowFullSql] = useState(false);
 
   useEffect(() => {
     if (getBranchSettings) {

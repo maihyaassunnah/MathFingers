@@ -438,40 +438,42 @@ export function StudentManager({
   return (
     <div id="student-manager-section" className="space-y-6">
       {/* Header and Add Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
-            <h2 className={`text-2xl font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Database Siswa Math Fingers</h2>
-            <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-sm flex items-center gap-1.5">
-              <Users size={14} />
-              <span>{sortedStudents.length} Siswa</span>
-            </span>
+            <h2 className={`text-xl sm:text-2xl font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Database Siswa Math Fingers</h2>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-sm flex items-center gap-1.5">
+                <Users size={14} />
+                <span>{sortedStudents.length} Siswa</span>
+              </span>
+              <button
+                id="btn-add-student"
+                onClick={handleOpenAdd}
+                className="w-8 h-8 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white shadow-md hover:scale-105 active:scale-95 transition flex items-center justify-center shrink-0 cursor-pointer"
+                title="Tambah Siswa Baru"
+              >
+                <Plus size={18} className="stroke-[2.5]" />
+              </button>
+            </div>
           </div>
-          <p className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-sm mt-1`}>Kelola pendaftaran, level bimbingan, dan data kontak wali siswa.</p>
+          <p className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-xs sm:text-sm mt-1`}>Kelola pendaftaran, level bimbingan, dan data kontak wali siswa.</p>
         </div>
-        <button
-          id="btn-add-student"
-          onClick={handleOpenAdd}
-          className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2.5 rounded-xl transition duration-150 shadow-sm"
-        >
-          <UserPlus size={18} />
-          <span>Tambah Siswa Baru</span>
-        </button>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className={`p-3.5 sm:p-4 rounded-2xl shadow-sm border flex flex-col lg:flex-row gap-3 items-stretch lg:items-center ${
+      {/* Filter and Search Bar - Compact Single Line */}
+      <div className={`p-2.5 sm:p-3 rounded-2xl shadow-sm border flex flex-col md:flex-row gap-2 items-center ${
         isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
       }`}>
-        <div className="relative w-full lg:flex-1">
-          <Search className="absolute left-3.5 top-3 text-slate-500" size={18} />
+        <div className="relative w-full md:w-60 lg:w-72 shrink-0">
+          <Search className="absolute left-3 top-2.5 text-slate-500" size={15} />
           <input
             id="student-search-input"
             type="text"
-            placeholder="Cari nama siswa, nama orang tua, atau nomor HP..."
+            placeholder="Cari siswa, wali, HP..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`w-full pl-10 pr-4 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm placeholder:text-slate-550 ${
+            className={`w-full pl-9 pr-3 py-1.5 border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs placeholder:text-slate-500 ${
               isLight 
                 ? 'bg-slate-50 border-slate-200 text-slate-800' 
                 : 'bg-slate-950/40 border-slate-800 text-white'
@@ -479,8 +481,8 @@ export function StudentManager({
           />
         </div>
         
-        {/* Filter Dropdowns Layout: 2 kolom di mobile/tablet agar hemat ruang */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-wrap gap-2.5 items-center w-full lg:w-auto">
+        {/* Compact Single Line Filter Bar */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar w-full py-0.5 whitespace-nowrap">
           {/* Urutan Abjad */}
           <CustomDropdown
             id="sort-student-alphabetical"
@@ -491,7 +493,7 @@ export function StudentManager({
               { value: 'desc', label: 'Nama: Z - A' }
             ]}
             theme={theme}
-            className="w-full min-w-0 lg:w-auto lg:min-w-[130px]"
+            className="shrink-0 text-xs !w-auto min-w-[120px]"
           />
 
           {/* Cabang Filter - Hanya jika Super Admin */}
@@ -505,7 +507,7 @@ export function StudentManager({
                 ...availableBranches.map(b => ({ value: b, label: `Cabang: ${b}` }))
               ]}
               theme={theme}
-              className="w-full min-w-0 lg:w-auto lg:min-w-[140px]"
+              className="shrink-0 text-xs !w-auto min-w-[130px]"
             />
           )}
 
@@ -519,7 +521,7 @@ export function StudentManager({
               ...availableClasses.map(k => ({ value: k, label: `Kelas: ${k}` }))
             ]}
             theme={theme}
-            className="w-full min-w-0 lg:w-auto lg:min-w-[140px]"
+            className="shrink-0 text-xs !w-auto min-w-[130px]"
           />
 
           {/* Gender Filter */}
@@ -533,7 +535,7 @@ export function StudentManager({
               { value: 'Perempuan', label: 'Perempuan' }
             ]}
             theme={theme}
-            className="w-full min-w-0 lg:w-auto lg:min-w-[130px]"
+            className="shrink-0 text-xs !w-auto min-w-[125px]"
           />
 
           {/* Status Filter */}
@@ -547,7 +549,7 @@ export function StudentManager({
               { value: 'inactive', label: 'Nonaktif' }
             ]}
             theme={theme}
-            className="w-full min-w-0 lg:w-auto lg:min-w-[130px]"
+            className="shrink-0 text-xs !w-auto min-w-[120px]"
           />
 
           {/* Reset Filter Button */}
@@ -561,10 +563,10 @@ export function StudentManager({
                 setBranchFilter('All');
                 setKelasFilter('All');
               }}
-              className="w-full lg:w-auto px-3 py-2.5 rounded-xl text-xs font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 transition flex items-center justify-center gap-1 h-[38px] cursor-pointer col-span-2 sm:col-span-1"
+              className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 transition flex items-center gap-1 cursor-pointer shrink-0"
               title="Reset Semua Filter"
             >
-              <X size={14} />
+              <X size={13} />
               <span>Reset</span>
             </button>
           )}
@@ -1018,13 +1020,15 @@ export function StudentManager({
                 }`}>
                   <th className="p-4 w-16 text-center">
                     <div className="flex items-center justify-center gap-1.5">
-                      <input
-                        type="checkbox"
-                        checked={sortedStudents.length > 0 && selectedStudentIds.length === sortedStudents.length}
-                        onChange={(e) => handleToggleSelectAll(e.target.checked)}
-                        className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-400 cursor-pointer"
-                        title="Pilih Semua Siswa"
-                      />
+                      {selectedStudentIds.length > 0 && (
+                        <input
+                          type="checkbox"
+                          checked={sortedStudents.length > 0 && selectedStudentIds.length === sortedStudents.length}
+                          onChange={(e) => handleToggleSelectAll(e.target.checked)}
+                          className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-400 cursor-pointer"
+                          title="Pilih Semua Siswa"
+                        />
+                      )}
                       <span>NO</span>
                     </div>
                   </th>
@@ -1044,18 +1048,23 @@ export function StudentManager({
                   const isSelected = selectedStudentIds.includes(student.id);
 
                   return (
-                    <tr key={student.id} className={`transition duration-150 ${
+                    <tr key={student.id} className={`group/row transition duration-150 ${
                       isSelected 
                         ? isLight ? 'bg-emerald-50/60 hover:bg-emerald-100/60' : 'bg-emerald-950/30 hover:bg-emerald-950/50'
                         : isLight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/20'
                     }`}>
                       <td className="p-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-1.5">
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => handleToggleSelectStudent(student.id)}
-                            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-400 cursor-pointer"
+                            className={`w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-400 cursor-pointer transition-opacity ${
+                              (isSelected || selectedStudentIds.length > 0)
+                                ? 'opacity-100'
+                                : 'opacity-0 group-hover/row:opacity-100'
+                            }`}
+                            title="Pilih Siswa"
                           />
                           <span className="font-bold text-slate-500 dark:text-slate-400 text-xs sm:text-sm">
                             {index + 1}

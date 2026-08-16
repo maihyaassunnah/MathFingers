@@ -26,6 +26,7 @@ import { StudentQrCards } from './components/StudentQrCards';
 import { AppUpdateModal, LATEST_APP_VERSION } from './components/AppUpdateModal';
 import { MobileBottomNavigation } from './components/MobileBottomNavigation';
 import { MobileDrawer } from './components/MobileDrawer';
+import { Sidebar } from './components/Sidebar';
 import { AdminUser, Branch } from './types';
 import { getAdminAvatar, updateDynamicPwaIcon, getStudentUniqueCode } from './utils';
 
@@ -149,6 +150,7 @@ export default function App() {
   const [activeBranch, setActiveBranch] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const isDesktop = useMediaQuery('(min-width: 768px)');
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('math_finggers_theme') as 'light' | 'dark') || 'dark';
@@ -565,6 +567,8 @@ export default function App() {
             currentUser={currentUser}
             onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
             isUpdateAvailable={installedVersion !== LATEST_APP_VERSION}
+            onSelectBranch={setActiveBranch}
+            onToggleTheme={toggleTheme}
           />
         );
       case 'students':
@@ -801,6 +805,8 @@ export default function App() {
             currentUser={currentUser}
             onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
             isUpdateAvailable={installedVersion !== LATEST_APP_VERSION}
+            onSelectBranch={setActiveBranch}
+            onToggleTheme={toggleTheme}
           />
         );
     }
@@ -863,15 +869,6 @@ export default function App() {
           <MathFingerLogo size={36} textSize="sm" theme={theme} />
 
           <div className="flex items-center gap-2">
-            {/* Light/Dark Toggle (Mobile) */}
-            <button
-              onClick={toggleTheme}
-              className={`p-2 rounded-xl transition ${theme === 'dark' ? 'text-amber-400 hover:bg-slate-800/50' : 'text-slate-600 hover:bg-slate-100'}`}
-              title={theme === 'dark' ? 'Aktifkan Mode Terang' : 'Aktifkan Mode Gelap'}
-            >
-              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-
             {/* Mobile Offline Status indicator with real-time ping latency and rating */}
             {isOfflineFallback || pingLatency === null ? (
               <span className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 text-amber-500 dark:text-amber-400 border border-amber-500/20 rounded-xl text-xs shadow-xs" title="Koneksi Terputus - Mode Penyimpanan Lokal Aktif">
@@ -902,177 +899,29 @@ export default function App() {
 
       {/* 2. SIDEBAR (DESKTOP ONLY via isDesktop) */}
       {isDesktop && (
-        <aside className={`flex flex-col w-64 border-r sticky top-0 h-screen overflow-y-auto transition-colors duration-150 ${
-          theme === 'dark' ? 'bg-[#020617] border-slate-800' : 'bg-white border-slate-200'
-        }`}>
-          {/* Brand Identity */}
-          <div className={`p-5 border-b flex flex-col items-center text-center space-y-3 ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'}`}>
-            <MathFingerLogo size={64} textSize="md" theme={theme} />
-            
-            {/* Light/Dark Toggle (Desktop) */}
-            <button
-              onClick={toggleTheme}
-              className={`mt-1.5 flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
-                theme === 'dark' 
-                  ? 'bg-slate-900 border-slate-800 text-amber-400 hover:text-white hover:bg-slate-800' 
-                  : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              {theme === 'dark' ? (
-                <>
-                  <Sun size={14} />
-                  <span>Mode Terang</span>
-                </>
-              ) : (
-                <>
-                  <Moon size={14} />
-                  <span>Mode Gelap</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Database Sync Status */}
-          <div className={`px-6 py-2.5 border-b flex items-center justify-between text-xs ${theme === 'dark' ? 'bg-slate-950/40 border-slate-800/60' : 'bg-slate-50 border-slate-200'}`}>
-            <span className="text-slate-500 font-medium">Database:</span>
-            {isOfflineFallback || pingLatency === null ? (
-              <span className="inline-flex items-center gap-1 font-semibold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
-                <CloudLightning size={10} className="animate-pulse" />
-                <span>Offline / Lokal</span>
-              </span>
-            ) : (
-              (() => {
-                const rating = pingLatency < 100 ? { label: 'Cepat', colorClass: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20', pingColor: 'bg-emerald-400' } :
-                               pingLatency < 250 ? { label: 'Sedang', colorClass: 'text-amber-500 bg-amber-500/10 border-amber-500/20', pingColor: 'bg-amber-400' } :
-                               { label: 'Lambat', colorClass: 'text-rose-500 bg-rose-500/10 border-rose-500/20', pingColor: 'bg-rose-400' };
-                return (
-                  <span className={`inline-flex items-center gap-1.5 font-semibold px-2 py-0.5 rounded-lg border transition-all ${rating.colorClass}`} title={`Latensi Ping: ${pingLatency}ms (${rating.label})`}>
-                    <span className="relative flex h-1.5 w-1.5">
-                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${rating.pingColor}`}></span>
-                      <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${rating.pingColor.replace('400', '500')}`}></span>
-                    </span>
-                    <Wifi size={10} />
-                    <span>Cloud ({pingLatency} ms - {rating.label})</span>
-                  </span>
-                );
-              })()
-            )}
-          </div>
-
-          {/* App Version / Update Status in Sidebar */}
-          <div className={`px-5 py-2 border-b flex items-center justify-between text-xs ${theme === 'dark' ? 'bg-slate-950/60 border-slate-800/60' : 'bg-slate-100/70 border-slate-200'}`}>
-            <span className="text-slate-400 font-medium text-[11px]">Versi App:</span>
-            <button
-              type="button"
-              onClick={() => setIsUpdateModalOpen(true)}
-              className={`inline-flex items-center gap-1 font-bold text-[10px] px-2 py-0.5 rounded-lg border transition cursor-pointer ${
-                installedVersion === LATEST_APP_VERSION
-                  ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/25'
-                  : 'bg-amber-500/15 text-amber-500 border-amber-500/30 hover:bg-amber-500/25'
-              }`}
-              title="Klik untuk membuka rincian rilis aplikasi"
-            >
-              {installedVersion === LATEST_APP_VERSION ? (
-                <>
-                  <CheckCircle2 size={10} className="text-emerald-500" />
-                  <span>{LATEST_APP_VERSION} (Terbaru)</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles size={10} className="animate-pulse text-amber-500" />
-                  <span>{LATEST_APP_VERSION} (Update!)</span>
-                </>
-              )}
-            </button>
-          </div>
-          <nav className="flex-1 p-4 space-y-1">
-            {navigationItems.map((item) => {
-              const IconComponent = item.icon;
-              const isActive = activeTab === item.id;
-              const isDivider2 = item.id === 'branches_mgmt' || (item.id === 'settings' && currentUser?.role !== 'super_admin');
-
-              return (
-                <div key={item.id} className="space-y-1">
-                  {item.id === 'attendance' && (
-                    <div className="pt-4 pb-1.5 px-3">
-                      <div className={`border-t ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'} mb-2.5`} />
-                      <span className={`text-[10px] font-bold tracking-wider uppercase block ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
-                        Akademik & Operasional
-                      </span>
-                    </div>
-                  )}
-                  {isDivider2 && (
-                    <div className="pt-4 pb-1.5 px-3">
-                      <div className={`border-t ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'} mb-2.5`} />
-                      <span className={`text-[10px] font-bold tracking-wider uppercase block ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
-                        Administrasi & Sistem
-                      </span>
-                    </div>
-                  )}
-                  <button
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-150 relative ${
-                      isActive 
-                        ? getAccentBgClass() 
-                        : theme === 'dark'
-                          ? 'text-slate-400 hover:text-white hover:bg-slate-800/30'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                    }`}
-                  >
-                    <IconComponent size={18} className={isActive ? 'text-white dark:text-slate-950' : theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} />
-                    <span className="whitespace-nowrap truncate">{item.name}</span>
-                    {isActive && (
-                      <span className="absolute right-3 top-4.5 w-1.5 h-1.5 bg-white dark:bg-slate-950 rounded-full" />
-                    )}
-                  </button>
-                </div>
-              );
-            })}
-          </nav>
-
-          {/* Admin Profile & Logout (Desktop) */}
-          <div className={`p-4 border-t flex flex-col gap-3.5 ${theme === 'dark' ? 'border-slate-800/80' : 'border-slate-200'}`}>
-            <div className="flex items-center gap-3">
-              <div className="relative shrink-0">
-                <img
-                  src={getAdminAvatar(currentUser || { username: 'guest' })}
-                  alt={currentUser?.name}
-                  referrerPolicy="no-referrer"
-                  className="w-10 h-10 rounded-xl object-cover border border-slate-250 dark:border-slate-700 shadow-xs"
-                />
-                <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-white dark:border-slate-900 ${
-                  currentUser?.role === 'super_admin' ? 'bg-indigo-500' : 'bg-amber-500'
-                }`} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className={`text-xs font-bold truncate ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>{currentUser?.name}</h4>
-                <span className="text-[10px] text-slate-500 font-medium block">
-                  {currentUser?.role === 'super_admin' ? 'Super Admin' : `Admin Cabang ${currentUser?.branch}`}
-                </span>
-              </div>
-            </div>
-            
-            <button
-              onClick={() => {
-                setCurrentUser(null);
-                localStorage.removeItem('math_finggers_current_user_obj');
-                localStorage.removeItem('math_finggers_current_user');
-              }}
-              className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold border transition ${
-                theme === 'dark'
-                  ? 'bg-red-500/5 hover:bg-red-500/10 border-red-500/10 text-red-400 hover:text-red-300'
-                  : 'bg-red-50/50 hover:bg-red-100/50 border-red-200/50 text-red-600'
-              }`}
-            >
-              <LogOut size={13} />
-              <span>Keluar Sesi</span>
-            </button>
-
-            <div className="text-[9px] text-slate-500 text-center mt-1">
-              &copy; {new Date().getFullYear()} Math Fingers System v1.1.0
-            </div>
-          </div>
-        </aside>
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          currentUser={currentUser}
+          theme={theme}
+          toggleTheme={toggleTheme}
+          isSuperAdmin={isSuperAdmin}
+          activeBranch={activeBranch}
+          onSelectBranch={setActiveBranch}
+          studentsCount={filteredStudents.length}
+          pendingSppCount={filteredInvoices.filter(i => i.status === 'unpaid' || i.status === 'overdue').length}
+          todayAttendanceCount={filteredAttendance.filter(a => a.date === new Date().toISOString().split('T')[0]).length}
+          installedVersion={installedVersion}
+          isUpdateAvailable={installedVersion !== LATEST_APP_VERSION}
+          onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
+          onLogout={() => {
+            setCurrentUser(null);
+            localStorage.removeItem('math_finggers_current_user_obj');
+            localStorage.removeItem('math_finggers_current_user');
+          }}
+          isCollapsed={isSidebarCollapsed}
+          setIsCollapsed={setIsSidebarCollapsed}
+        />
       )}
 
       {/* 3. MOBILE MENU SIDE-DRAWER OVERLAY (ONLY ON NON-DESKTOP) */}

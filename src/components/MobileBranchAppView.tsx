@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Student, 
@@ -10,16 +10,15 @@ import {
   AdminUser,
   ClassGroup,
   FinanceIncome,
-  FinanceExpense
+  FinanceExpense,
+  HeroSlide
 } from '../types';
-import { formatRupiah, getAdminAvatar } from '../utils';
+import { getAdminAvatar } from '../utils';
 import { 
   MapPin, 
   Bell, 
   Search, 
   SlidersHorizontal, 
-  CheckCircle2, 
-  Clock, 
   ShieldCheck, 
   Zap, 
   Calendar, 
@@ -35,18 +34,13 @@ import {
   Award, 
   BookOpen, 
   TrendingUp, 
-  Building, 
-  Database, 
   Settings, 
   ChevronRight, 
+  ChevronLeft,
   ChevronDown, 
-  Star, 
-  Phone, 
-  ArrowUpRight,
-  TrendingDown,
-  Sparkles,
   CreditCard,
-  Plus
+  Sparkles,
+  X
 } from 'lucide-react';
 
 interface MobileBranchAppViewProps {
@@ -88,8 +82,12 @@ export function MobileBranchAppView({
 }: MobileBranchAppViewProps) {
   const isLight = theme === 'light';
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showAllServices, setShowAllServices] = useState(false);
-  const [activePromoIndex, setActivePromoIndex] = useState(0);
+  const [activeSlideIndex, setActiveSlideIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Derive location / branch info
   const branchName = currentUser?.role === 'branch_admin' 
@@ -98,22 +96,6 @@ export function MobileBranchAppView({
   
   const branchObj = branches.find(b => b.name.toLowerCase() === branchName.toLowerCase());
   const branchAddress = branchObj?.address || 'Jl. Raya Math Fingers No. 221B, Indonesia';
-
-  // Stats calculation
-  const activeStudents = students.filter(s => s.status === 'active');
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const todaysAttendance = attendance.filter(a => a.date === todayStr);
-  const presentCount = todaysAttendance.filter(a => a.status === 'present').length;
-  const attendanceRate = todaysAttendance.length > 0 
-    ? Math.round((presentCount / todaysAttendance.length) * 100) 
-    : 0;
-
-  const unpaidInvoices = invoices.filter(inv => inv.status === 'unpaid');
-  const unpaidTotal = unpaidInvoices.reduce((sum, inv) => sum + inv.amount, 0);
-
-  const avgGrade = grades.length > 0
-    ? Math.round(grades.reduce((sum, g) => sum + g.score, 0) / grades.length)
-    : 85;
 
   // 12 Primary and Secondary Services Grid
   const primaryServices = [
@@ -148,73 +130,88 @@ export function MobileBranchAppView({
       )
     : allDisplayServices;
 
-  // Recommended Operations (Cards like "Recommended for you" in reference image)
-  const recommendedCards = [
+  // Carousel Slides (Up to 3 slides configured by Super Admin)
+  const defaultSlides: HeroSlide[] = [
     {
-      id: 'rec-attendance',
-      badge: 'Utama Hari Ini',
-      title: 'Presensi Cepat QR Siswa',
-      rating: '4.9 (1.2k)',
-      duration: '5 menit',
-      verified: 'Terverifikasi Instan',
-      price: `${todaysAttendance.length} Siswa`,
-      originalPrice: `${activeStudents.length} Total`,
-      btnText: 'Scan Sekarang',
-      actionTab: 'qr_cards',
-      image: 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=600',
+      id: 'slide-1',
+      title: settings.mobileHeroTitle || 'Bimbingan Cepat & Akurat?',
+      subtitle: settings.mobileHeroSubtitle || 'Sistem Jaritmatika Math Fingers siap mendampingi presensi, kuis, dan administrasi cabang Anda.',
+      badgeText: settings.mobileHeroBadgeText || '⚡ Operasional Cabang Siap 100%',
+      bannerUrl: settings.mobileHeroBannerUrl || 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800',
+      primaryBtnText: settings.mobileHeroPrimaryBtnText || 'Catat Absen',
+      primaryBtnAction: settings.mobileHeroPrimaryBtnAction || 'attendance',
+      secondaryBtnText: settings.mobileHeroSecondaryBtnText || 'Tagihan SPP',
+      secondaryBtnAction: settings.mobileHeroSecondaryBtnAction || 'spp',
+      enabled: true
     },
     {
-      id: 'rec-spp',
-      badge: 'Penagihan',
-      title: 'Kuitansi & Tagihan SPP',
-      rating: '4.8 (850)',
-      duration: 'Real-time',
-      verified: 'Auto WhatsApp Slip',
-      price: formatRupiah(settings.defaultSppAmount || 250000),
-      originalPrice: 'Reguler',
-      btnText: 'Kelola SPP',
-      actionTab: 'spp',
-      image: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=600',
+      id: 'slide-2',
+      title: 'Presensi & Evaluasi Refleks',
+      subtitle: 'Pantau kehadiran barcode QR dan kalkulasi skor kuis refleks berhitung siswa secara instan & akurat.',
+      badgeText: '🎯 Presensi QR & Skor Instan',
+      bannerUrl: 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=800',
+      primaryBtnText: 'Scan Kartu QR',
+      primaryBtnAction: 'qr_cards',
+      secondaryBtnText: 'Input Nilai',
+      secondaryBtnAction: 'grades',
+      enabled: true
     },
     {
-      id: 'rec-grades',
-      badge: 'Akademik',
-      title: 'Input Nilai Kuis Jaritmatika',
-      rating: '5.0 (920)',
-      duration: '10 menit',
-      verified: 'Kalkulasi Otomatis',
-      price: `Rata-rata ${avgGrade}`,
-      originalPrice: 'Target 90+',
-      btnText: 'Beri Nilai',
-      actionTab: 'grades',
-      image: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=600',
-    },
-    {
-      id: 'rec-students',
-      badge: 'Registrasi',
-      title: 'Pendaftaran Siswa Baru',
-      rating: '4.9 (500+)',
-      duration: '3 menit',
-      verified: 'Buku Induk Cabang',
-      price: `${activeStudents.length} Terdaftar`,
-      originalPrice: 'Aktif',
-      btnText: 'Tambah Siswa',
-      actionTab: 'students',
-      image: 'https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?auto=format&fit=crop&q=80&w=600',
+      id: 'slide-3',
+      title: 'Kelola SPP & Kuitansi Digital',
+      subtitle: 'Terbitkan kuitansi resmi PDF berstempel dan kirim notifikasi tagihan SPP otomatis ke WhatsApp wali murid.',
+      badgeText: '💳 Slip & Kuitansi Otomatis',
+      bannerUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800',
+      primaryBtnText: 'Kelola SPP',
+      primaryBtnAction: 'spp',
+      secondaryBtnText: 'Data Siswa',
+      secondaryBtnAction: 'students',
+      enabled: true
     }
   ];
 
-  // Promotional Banner details configurable by Super Admin
-  const promoTitle = settings.mobileHeroTitle || 'Bimbingan Cepat & Akurat?';
-  const promoSubtitle = settings.mobileHeroSubtitle || 'Sistem Jaritmatika Math Fingers siap mendampingi presensi, kuis, dan administrasi cabang Anda.';
-  const promoBadge = settings.mobileHeroBadgeText || '⚡ Operasional Cabang Siap 100%';
-  const promoPrimaryBtn = settings.mobileHeroPrimaryBtnText || 'Catat Absen';
-  const promoSecondaryBtn = settings.mobileHeroSecondaryBtnText || 'Tagihan SPP';
+  // Resolve slides: Prefer settings.heroSlides if configured, filter enabled ones, max 3
+  const configuredSlides = settings.heroSlides && settings.heroSlides.length > 0
+    ? settings.heroSlides.filter(s => s.enabled !== false).slice(0, 3)
+    : [];
+
+  const activeSlides: HeroSlide[] = configuredSlides.length > 0 ? configuredSlides : defaultSlides;
+
+  // Auto-Slide Timer (Rotates every 4.5 seconds when not paused)
+  useEffect(() => {
+    if (activeSlides.length <= 1 || isPaused) return;
+
+    const timer = setInterval(() => {
+      setSlideDirection('right');
+      setActiveSlideIndex((prev) => (prev + 1) % activeSlides.length);
+    }, 4500);
+
+    return () => clearInterval(timer);
+  }, [activeSlides.length, isPaused]);
+
+  // Keep index within bounds if activeSlides count changes
+  useEffect(() => {
+    if (activeSlideIndex >= activeSlides.length) {
+      setActiveSlideIndex(0);
+    }
+  }, [activeSlides.length, activeSlideIndex]);
+
+  const handleNextSlide = () => {
+    setSlideDirection('right');
+    setActiveSlideIndex((prev) => (prev + 1) % activeSlides.length);
+  };
+
+  const handlePrevSlide = () => {
+    setSlideDirection('left');
+    setActiveSlideIndex((prev) => (prev - 1 + activeSlides.length) % activeSlides.length);
+  };
+
+  const currentSlide = activeSlides[activeSlideIndex] || activeSlides[0] || defaultSlides[0];
 
   return (
     <div id="mobile-branch-app-view" className="space-y-4 max-w-md mx-auto pb-6">
       
-      {/* 1. TOP BAR: Location Dropdown + Notification + Cart / Sync Status */}
+      {/* 1. TOP BAR: Location Dropdown + Action Icons (Search, Notification, Profile Avatar) */}
       <div className="flex items-center justify-between gap-2 pt-1 px-1">
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-8 h-8 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
@@ -227,13 +224,35 @@ export function MobileBranchAppView({
               </span>
               <ChevronDown size={14} className="text-slate-400 shrink-0" />
             </div>
-            <p className="text-[10px] text-slate-500 truncate max-w-[200px]">
+            <p className="text-[10px] text-slate-500 truncate max-w-[160px] sm:max-w-[220px]">
               {branchAddress}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Search Icon Button - Next to notification & profile */}
+          <button 
+            type="button"
+            onClick={() => {
+              const nextState = !isSearchOpen;
+              setIsSearchOpen(nextState);
+              if (nextState) {
+                setTimeout(() => searchInputRef.current?.focus(), 80);
+              }
+            }}
+            className={`relative p-2 rounded-full border transition ${
+              isSearchOpen || searchQuery
+                ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
+                : isLight 
+                  ? 'bg-white border-slate-200 text-slate-700 hover:text-emerald-600 shadow-xs' 
+                  : 'bg-slate-800 border-slate-700 text-slate-200 hover:text-emerald-400'
+            }`}
+            title="Cari Menu, Siswa & Layanan"
+          >
+            <Search size={17} />
+          </button>
+
           {/* Notification Bell / Update badge */}
           <button 
             type="button"
@@ -253,7 +272,7 @@ export function MobileBranchAppView({
           <button 
             type="button"
             onClick={() => onNavigate('settings')}
-            className="p-0.5 rounded-full border border-emerald-500/30 overflow-hidden shrink-0"
+            className="p-0.5 rounded-full border border-emerald-500/30 overflow-hidden shrink-0 hover:scale-105 transition"
             title="Pengaturan Akun & Cabang"
           >
             <img 
@@ -266,107 +285,202 @@ export function MobileBranchAppView({
         </div>
       </div>
 
-      {/* 2. SEARCH BAR WITH FILTER ICON */}
-      <div className="relative">
-        <Search className="absolute left-3.5 top-3 text-slate-400" size={17} />
-        <input 
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Cari menu, layanan, siswa, atau modul..."
-          className={`w-full pl-10 pr-11 py-2.5 rounded-2xl border text-xs font-semibold focus:outline-none transition ${
-            isLight 
-              ? 'bg-white border-slate-200/90 text-slate-800 focus:border-emerald-500 shadow-xs' 
-              : 'bg-slate-900 border-slate-800 text-white focus:border-emerald-500'
-          }`}
-        />
-        {searchQuery ? (
-          <button 
-            onClick={() => setSearchQuery('')}
-            className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 text-xs font-bold"
+      {/* 2. EXPANDABLE SEARCH BAR WITH FILTER & CLEAR BUTTON */}
+      <AnimatePresence>
+        {(isSearchOpen || searchQuery) && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0, y: -4 }}
+            animate={{ opacity: 1, height: 'auto', y: 0 }}
+            exit={{ opacity: 0, height: 0, y: -4 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="overflow-hidden"
           >
-            ✕
-          </button>
-        ) : (
-          <button 
-            type="button"
-            onClick={() => setShowAllServices(!showAllServices)}
-            className={`absolute right-2.5 top-2 p-1.5 rounded-xl border transition ${
-              isLight ? 'bg-slate-50 border-slate-200 text-slate-600' : 'bg-slate-800 border-slate-700 text-slate-300'
-            }`}
-            title="Filter Tampilan Menu"
-          >
-            <SlidersHorizontal size={14} />
-          </button>
+            <div className="relative pt-0.5">
+              <Search className="absolute left-3.5 top-3 text-slate-400" size={17} />
+              <input 
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Cari menu, layanan, siswa, atau modul..."
+                className={`w-full pl-10 pr-20 py-2.5 rounded-2xl border text-xs font-semibold focus:outline-none transition ${
+                  isLight 
+                    ? 'bg-white border-slate-200/90 text-slate-800 focus:border-emerald-500 shadow-xs' 
+                    : 'bg-slate-900 border-slate-800 text-white focus:border-emerald-500'
+                }`}
+              />
+              <div className="absolute right-2.5 top-2 flex items-center gap-1">
+                {searchQuery && (
+                  <button 
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold"
+                    title="Bersihkan teks"
+                  >
+                    ✕
+                  </button>
+                )}
+                <button 
+                  type="button"
+                  onClick={() => setShowAllServices(!showAllServices)}
+                  className={`p-1.5 rounded-xl border transition ${
+                    showAllServices
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : isLight ? 'bg-slate-50 border-slate-200 text-slate-600' : 'bg-slate-800 border-slate-700 text-slate-300'
+                  }`}
+                  title="Filter Tampilan Semua Menu"
+                >
+                  <SlidersHorizontal size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSearchOpen(false);
+                    setSearchQuery('');
+                  }}
+                  className={`p-1.5 rounded-xl border transition ${
+                    isLight ? 'bg-slate-50 border-slate-200 text-slate-400 hover:text-slate-600' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
+                  }`}
+                  title="Tutup Pencarian"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
 
-      {/* 3. HERO PROMOTIONAL BANNER (Like AC Repair in Reference Image) */}
-      <div className={`relative overflow-hidden rounded-3xl border shadow-md transition-all ${
-        isLight 
-          ? 'bg-gradient-to-br from-emerald-900 via-teal-900 to-slate-900 text-white border-emerald-800/40' 
-          : 'bg-gradient-to-br from-emerald-950 via-slate-900 to-slate-950 text-white border-emerald-500/20'
-      }`}>
-        {/* Background Overlay image with soft fade */}
-        <div 
-          className="absolute inset-0 opacity-20 bg-cover bg-center pointer-events-none mix-blend-overlay"
-          style={{
-            backgroundImage: `url(${settings.mobileHeroBannerUrl || 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800'})`
-          }}
-        />
-
-        <div className="relative z-10 p-5 space-y-3">
-          <div className="space-y-1 max-w-[70%]">
-            <h2 className="text-lg sm:text-xl font-black tracking-tight leading-snug">
-              {promoTitle}
-            </h2>
-            <p className="text-[11px] text-emerald-100/90 leading-relaxed font-medium">
-              {promoSubtitle}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-300">
-            <Zap size={12} className="text-amber-400" />
-            <span>{promoBadge}</span>
-          </div>
-
-          {/* Quick Action Pill Buttons in Hero */}
-          <div className="flex items-center gap-2 pt-1">
-            <button
-              type="button"
-              onClick={() => onNavigate(settings.mobileHeroPrimaryBtnAction || 'attendance')}
-              className="px-3.5 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-sm transition"
+      {/* 3. HERO PROMOTIONAL BANNER CAROUSEL (Maksimal 3 Slide Otomatis) */}
+      <div 
+        className="relative group"
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        onTouchStart={() => setIsPaused(true)}
+        onTouchEnd={() => setIsPaused(false)}
+      >
+        <div className={`relative overflow-hidden rounded-3xl border shadow-md transition-all min-h-[178px] ${
+          isLight 
+            ? 'bg-gradient-to-br from-emerald-900 via-teal-900 to-slate-900 text-white border-emerald-800/40' 
+            : 'bg-gradient-to-br from-emerald-950 via-slate-900 to-slate-950 text-white border-emerald-500/20'
+        }`}>
+          
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={currentSlide.id || activeSlideIndex}
+              initial={{ opacity: 0, x: slideDirection === 'right' ? 40 : -40 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: slideDirection === 'right' ? -40 : 40 }}
+              transition={{ duration: 0.35, ease: 'easeInOut' }}
+              className="relative w-full h-full"
             >
-              <Zap size={13} className="fill-current" />
-              <span>{promoPrimaryBtn}</span>
-            </button>
+              {/* Background Overlay image with soft fade */}
+              <div 
+                className="absolute inset-0 opacity-20 bg-cover bg-center pointer-events-none mix-blend-overlay transition-all duration-500"
+                style={{
+                  backgroundImage: `url(${currentSlide.bannerUrl || 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800'})`
+                }}
+              />
 
-            <button
-              type="button"
-              onClick={() => onNavigate(settings.mobileHeroSecondaryBtnAction || 'spp')}
-              className="px-3.5 py-2 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 text-white backdrop-blur-md font-bold text-xs flex items-center gap-1.5 border border-white/20 transition"
-            >
-              <Calendar size={13} />
-              <span>{promoSecondaryBtn}</span>
-            </button>
-          </div>
+              <div className="relative z-10 p-5 space-y-3">
+                <div className="space-y-1 max-w-[74%]">
+                  <h2 className="text-lg sm:text-xl font-black tracking-tight leading-snug">
+                    {currentSlide.title}
+                  </h2>
+                  <p className="text-[11px] text-emerald-100/90 leading-relaxed font-medium line-clamp-2">
+                    {currentSlide.subtitle}
+                  </p>
+                </div>
+
+                {currentSlide.badgeText && (
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-300">
+                    <Zap size={12} className="text-amber-400" />
+                    <span>{currentSlide.badgeText}</span>
+                  </div>
+                )}
+
+                {/* Quick Action Pill Buttons in Hero */}
+                <div className="flex items-center gap-2 pt-0.5">
+                  {currentSlide.primaryBtnText && (
+                    <button
+                      type="button"
+                      onClick={() => onNavigate(currentSlide.primaryBtnAction || 'attendance')}
+                      className="px-3.5 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-sm transition"
+                    >
+                      <Zap size={13} className="fill-current" />
+                      <span>{currentSlide.primaryBtnText}</span>
+                    </button>
+                  )}
+
+                  {currentSlide.secondaryBtnText && (
+                    <button
+                      type="button"
+                      onClick={() => onNavigate(currentSlide.secondaryBtnAction || 'spp')}
+                      className="px-3.5 py-2 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 text-white backdrop-blur-md font-bold text-xs flex items-center gap-1.5 border border-white/20 transition"
+                    >
+                      <Calendar size={13} />
+                      <span>{currentSlide.secondaryBtnText}</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Floating Right Hero Avatar/Illustration */}
+              <div className="absolute right-2 bottom-0 w-28 h-32 pointer-events-none opacity-90 hidden xs:block">
+                <img 
+                  src="https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=300"
+                  alt="Teacher Avatar"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover object-top rounded-tl-3xl mask-gradient-to-b"
+                />
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Prev/Next arrows on hover or desktop */}
+          {activeSlides.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={handlePrevSlide}
+                className="absolute left-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-950/40 hover:bg-slate-950/70 text-white backdrop-blur-md transition opacity-0 group-hover:opacity-100 z-20"
+                title="Slide Sebelumnya"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={handleNextSlide}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-950/40 hover:bg-slate-950/70 text-white backdrop-blur-md transition opacity-0 group-hover:opacity-100 z-20"
+                title="Slide Selanjutnya"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </>
+          )}
         </div>
 
-        {/* Floating Right Hero Avatar/Illustration */}
-        <div className="absolute right-2 bottom-0 w-28 h-32 pointer-events-none opacity-90 hidden xs:block">
-          <img 
-            src="https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=300"
-            alt="Teacher Avatar"
-            className="w-full h-full object-cover object-top rounded-tl-3xl mask-gradient-to-b"
-          />
-        </div>
-      </div>
-
-      {/* Pagination dots */}
-      <div className="flex items-center justify-center gap-1.5 pt-0.5">
-        <span className="w-4 h-1.5 rounded-full bg-emerald-500 transition-all" />
-        <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
-        <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
+        {/* Carousel Pagination Dots */}
+        {activeSlides.length > 1 && (
+          <div className="flex items-center justify-center gap-1.5 pt-2">
+            {activeSlides.map((slide, idx) => (
+              <button
+                key={slide.id || idx}
+                type="button"
+                onClick={() => {
+                  setSlideDirection(idx > activeSlideIndex ? 'right' : 'left');
+                  setActiveSlideIndex(idx);
+                }}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  activeSlideIndex === idx
+                    ? 'w-6 bg-emerald-500'
+                    : 'w-2 bg-slate-300 dark:bg-slate-700 hover:bg-slate-400'
+                }`}
+                title={`Buka Slide ${idx + 1}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 4. POPULAR SERVICES GRID (4x2 / 4x4 Grid with clean icons & titles) */}
@@ -411,85 +525,7 @@ export function MobileBranchAppView({
         </div>
       </div>
 
-      {/* 5. RECOMMENDED FOR YOU (Horizontal Scroll or Compact Bento Cards like Reference) */}
-      <div className="space-y-2.5 pt-2">
-        <div className="flex items-center justify-between px-1">
-          <h3 className={`text-sm font-black tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
-            {settings.mobileRecommendedTitle || 'Rekomendasi Aksi Cepat'}
-          </h3>
-          <span className="text-xs font-bold text-slate-400">
-            Real-time
-          </span>
-        </div>
-
-        {/* Horizontal Card Carousel / Stack */}
-        <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
-          {recommendedCards.map((card) => (
-            <div
-              key={card.id}
-              className={`rounded-3xl border overflow-hidden transition-all shadow-xs flex flex-col justify-between ${
-                isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-              }`}
-            >
-              <div className="relative h-28 w-full bg-slate-100 dark:bg-slate-800">
-                <img 
-                  src={card.image} 
-                  alt={card.title}
-                  className="w-full h-full object-cover"
-                />
-                <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full bg-slate-950/80 backdrop-blur-md text-white font-extrabold text-[9px] uppercase tracking-wider">
-                  {card.badge}
-                </span>
-              </div>
-
-              <div className="p-3.5 space-y-2.5 flex-1 flex flex-col justify-between">
-                <div>
-                  <h4 className={`font-extrabold text-xs leading-snug line-clamp-1 ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                    {card.title}
-                  </h4>
-                  <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-1">
-                    <span className="flex items-center gap-0.5 text-amber-500 font-bold">
-                      <Star size={11} className="fill-amber-400" />
-                      {card.rating}
-                    </span>
-                    <span>•</span>
-                    <span className="flex items-center gap-0.5">
-                      <Clock size={11} />
-                      {card.duration}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-1">
-                    <ShieldCheck size={12} />
-                    <span>{card.verified}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800">
-                  <div>
-                    <span className="text-xs font-black text-slate-900 dark:text-white">
-                      {card.price}
-                    </span>
-                    <span className="text-[9px] text-slate-400 block">
-                      {card.originalPrice}
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => onNavigate(card.actionTab)}
-                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-[11px] transition shadow-xs"
-                  >
-                    {card.btnText}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 6. TRUST & OPERATIONAL BADGES (4 Columns at bottom) */}
+      {/* 5. TRUST & OPERATIONAL BADGES (4 Columns at bottom) */}
       <div className={`p-4 rounded-3xl border grid grid-cols-4 gap-2 text-center ${
         isLight ? 'bg-slate-50 border-slate-200/80' : 'bg-slate-900/60 border-slate-800'
       }`}>

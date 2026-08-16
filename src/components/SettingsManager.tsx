@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import * as XLSX from 'xlsx';
-import { AppSettings, AdminUser, Branch } from '../types';
+import { AppSettings, AdminUser, Branch, HeroSlide } from '../types';
 import { compressImageFile, updateDynamicPwaIcon } from '../utils';
 import { 
   Settings, 
@@ -62,6 +62,83 @@ const ACCENT_COLORS = [
   { id: 'sky', name: 'Sky Blue', colorClass: 'bg-sky-500', hoverClass: 'hover:bg-sky-600', ringClass: 'ring-sky-400' },
 ] as const;
 
+const DEFAULT_HERO_SLIDES: HeroSlide[] = [
+  {
+    id: 'slide-1',
+    title: 'Bimbingan Cepat & Akurat?',
+    subtitle: 'Sistem Jaritmatika Math Fingers siap mendampingi presensi, kuis, dan administrasi cabang Anda.',
+    badgeText: '⚡ Operasional Cabang Siap 100%',
+    bannerUrl: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800',
+    primaryBtnText: 'Catat Absen',
+    primaryBtnAction: 'attendance',
+    secondaryBtnText: 'Tagihan SPP',
+    secondaryBtnAction: 'spp',
+    enabled: true
+  },
+  {
+    id: 'slide-2',
+    title: 'Presensi & Evaluasi Refleks',
+    subtitle: 'Pantau kehadiran barcode QR dan kalkulasi skor kuis refleks berhitung siswa secara instan & akurat.',
+    badgeText: '🎯 Presensi QR & Skor Instan',
+    bannerUrl: 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=800',
+    primaryBtnText: 'Scan Kartu QR',
+    primaryBtnAction: 'qr_cards',
+    secondaryBtnText: 'Input Nilai',
+    secondaryBtnAction: 'grades',
+    enabled: true
+  },
+  {
+    id: 'slide-3',
+    title: 'Kelola SPP & Kuitansi Digital',
+    subtitle: 'Terbitkan kuitansi resmi PDF berstempel dan kirim notifikasi tagihan SPP otomatis ke WhatsApp wali murid.',
+    badgeText: '💳 Slip & Kuitansi Otomatis',
+    bannerUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800',
+    primaryBtnText: 'Kelola SPP',
+    primaryBtnAction: 'spp',
+    secondaryBtnText: 'Data Siswa',
+    secondaryBtnAction: 'students',
+    enabled: true
+  }
+];
+
+const getNormalizedHeroSlides = (sourceSettings: AppSettings): HeroSlide[] => {
+  const custom = sourceSettings.heroSlides;
+  if (custom && custom.length > 0) {
+    return [0, 1, 2].map((i) => {
+      if (custom[i]) {
+        return {
+          ...DEFAULT_HERO_SLIDES[i],
+          ...custom[i],
+          id: `slide-${i + 1}`,
+          enabled: custom[i].enabled !== undefined ? custom[i].enabled : true
+        };
+      }
+      return {
+        ...DEFAULT_HERO_SLIDES[i],
+        id: `slide-${i + 1}`,
+        enabled: i === 0
+      };
+    });
+  }
+
+  return [
+    {
+      ...DEFAULT_HERO_SLIDES[0],
+      title: sourceSettings.mobileHeroTitle || DEFAULT_HERO_SLIDES[0].title,
+      subtitle: sourceSettings.mobileHeroSubtitle || DEFAULT_HERO_SLIDES[0].subtitle,
+      badgeText: sourceSettings.mobileHeroBadgeText || DEFAULT_HERO_SLIDES[0].badgeText,
+      bannerUrl: sourceSettings.mobileHeroBannerUrl || DEFAULT_HERO_SLIDES[0].bannerUrl,
+      primaryBtnText: sourceSettings.mobileHeroPrimaryBtnText || DEFAULT_HERO_SLIDES[0].primaryBtnText,
+      primaryBtnAction: sourceSettings.mobileHeroPrimaryBtnAction || DEFAULT_HERO_SLIDES[0].primaryBtnAction,
+      secondaryBtnText: sourceSettings.mobileHeroSecondaryBtnText || DEFAULT_HERO_SLIDES[0].secondaryBtnText,
+      secondaryBtnAction: sourceSettings.mobileHeroSecondaryBtnAction || DEFAULT_HERO_SLIDES[0].secondaryBtnAction,
+      enabled: true
+    },
+    DEFAULT_HERO_SLIDES[1],
+    DEFAULT_HERO_SLIDES[2]
+  ];
+};
+
 export function SettingsManager({ 
   settings, 
   onUpdateSettings, 
@@ -94,6 +171,12 @@ export function SettingsManager({
   const [invoiceLogo, setInvoiceLogo] = useState<string | undefined>(settings.invoiceLogo);
   const [invoiceSignature, setInvoiceSignature] = useState<string | undefined>(settings.invoiceSignature);
   const [appIcon, setAppIcon] = useState<string | undefined>(settings.appIcon);
+  
+  // Carousel Hero Slides (Maksimal 3 Slide untuk Carousel Otomatis)
+  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(() => getNormalizedHeroSlides(settings));
+  const [activeSlideTab, setActiveSlideTab] = useState<number>(0);
+  const [previewSlideIdx, setPreviewSlideIdx] = useState<number>(0);
+
   const [mobileHeroTitle, setMobileHeroTitle] = useState(settings.mobileHeroTitle || 'Bimbingan Cepat & Akurat?');
   const [mobileHeroSubtitle, setMobileHeroSubtitle] = useState(settings.mobileHeroSubtitle || 'Sistem Jaritmatika Math Fingers siap mendampingi presensi, kuis, dan administrasi cabang Anda.');
   const [mobileHeroBannerUrl, setMobileHeroBannerUrl] = useState(settings.mobileHeroBannerUrl || 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800');
@@ -118,18 +201,42 @@ export function SettingsManager({
       setInvoiceLogo(bSetting.invoiceLogo);
       setInvoiceSignature(bSetting.invoiceSignature);
       setAppIcon(bSetting.appIcon);
-      setMobileHeroTitle(bSetting.mobileHeroTitle || 'Bimbingan Cepat & Akurat?');
-      setMobileHeroSubtitle(bSetting.mobileHeroSubtitle || 'Sistem Jaritmatika Math Fingers siap mendampingi presensi, kuis, dan administrasi cabang Anda.');
-      setMobileHeroBannerUrl(bSetting.mobileHeroBannerUrl || 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800');
-      setMobileHeroBadgeText(bSetting.mobileHeroBadgeText || '⚡ Operasional Cabang Siap 100%');
-      setMobileHeroPrimaryBtnText(bSetting.mobileHeroPrimaryBtnText || 'Catat Absen');
-      setMobileHeroPrimaryBtnAction(bSetting.mobileHeroPrimaryBtnAction || 'attendance');
-      setMobileHeroSecondaryBtnText(bSetting.mobileHeroSecondaryBtnText || 'Tagihan SPP');
-      setMobileHeroSecondaryBtnAction(bSetting.mobileHeroSecondaryBtnAction || 'spp');
+
+      const normalized = getNormalizedHeroSlides(bSetting);
+      setHeroSlides(normalized);
+      setMobileHeroTitle(normalized[0]?.title || 'Bimbingan Cepat & Akurat?');
+      setMobileHeroSubtitle(normalized[0]?.subtitle || 'Sistem Jaritmatika Math Fingers siap mendampingi presensi, kuis, dan administrasi cabang Anda.');
+      setMobileHeroBannerUrl(normalized[0]?.bannerUrl || 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800');
+      setMobileHeroBadgeText(normalized[0]?.badgeText || '⚡ Operasional Cabang Siap 100%');
+      setMobileHeroPrimaryBtnText(normalized[0]?.primaryBtnText || 'Catat Absen');
+      setMobileHeroPrimaryBtnAction(normalized[0]?.primaryBtnAction || 'attendance');
+      setMobileHeroSecondaryBtnText(normalized[0]?.secondaryBtnText || 'Tagihan SPP');
+      setMobileHeroSecondaryBtnAction(normalized[0]?.secondaryBtnAction || 'spp');
       setMobilePopularServicesTitle(bSetting.mobilePopularServicesTitle || 'Layanan Populer Cabang');
       setMobileRecommendedTitle(bSetting.mobileRecommendedTitle || 'Rekomendasi Aksi Cepat');
     }
   }, [targetBranch, allSettingsMap]);
+
+  const updateSlideField = (index: number, field: keyof HeroSlide, value: any) => {
+    setHeroSlides(prev => {
+      const next = [...prev];
+      if (next[index]) {
+        next[index] = { ...next[index], [field]: value };
+      }
+      return next;
+    });
+
+    if (index === 0) {
+      if (field === 'title') setMobileHeroTitle(value);
+      if (field === 'subtitle') setMobileHeroSubtitle(value);
+      if (field === 'badgeText') setMobileHeroBadgeText(value);
+      if (field === 'bannerUrl') setMobileHeroBannerUrl(value);
+      if (field === 'primaryBtnText') setMobileHeroPrimaryBtnText(value);
+      if (field === 'primaryBtnAction') setMobileHeroPrimaryBtnAction(value);
+      if (field === 'secondaryBtnText') setMobileHeroSecondaryBtnText(value);
+      if (field === 'secondaryBtnAction') setMobileHeroSecondaryBtnAction(value);
+    }
+  };
   
   const [isSaved, setIsSaved] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -250,14 +357,15 @@ export function SettingsManager({
       appIcon,
       branch: targetBranch,
       branches: targetBranch,
-      mobileHeroTitle,
-      mobileHeroSubtitle,
-      mobileHeroBannerUrl,
-      mobileHeroBadgeText,
-      mobileHeroPrimaryBtnText,
-      mobileHeroPrimaryBtnAction,
-      mobileHeroSecondaryBtnText,
-      mobileHeroSecondaryBtnAction,
+      heroSlides,
+      mobileHeroTitle: heroSlides[0]?.title || mobileHeroTitle,
+      mobileHeroSubtitle: heroSlides[0]?.subtitle || mobileHeroSubtitle,
+      mobileHeroBannerUrl: heroSlides[0]?.bannerUrl || mobileHeroBannerUrl,
+      mobileHeroBadgeText: heroSlides[0]?.badgeText || mobileHeroBadgeText,
+      mobileHeroPrimaryBtnText: heroSlides[0]?.primaryBtnText || mobileHeroPrimaryBtnText,
+      mobileHeroPrimaryBtnAction: heroSlides[0]?.primaryBtnAction || mobileHeroPrimaryBtnAction,
+      mobileHeroSecondaryBtnText: heroSlides[0]?.secondaryBtnText || mobileHeroSecondaryBtnText,
+      mobileHeroSecondaryBtnAction: heroSlides[0]?.secondaryBtnAction || mobileHeroSecondaryBtnAction,
       mobilePopularServicesTitle,
       mobileRecommendedTitle
     });
@@ -279,14 +387,15 @@ export function SettingsManager({
     setInvoiceLogo(undefined);
     setInvoiceSignature(undefined);
     setAppIcon(undefined);
-    setMobileHeroTitle('Bimbingan Cepat & Akurat?');
-    setMobileHeroSubtitle('Sistem Jaritmatika Math Fingers siap mendampingi presensi, kuis, dan administrasi cabang Anda.');
-    setMobileHeroBannerUrl('https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800');
-    setMobileHeroBadgeText('⚡ Operasional Cabang Siap 100%');
-    setMobileHeroPrimaryBtnText('Catat Absen');
-    setMobileHeroPrimaryBtnAction('attendance');
-    setMobileHeroSecondaryBtnText('Tagihan SPP');
-    setMobileHeroSecondaryBtnAction('spp');
+    setHeroSlides(DEFAULT_HERO_SLIDES);
+    setMobileHeroTitle(DEFAULT_HERO_SLIDES[0].title);
+    setMobileHeroSubtitle(DEFAULT_HERO_SLIDES[0].subtitle);
+    setMobileHeroBannerUrl(DEFAULT_HERO_SLIDES[0].bannerUrl);
+    setMobileHeroBadgeText(DEFAULT_HERO_SLIDES[0].badgeText);
+    setMobileHeroPrimaryBtnText(DEFAULT_HERO_SLIDES[0].primaryBtnText);
+    setMobileHeroPrimaryBtnAction(DEFAULT_HERO_SLIDES[0].primaryBtnAction);
+    setMobileHeroSecondaryBtnText(DEFAULT_HERO_SLIDES[0].secondaryBtnText);
+    setMobileHeroSecondaryBtnAction(DEFAULT_HERO_SLIDES[0].secondaryBtnAction);
     setMobilePopularServicesTitle('Layanan Populer Cabang');
     setMobileRecommendedTitle('Rekomendasi Aksi Cepat');
     updateDynamicPwaIcon(undefined);
@@ -1221,7 +1330,7 @@ export function SettingsManager({
           </div>
         )}
 
-        {/* Row 1.8: Super Admin - Pengaturan Tampilan Mobile User Cabang (Modern Home App Experience) */}
+        {/* Row 1.8: Super Admin - Pengaturan Tampilan Mobile User Cabang (Modern Carousel 3-Slide Manager) */}
         {currentUser?.role === 'super_admin' && (
           <div className={`p-6 rounded-2xl border shadow-sm space-y-5 ${
             isLight ? 'bg-gradient-to-br from-white via-emerald-50/20 to-white border-emerald-200' : 'bg-gradient-to-br from-slate-900 via-emerald-950/20 to-slate-900 border-emerald-800/50'
@@ -1230,181 +1339,331 @@ export function SettingsManager({
               <div>
                 <h3 className={`text-sm font-bold uppercase tracking-wider ${isLight ? 'text-emerald-950' : 'text-emerald-300'} flex items-center gap-2`}>
                   <Sparkles size={18} className="text-emerald-500" />
-                  <span>Pengaturan Tampilan Aplikasi Mobile Cabang (Super Admin)</span>
+                  <span>Pengaturan Carousel Banner Info & Bimbingan (Super Admin)</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Atur konten Banner Hero Promo, Tombol Aksi Cepat, Judul Layanan Populer, serta Rekomendasi yang tampil di perangkat HP Admin Cabang untuk target <b>"{targetBranch}"</b>.
+                  Kelola konten banner hero "Bimbingan Cepat & Akurat" dengan fitur <b>Carousel Otomatis (Maksimal 3 Slide)</b> yang tampil di aplikasi mobile cabang target <b>"{targetBranch}"</b>.
                 </p>
               </div>
               <span className="text-[11px] font-extrabold px-3 py-1 rounded-full bg-emerald-500 text-slate-950 self-start sm:self-center shadow-xs">
-                Mobile UX Controller
+                Maks. 3 Slide Carousel
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Field 1: Judul Banner Hero */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                  Judul Banner Utama (Hero Headline) *
-                </label>
-                <input
-                  type="text"
-                  value={mobileHeroTitle}
-                  onChange={(e) => setMobileHeroTitle(e.target.value)}
-                  placeholder="Contoh: Bimbingan Cepat & Akurat?"
-                  className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none text-sm font-bold ${
-                    isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
-                  }`}
-                />
-              </div>
-
-              {/* Field 2: Subtitle Banner */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                  Sub-Judul / Deskripsi Singkat Hero *
-                </label>
-                <input
-                  type="text"
-                  value={mobileHeroSubtitle}
-                  onChange={(e) => setMobileHeroSubtitle(e.target.value)}
-                  placeholder="Contoh: Sistem Jaritmatika Math Fingers siap mendampingi presensi & SPP cabang."
-                  className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none text-xs font-medium ${
-                    isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
-                  }`}
-                />
-              </div>
-
-              {/* Field 3: Badge Promo Hero */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                  Teks Badge Keunggulan Hero
-                </label>
-                <input
-                  type="text"
-                  value={mobileHeroBadgeText}
-                  onChange={(e) => setMobileHeroBadgeText(e.target.value)}
-                  placeholder="Contoh: ⚡ Operasional Cabang Siap 100%"
-                  className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none text-xs font-bold text-emerald-600 ${
-                    isLight ? 'bg-white border-slate-200' : 'bg-slate-950/40 border-slate-800 text-emerald-400'
-                  }`}
-                />
-              </div>
-
-              {/* Field 4: URL Gambar Latar Banner Hero */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                  URL Gambar Banner Hero Background
-                </label>
-                <input
-                  type="url"
-                  value={mobileHeroBannerUrl}
-                  onChange={(e) => setMobileHeroBannerUrl(e.target.value)}
-                  placeholder="https://images.unsplash.com/..."
-                  className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none text-xs font-mono ${
-                    isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
-                  }`}
-                />
-              </div>
-
-              {/* Field 5: Tombol Aksi 1 */}
-              <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">Tombol Utama 1 (Primary Action)</span>
-                  <span className="text-[10px] text-slate-400">Pill Hijau</span>
-                </div>
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    value={mobileHeroPrimaryBtnText}
-                    onChange={(e) => setMobileHeroPrimaryBtnText(e.target.value)}
-                    placeholder="Teks Tombol (misal: Catat Absen)"
-                    className={`w-full px-3 py-2 border rounded-lg text-xs font-bold ${
-                      isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-700 text-white'
-                    }`}
-                  />
-                  <select
-                    value={mobileHeroPrimaryBtnAction}
-                    onChange={(e) => setMobileHeroPrimaryBtnAction(e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg text-xs font-semibold ${
-                      isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
+            {/* Slide Navigation Tabs (Slide 1, Slide 2, Slide 3) */}
+            <div className="flex items-center gap-2 p-1.5 rounded-xl bg-slate-100 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800">
+              {[0, 1, 2].map((idx) => {
+                const s = heroSlides[idx] || DEFAULT_HERO_SLIDES[idx];
+                const isActive = activeSlideTab === idx;
+                const isEnabled = s.enabled !== false;
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setActiveSlideTab(idx);
+                      setPreviewSlideIdx(idx);
+                    }}
+                    className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 ${
+                      isActive
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : isLight
+                          ? 'bg-transparent text-slate-700 hover:bg-slate-200/60'
+                          : 'bg-transparent text-slate-300 hover:bg-slate-800'
                     }`}
                   >
-                    <option value="attendance">Buka Menu: Presensi / Absensi</option>
-                    <option value="qr_cards">Buka Menu: Scan Kartu QR</option>
-                    <option value="spp">Buka Menu: Pembayaran SPP</option>
-                    <option value="grades">Buka Menu: Input Nilai Kuis</option>
-                    <option value="students">Buka Menu: Data Siswa</option>
-                    <option value="classes">Buka Menu: Manajemen Kelas</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Field 6: Tombol Aksi 2 */}
-              <div className="p-3.5 rounded-xl border border-slate-500/20 bg-slate-500/5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Tombol Kedua 2 (Secondary Action)</span>
-                  <span className="text-[10px] text-slate-400">Pill Transparan</span>
-                </div>
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    value={mobileHeroSecondaryBtnText}
-                    onChange={(e) => setMobileHeroSecondaryBtnText(e.target.value)}
-                    placeholder="Teks Tombol (misal: Tagihan SPP)"
-                    className={`w-full px-3 py-2 border rounded-lg text-xs font-bold ${
-                      isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-700 text-white'
-                    }`}
-                  />
-                  <select
-                    value={mobileHeroSecondaryBtnAction}
-                    onChange={(e) => setMobileHeroSecondaryBtnAction(e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg text-xs font-semibold ${
-                      isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
-                    }`}
-                  >
-                    <option value="spp">Buka Menu: Pembayaran SPP</option>
-                    <option value="attendance">Buka Menu: Presensi / Absensi</option>
-                    <option value="qr_cards">Buka Menu: Scan Kartu QR</option>
-                    <option value="grades">Buka Menu: Input Nilai Kuis</option>
-                    <option value="notes">Buka Menu: Jurnal Guru</option>
-                    <option value="report">Buka Menu: Rapor Siswa</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Field 7: Judul Layanan Populer */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                  Label Bagian Grid Menu
-                </label>
-                <input
-                  type="text"
-                  value={mobilePopularServicesTitle}
-                  onChange={(e) => setMobilePopularServicesTitle(e.target.value)}
-                  placeholder="Contoh: Layanan Populer Cabang"
-                  className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none text-xs font-bold ${
-                    isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
-                  }`}
-                />
-              </div>
-
-              {/* Field 8: Judul Rekomendasi */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                  Label Bagian Kartu Rekomendasi
-                </label>
-                <input
-                  type="text"
-                  value={mobileRecommendedTitle}
-                  onChange={(e) => setMobileRecommendedTitle(e.target.value)}
-                  placeholder="Contoh: Rekomendasi Aksi Cepat"
-                  className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none text-xs font-bold ${
-                    isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
-                  }`}
-                />
-              </div>
-
+                    <span>Slide {idx + 1} {idx === 0 ? '(Utama)' : ''}</span>
+                    <span className={`w-2 h-2 rounded-full ${
+                      isEnabled ? (isActive ? 'bg-emerald-200' : 'bg-emerald-500') : 'bg-slate-400'
+                    }`} />
+                  </button>
+                );
+              })}
             </div>
+
+            {/* Form Editor for Selected Slide */}
+            {(() => {
+              const currentSlide = heroSlides[activeSlideTab] || DEFAULT_HERO_SLIDES[activeSlideTab];
+              return (
+                <div className="space-y-4 pt-1">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                    <label className="flex items-center gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={currentSlide.enabled !== false}
+                        onChange={(e) => updateSlideField(activeSlideTab, 'enabled', e.target.checked)}
+                        className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
+                      />
+                      <span className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>
+                        Aktifkan Slide {activeSlideTab + 1} di Carousel Aplikasi HP
+                      </span>
+                    </label>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                      {currentSlide.enabled !== false ? 'Aktif Berputar' : 'Dinonaktifkan'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Field 1: Judul Banner Hero */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                        Judul Banner Slide {activeSlideTab + 1} *
+                      </label>
+                      <input
+                        type="text"
+                        value={currentSlide.title || ''}
+                        onChange={(e) => updateSlideField(activeSlideTab, 'title', e.target.value)}
+                        placeholder="Contoh: Bimbingan Cepat & Akurat?"
+                        className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none text-sm font-bold ${
+                          isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
+                        }`}
+                      />
+                    </div>
+
+                    {/* Field 2: Subtitle Banner */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                        Sub-Judul / Deskripsi Singkat *
+                      </label>
+                      <input
+                        type="text"
+                        value={currentSlide.subtitle || ''}
+                        onChange={(e) => updateSlideField(activeSlideTab, 'subtitle', e.target.value)}
+                        placeholder="Contoh: Sistem Jaritmatika Math Fingers siap mendampingi presensi & SPP cabang."
+                        className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none text-xs font-medium ${
+                          isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
+                        }`}
+                      />
+                    </div>
+
+                    {/* Field 3: Badge Promo Hero */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                        Teks Badge Keunggulan Slide
+                      </label>
+                      <input
+                        type="text"
+                        value={currentSlide.badgeText || ''}
+                        onChange={(e) => updateSlideField(activeSlideTab, 'badgeText', e.target.value)}
+                        placeholder="Contoh: ⚡ Operasional Cabang Siap 100%"
+                        className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none text-xs font-bold text-emerald-600 ${
+                          isLight ? 'bg-white border-slate-200' : 'bg-slate-950/40 border-slate-800 text-emerald-400'
+                        }`}
+                      />
+                    </div>
+
+                    {/* Field 4: URL Gambar Latar Banner Hero */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                        URL Gambar Banner Latar
+                      </label>
+                      <input
+                        type="url"
+                        value={currentSlide.bannerUrl || ''}
+                        onChange={(e) => updateSlideField(activeSlideTab, 'bannerUrl', e.target.value)}
+                        placeholder="https://images.unsplash.com/..."
+                        className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none text-xs font-mono mb-1.5 ${
+                          isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
+                        }`}
+                      />
+                      {/* Presets Cepat */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] text-slate-400 font-semibold">Preset Cepat:</span>
+                        <button
+                          type="button"
+                          onClick={() => updateSlideField(activeSlideTab, 'bannerUrl', 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800')}
+                          className="text-[10px] px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800 hover:bg-emerald-500 hover:text-white transition"
+                        >
+                          Sekolah & Buku
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateSlideField(activeSlideTab, 'bannerUrl', 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=800')}
+                          className="text-[10px] px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800 hover:bg-emerald-500 hover:text-white transition"
+                        >
+                          Guru & Siswa
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateSlideField(activeSlideTab, 'bannerUrl', 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800')}
+                          className="text-[10px] px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800 hover:bg-emerald-500 hover:text-white transition"
+                        >
+                          Kuitansi & SPP
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Field 5: Tombol Aksi 1 */}
+                    <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">Tombol Utama 1 (Pill Hijau)</span>
+                        <span className="text-[10px] text-slate-400">Primary Action</span>
+                      </div>
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={currentSlide.primaryBtnText || ''}
+                          onChange={(e) => updateSlideField(activeSlideTab, 'primaryBtnText', e.target.value)}
+                          placeholder="Teks Tombol (misal: Catat Absen)"
+                          className={`w-full px-3 py-2 border rounded-lg text-xs font-bold ${
+                            isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-700 text-white'
+                          }`}
+                        />
+                        <select
+                          value={currentSlide.primaryBtnAction || 'attendance'}
+                          onChange={(e) => updateSlideField(activeSlideTab, 'primaryBtnAction', e.target.value)}
+                          className={`w-full px-3 py-2 border rounded-lg text-xs font-semibold ${
+                            isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
+                          }`}
+                        >
+                          <option value="attendance">Buka Menu: Presensi / Absensi</option>
+                          <option value="qr_cards">Buka Menu: Scan Kartu QR</option>
+                          <option value="spp">Buka Menu: Pembayaran SPP</option>
+                          <option value="grades">Buka Menu: Input Nilai Kuis</option>
+                          <option value="students">Buka Menu: Data Siswa</option>
+                          <option value="classes">Buka Menu: Manajemen Kelas</option>
+                          <option value="notes">Buka Menu: Jurnal Guru</option>
+                          <option value="report">Buka Menu: Rapor Siswa</option>
+                          <option value="finance">Buka Menu: Keuangan Cabang</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Field 6: Tombol Aksi 2 */}
+                    <div className="p-3.5 rounded-xl border border-slate-500/20 bg-slate-500/5 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Tombol Kedua 2 (Pill Transparan)</span>
+                        <span className="text-[10px] text-slate-400">Secondary Action</span>
+                      </div>
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={currentSlide.secondaryBtnText || ''}
+                          onChange={(e) => updateSlideField(activeSlideTab, 'secondaryBtnText', e.target.value)}
+                          placeholder="Teks Tombol (misal: Tagihan SPP)"
+                          className={`w-full px-3 py-2 border rounded-lg text-xs font-bold ${
+                            isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-700 text-white'
+                          }`}
+                        />
+                        <select
+                          value={currentSlide.secondaryBtnAction || 'spp'}
+                          onChange={(e) => updateSlideField(activeSlideTab, 'secondaryBtnAction', e.target.value)}
+                          className={`w-full px-3 py-2 border rounded-lg text-xs font-semibold ${
+                            isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
+                          }`}
+                        >
+                          <option value="spp">Buka Menu: Pembayaran SPP</option>
+                          <option value="attendance">Buka Menu: Presensi / Absensi</option>
+                          <option value="qr_cards">Buka Menu: Scan Kartu QR</option>
+                          <option value="grades">Buka Menu: Input Nilai Kuis</option>
+                          <option value="notes">Buka Menu: Jurnal Guru</option>
+                          <option value="report">Buka Menu: Rapor Siswa</option>
+                          <option value="students">Buka Menu: Data Siswa</option>
+                          <option value="classes">Buka Menu: Manajemen Kelas</option>
+                          <option value="simulator">Buka Menu: Materi & Modul</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Field 7: Label Grid Layanan Populer */}
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                Label Judul Grid Menu Layanan Populer
+              </label>
+              <input
+                type="text"
+                value={mobilePopularServicesTitle}
+                onChange={(e) => setMobilePopularServicesTitle(e.target.value)}
+                placeholder="Contoh: Layanan Populer Cabang"
+                className={`w-full max-w-md px-4 py-2.5 border rounded-xl focus:outline-none text-xs font-bold ${
+                  isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
+                }`}
+              />
+            </div>
+
+            {/* Live Interactive Preview Card for Super Admin */}
+            <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                  <Smartphone size={14} className="text-emerald-500" />
+                  <span>Pratinjau Langsung Carousel Mobile (Live Preview)</span>
+                </span>
+                <span className="text-[10px] text-slate-400">
+                  Klik dot untuk melihat pratinjau slide
+                </span>
+              </div>
+
+              {(() => {
+                const pSlide = heroSlides[previewSlideIdx] || DEFAULT_HERO_SLIDES[previewSlideIdx];
+                return (
+                  <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-950 via-teal-950 to-slate-950 text-white p-5 border border-emerald-500/30 max-w-md mx-auto shadow-md">
+                    <div 
+                      className="absolute inset-0 opacity-25 bg-cover bg-center pointer-events-none mix-blend-overlay"
+                      style={{
+                        backgroundImage: `url(${pSlide.bannerUrl || DEFAULT_HERO_SLIDES[0].bannerUrl})`
+                      }}
+                    />
+
+                    <div className="relative z-10 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          Slide {previewSlideIdx + 1} {pSlide.enabled !== false ? '• Aktif' : '• Nonaktif'}
+                        </span>
+                        {pSlide.badgeText && (
+                          <span className="text-[10px] font-bold text-amber-400">
+                            {pSlide.badgeText}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <h4 className="text-base font-black tracking-tight leading-tight">
+                          {pSlide.title || 'Judul Kosong'}
+                        </h4>
+                        <p className="text-[11px] text-emerald-100/90 leading-snug font-medium line-clamp-2">
+                          {pSlide.subtitle || 'Deskripsi kosong'}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-1">
+                        {pSlide.primaryBtnText && (
+                          <span className="px-3 py-1.5 rounded-full bg-emerald-500 text-slate-950 font-black text-[11px]">
+                            {pSlide.primaryBtnText}
+                          </span>
+                        )}
+                        {pSlide.secondaryBtnText && (
+                          <span className="px-3 py-1.5 rounded-full bg-white/20 text-white font-bold text-[11px] border border-white/20">
+                            {pSlide.secondaryBtnText}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Pagination indicator dots */}
+                      <div className="flex items-center justify-center gap-1.5 pt-2">
+                        {[0, 1, 2].map((dotIdx) => (
+                          <button
+                            key={dotIdx}
+                            type="button"
+                            onClick={() => {
+                              setPreviewSlideIdx(dotIdx);
+                              setActiveSlideTab(dotIdx);
+                            }}
+                            className={`h-1.5 rounded-full transition-all ${
+                              previewSlideIdx === dotIdx ? 'w-5 bg-emerald-400' : 'w-2 bg-slate-600 hover:bg-slate-400'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
           </div>
         )}
 

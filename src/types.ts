@@ -91,6 +91,19 @@ export interface LearningMaterial {
   tutorialImages?: string[];
 }
 
+export interface HeroSlide {
+  id: string;
+  title: string;
+  subtitle: string;
+  badgeText?: string;
+  bannerUrl?: string;
+  primaryBtnText?: string;
+  primaryBtnAction?: string;
+  secondaryBtnText?: string;
+  secondaryBtnAction?: string;
+  enabled?: boolean;
+}
+
 export interface AppSettings {
   bankName: string;
   bankAccountNo: string;
@@ -105,6 +118,7 @@ export interface AppSettings {
   branch?: string;
   branches?: string;
   // Custom Mobile App Experience Settings (Diatur oleh Super Admin)
+  heroSlides?: HeroSlide[];
   mobileHeroTitle?: string;
   mobileHeroSubtitle?: string;
   mobileHeroBannerUrl?: string;

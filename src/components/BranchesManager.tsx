@@ -383,7 +383,7 @@ export function BranchesManager({
                   required
                   value={branchName}
                   onChange={(e) => setBranchName(e.target.value)}
-                  placeholder="Contoh: Bandung, Surabaya"
+                  placeholder="Contoh: Singkut, Bangko, Muara Bungo"
                   className={`w-full px-4.5 py-3 rounded-xl border text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${
                     isLight ? 'bg-slate-50 border-slate-200 text-slate-850' : 'bg-slate-950/50 border-slate-800 text-white'
                   }`}
@@ -577,7 +577,7 @@ export function BranchesManager({
                     {[
                       { name: 'Febrianti', url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200' },
                       { name: 'Dewi', url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200' },
-                      { name: 'Guru Bandung', url: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200' },
+                      { name: 'Guru Math Fingers', url: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200' },
                       { name: 'Wahyudin', url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200' },
                       { name: 'Tutor Cerdas', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200' }
                     ].map((preset, idx) => {

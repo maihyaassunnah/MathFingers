@@ -326,14 +326,23 @@ export function StudentManager({
     }
   };
 
-  // Dynamic options for Branch and Class filters
+  // Dynamic options for Branch and Class filters - 2 Cabang Real: Singkut, Bangko
   const availableBranches = Array.from(
     new Set([
-      'Pusat',
+      'Singkut',
+      'Bangko',
       ...branches.map(b => b.name),
       ...students.map(s => s.branch).filter((b): b is string => Boolean(b && b.trim()))
     ])
-  ).filter(Boolean);
+  )
+    .filter((b): b is string => Boolean(b && b.trim() && b.toLowerCase() !== 'bandung' && b.toLowerCase() !== 'pusat' && b.toLowerCase() !== 'all' && b.toLowerCase() !== 'semua'))
+    .map(b => {
+      const lower = b.toLowerCase().trim();
+      if (lower === 'singkut') return 'Singkut';
+      if (lower === 'bangko') return 'Bangko';
+      return b;
+    })
+    .filter((b, idx, arr) => arr.indexOf(b) === idx);
 
   const availableClasses = Array.from(
     new Set([

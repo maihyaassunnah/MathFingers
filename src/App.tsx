@@ -141,15 +141,15 @@ export default function App() {
     if (legacyStringUser) {
       const lower = legacyStringUser.toLowerCase();
       if (lower.includes('wahyudin') || lower.includes('hafiz')) {
-        return { username: 'wahyudin', name: 'Wahyudin Hafiz, S.Pd', role: 'super_admin', branch: 'Pusat' };
+        return { username: 'wahyudin', name: 'Wahyudin Hafiz, S.Pd', role: 'super_admin', branch: 'Semua' };
       }
       if (lower.includes('febrianti')) {
-        return { username: 'febrianti', name: 'Febrianti Dewi, S.Pd', role: 'branch_admin', branch: 'Pusat' };
+        return { username: 'febrianti', name: 'Febrianti Dewi, S.Pd', role: 'branch_admin', branch: 'Singkut' };
       }
       if (lower.includes('dewi') || lower.includes('safitri')) {
-        return { username: 'dewi', name: 'Dewi Safitri, S.H', role: 'branch_admin', branch: 'Pusat' };
+        return { username: 'dewi', name: 'Dewi Safitri, S.H', role: 'branch_admin', branch: 'Bangko' };
       }
-      return { username: 'dewi', name: legacyStringUser, role: 'branch_admin', branch: 'Pusat' };
+      return { username: 'dewi', name: legacyStringUser, role: 'branch_admin', branch: 'Singkut' };
     }
     return null;
   });
@@ -295,14 +295,16 @@ export default function App() {
     }
   }, [settings?.appIcon]);
 
-  // Safe branch resolver that maps legacy or unspecified branches ('Pusat' or null) 
-  // to the first active branch if there's no branch named 'Pusat' in the database.
+  // Safe branch resolver that maps legacy or unspecified branches ('Pusat' / 'Bandung' or null) 
+  // to the first active branch ('Singkut' or 'Bangko').
   const getAssignedBranch = (recordBranch: string | undefined | null) => {
-    const b = recordBranch || 'Pusat';
+    const b = recordBranch;
+    if (!b || b.toLowerCase() === 'pusat' || b.toLowerCase() === 'bandung') {
+      return branches[0]?.name || 'Singkut';
+    }
     const actualBranchNames = branches.map(br => br.name);
-    const isPusatMissing = !actualBranchNames.includes('Pusat');
-    if (isPusatMissing && (b === 'Pusat' || !actualBranchNames.includes(b))) {
-      return branches[0]?.name || 'Pusat';
+    if (!actualBranchNames.includes(b)) {
+      return branches[0]?.name || 'Singkut';
     }
     return b;
   };
@@ -350,7 +352,7 @@ export default function App() {
 
   // Multi-branch aware writers
   const handleAddManualIncome = async (incomeData: any) => {
-    const defaultBranchName = branches[0]?.name || 'Pusat';
+    const defaultBranchName = branches[0]?.name || 'Singkut';
     const branchToSet = incomeData.branch || (currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName));
     await addManualIncome({
       ...incomeData,
@@ -359,7 +361,7 @@ export default function App() {
   };
 
   const handleAddExpense = async (expenseData: any) => {
-    const defaultBranchName = branches[0]?.name || 'Pusat';
+    const defaultBranchName = branches[0]?.name || 'Singkut';
     const branchToSet = expenseData.branch || (currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName));
     await addExpense({
       ...expenseData,
@@ -368,7 +370,7 @@ export default function App() {
   };
 
   const handleAddStudent = async (studentData: any) => {
-    const defaultBranchName = branches[0]?.name || 'Pusat';
+    const defaultBranchName = branches[0]?.name || 'Singkut';
     const branchToSet = studentData.branch || (currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName));
     await addStudent({
       ...studentData,
@@ -377,7 +379,7 @@ export default function App() {
   };
 
   const handleAddClass = async (classData: any) => {
-    const defaultBranchName = branches[0]?.name || 'Pusat';
+    const defaultBranchName = branches[0]?.name || 'Singkut';
     const branchToSet = classData.branch || (currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName));
     await addClassGroup({
       ...classData,
@@ -386,7 +388,7 @@ export default function App() {
   };
 
   const handleAddAttendanceBatch = async (records: any[]) => {
-    const defaultBranchName = branches[0]?.name || 'Pusat';
+    const defaultBranchName = branches[0]?.name || 'Singkut';
     const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
     const updatedRecords = records.map(r => ({
       ...r,
@@ -402,7 +404,7 @@ export default function App() {
 
     setScanSaving(true);
     try {
-      const defaultBranchName = branches[0]?.name || 'Pusat';
+      const defaultBranchName = branches[0]?.name || 'Singkut';
       const branchToSet = student.branch || currentUser?.branch || defaultBranchName;
       
       const finalNotes = scanNotes.trim() || (scanStatus === 'permission' ? 'Izin Bimbingan' : 'Presensi Scan QR');
@@ -445,7 +447,7 @@ export default function App() {
   };
 
   const handleAddTeacherNote = async (noteData: any) => {
-    const defaultBranchName = branches[0]?.name || 'Pusat';
+    const defaultBranchName = branches[0]?.name || 'Singkut';
     const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
     await addTeacherNote({
       ...noteData,
@@ -454,7 +456,7 @@ export default function App() {
   };
 
   const handleAddTeacherNotesBatch = async (notesData: any[]) => {
-    const defaultBranchName = branches[0]?.name || 'Pusat';
+    const defaultBranchName = branches[0]?.name || 'Singkut';
     const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
     const updatedNotes = notesData.map(n => ({
       ...n,
@@ -464,7 +466,7 @@ export default function App() {
   };
 
   const handleCreateInvoice = async (invoiceData: any) => {
-    const defaultBranchName = branches[0]?.name || 'Pusat';
+    const defaultBranchName = branches[0]?.name || 'Singkut';
     const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
     await createInvoice({
       ...invoiceData,
@@ -473,7 +475,7 @@ export default function App() {
   };
 
   const handleAddGrade = async (gradeData: any) => {
-    const defaultBranchName = branches[0]?.name || 'Pusat';
+    const defaultBranchName = branches[0]?.name || 'Singkut';
     const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
     await addGrade({
       ...gradeData,

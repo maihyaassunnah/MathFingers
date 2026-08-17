@@ -195,13 +195,23 @@ export function StudentQrCards({
   // Filter students
   const activeStudents = students.filter(s => s.status === 'active');
 
+  // 2 Cabang Real: Singkut, Bangko
   const availableBranches = Array.from(
     new Set([
-      'Pusat',
+      'Singkut',
+      'Bangko',
       ...branches.map(b => b.name),
       ...activeStudents.map(s => s.branch).filter((b): b is string => Boolean(b && b.trim()))
     ])
-  ).filter(Boolean);
+  )
+    .filter((b): b is string => Boolean(b && b.trim() && b.toLowerCase() !== 'bandung' && b.toLowerCase() !== 'pusat' && b.toLowerCase() !== 'all' && b.toLowerCase() !== 'semua'))
+    .map(b => {
+      const lower = b.toLowerCase().trim();
+      if (lower === 'singkut') return 'Singkut';
+      if (lower === 'bangko') return 'Bangko';
+      return b;
+    })
+    .filter((b, idx, arr) => arr.indexOf(b) === idx);
 
   const availableClasses = Array.from(
     new Set([
@@ -213,7 +223,7 @@ export function StudentQrCards({
   const filteredStudents = activeStudents.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           getStudentUniqueCode(student).includes(searchQuery);
-    const matchesBranch = branchFilter === 'All' || (student.branch || 'Pusat') === branchFilter;
+    const matchesBranch = branchFilter === 'All' || (student.branch || 'Singkut') === branchFilter;
     const matchesClass = classFilter === 'All' || (student.kelas || '') === classFilter;
     
     return matchesSearch && matchesBranch && matchesClass;

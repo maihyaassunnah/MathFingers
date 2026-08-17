@@ -111,15 +111,20 @@ export function LoginManager({
 
   const isLight = theme === 'light';
 
-  // Default admins fallback
+  // Default admins fallback - 2 Cabang Real (Singkut & Bangko) + Super Admin (Semua Cabang)
   const defaultAdmins: AdminUser[] = useMemo(() => [
-    { username: 'wahyudin', name: 'Wahyudin Hafiz, S.Pd', role: 'super_admin', branch: 'Pusat', password: 'admin123' },
+    { username: 'wahyudin', name: 'Wahyudin Hafiz, S.Pd', role: 'super_admin', branch: 'Semua', password: 'admin123' },
     { username: 'febrianti', name: 'Febrianti Dewi, S.Pd', role: 'branch_admin', branch: 'Singkut', password: 'admin123' },
-    { username: 'dewi', name: 'Dewi Safitri, S.H', role: 'branch_admin', branch: 'Bangko', password: 'dewi123' },
-    { username: 'les_bandung', name: 'Les Privat Bandung', role: 'branch_admin', branch: 'Bandung', password: 'bdg123' }
+    { username: 'dewi', name: 'Dewi Safitri, S.H', role: 'branch_admin', branch: 'Bangko', password: 'dewi123' }
   ], []);
 
-  const activeAdmins = adminUsers.length > 0 ? adminUsers : defaultAdmins;
+  const activeAdmins = (adminUsers.length > 0 ? adminUsers : defaultAdmins)
+    .filter(u => u.username !== 'les_bandung' && u.branch?.toLowerCase() !== 'bandung')
+    .map(u => {
+      if (u.role === 'super_admin') return { ...u, branch: 'Semua' };
+      if (u.branch?.toLowerCase() === 'pusat') return { ...u, branch: 'Singkut' };
+      return u;
+    });
 
   // Auto-select initial user
   useEffect(() => {

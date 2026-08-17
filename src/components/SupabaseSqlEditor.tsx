@@ -29,15 +29,22 @@ export function SupabaseSqlEditor({
 
   // Dynamic SQL Generators following current database state
   const branchesSqlValues = (branches && branches.length > 0 ? branches : [
-    { id: 'br-1', name: 'Pusat', address: 'Kantor Pusat Math Fingers', phone: '08123456789', createdAt: 1719600000 },
-    { id: 'br-2', name: 'Bandung', address: 'Cabang Kota Bandung', phone: '08123456780', createdAt: 1719600000 }
-  ]).map(b => `  ('${b.id}', '${b.name.replace(/'/g, "''")}', '${(b.address || '').replace(/'/g, "''")}', '${(b.phone || '').replace(/'/g, "''")}', ${b.createdAt || 1719600000})`).join(',\n');
+    { id: 'br-singkut', name: 'Singkut', address: 'Cabang Singkut, Sarolangun', phone: '08123456788', createdAt: 1719600000 },
+    { id: 'br-bangko', name: 'Bangko', address: 'Cabang Bangko, Merangin', phone: '08123456787', createdAt: 1719600000 }
+  ])
+    .filter(b => b.name && b.name.toLowerCase() !== 'bandung' && b.name.toLowerCase() !== 'pusat')
+    .map(b => `  ('${b.id}', '${b.name.replace(/'/g, "''")}', '${(b.address || '').replace(/'/g, "''")}', '${(b.phone || '').replace(/'/g, "''")}', ${b.createdAt || 1719600000})`).join(',\n');
 
   const adminUsersSqlValues = (adminUsers && adminUsers.length > 0 ? adminUsers : [
-    { username: 'febrianti', name: 'Febrianti Dewi', role: 'super_admin' as const, branch: 'Pusat', password: 'admin123', avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200' },
-    { username: 'dewi', name: 'Dewi Safitri', role: 'branch_admin' as const, branch: 'Pusat', password: 'dewi123', avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200' },
-    { username: 'les_bandung', name: 'Les Privat Bandung', role: 'branch_admin' as const, branch: 'Bandung', password: 'bdg123', avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200' }
-  ]).map(u => `  ('${u.username}', '${u.name.replace(/'/g, "''")}', '${u.role}', '${u.branch.replace(/'/g, "''")}', '${(u.password || '123456').replace(/'/g, "''")}', ${u.avatarUrl ? `'${u.avatarUrl.replace(/'/g, "''")}'` : 'NULL'})`).join(',\n');
+    { username: 'wahyudin', name: 'Wahyudin Hafiz, S.Pd', role: 'super_admin' as const, branch: 'Semua', password: 'admin123', avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200' },
+    { username: 'febrianti', name: 'Febrianti Dewi, S.Pd', role: 'branch_admin' as const, branch: 'Singkut', password: 'admin123', avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200' },
+    { username: 'dewi', name: 'Dewi Safitri, S.H', role: 'branch_admin' as const, branch: 'Bangko', password: 'dewi123', avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200' }
+  ])
+    .filter(u => u.username !== 'les_bandung' && u.branch?.toLowerCase() !== 'bandung')
+    .map(u => {
+      const br = u.role === 'super_admin' ? 'Semua' : (u.branch?.toLowerCase() === 'pusat' ? 'Singkut' : u.branch);
+      return `  ('${u.username}', '${u.name.replace(/'/g, "''")}', '${u.role}', '${(br || 'Semua').replace(/'/g, "''")}', '${(u.password || '123456').replace(/'/g, "''")}', ${u.avatarUrl ? `'${u.avatarUrl.replace(/'/g, "''")}'` : 'NULL'})`;
+    }).join(',\n');
 
   
   // Connection Test State

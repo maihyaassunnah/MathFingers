@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
-import { Database, Terminal, Check, Copy, AlertTriangle, Play, HelpCircle, Code, List, Info, RefreshCw, Award, ArrowRight, Camera } from 'lucide-react';
+import { Database, Terminal, Check, Copy, AlertTriangle, Play, HelpCircle, Code, List, Info, RefreshCw, Award, ArrowRight, Camera, Sliders } from 'lucide-react';
 import { Student, Branch, AdminUser } from '../types';
 
 interface SupabaseSqlEditorProps {
@@ -301,7 +301,7 @@ DROP POLICY IF EXISTS "Allow public read-write for demo" ON hari_les;
 CREATE POLICY "Allow public read-write for demo" ON hari_les FOR ALL USING (true) WITH CHECK (true);
 
 
--- 10. TABEL APP_SETTINGS (Pengaturan Aplikasi, Rekening Bank, Invoice, Logo, TTD & Ikon PWA per Cabang)
+-- 10. TABEL APP_SETTINGS (Pengaturan Aplikasi, Rekening Bank, Invoice, Logo, TTD, Ikon PWA, Slide Banner Hero Mobile & Gradien)
 CREATE TABLE IF NOT EXISTS app_settings (
   id TEXT PRIMARY KEY DEFAULT 'default',
   branch TEXT DEFAULT 'Semua',
@@ -316,6 +316,17 @@ CREATE TABLE IF NOT EXISTS app_settings (
   "invoiceLogo" TEXT,
   "invoiceSignature" TEXT,
   "appIcon" TEXT,
+  "heroSlides" JSONB DEFAULT '[]'::jsonb,
+  "mobileHeroTitle" TEXT,
+  "mobileHeroSubtitle" TEXT,
+  "mobileHeroBannerUrl" TEXT,
+  "mobileHeroBadgeText" TEXT,
+  "mobileHeroPrimaryBtnText" TEXT,
+  "mobileHeroPrimaryBtnAction" TEXT,
+  "mobileHeroSecondaryBtnText" TEXT,
+  "mobileHeroSecondaryBtnAction" TEXT,
+  "mobilePopularServicesTitle" TEXT,
+  "mobileRecommendedTitle" TEXT,
   "updatedAt" BIGINT DEFAULT 1719600000
 );
 
@@ -326,6 +337,19 @@ CREATE POLICY "Allow public read-write for demo" ON app_settings FOR ALL USING (
 ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Semua';
 ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branches TEXT DEFAULT 'Semua';
 ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "appIcon" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "invoiceLogo" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "invoiceSignature" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "heroSlides" JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroTitle" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroSubtitle" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroBannerUrl" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroBadgeText" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroPrimaryBtnText" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroPrimaryBtnAction" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroSecondaryBtnText" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroSecondaryBtnAction" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobilePopularServicesTitle" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileRecommendedTitle" TEXT;
 
 
 -- 11. TABEL FINANCE_INCOMES (Pemasukan Keuangan Manual / Lainnya)
@@ -526,6 +550,17 @@ ON CONFLICT (id) DO NOTHING;`,
   "invoiceLogo" TEXT,
   "invoiceSignature" TEXT,
   "appIcon" TEXT,
+  "heroSlides" JSONB DEFAULT '[]'::jsonb,
+  "mobileHeroTitle" TEXT,
+  "mobileHeroSubtitle" TEXT,
+  "mobileHeroBannerUrl" TEXT,
+  "mobileHeroBadgeText" TEXT,
+  "mobileHeroPrimaryBtnText" TEXT,
+  "mobileHeroPrimaryBtnAction" TEXT,
+  "mobileHeroSecondaryBtnText" TEXT,
+  "mobileHeroSecondaryBtnAction" TEXT,
+  "mobilePopularServicesTitle" TEXT,
+  "mobileRecommendedTitle" TEXT,
   "updatedAt" BIGINT DEFAULT 1719600000
 );
 
@@ -536,6 +571,19 @@ CREATE POLICY "Allow public read-write for demo" ON app_settings FOR ALL USING (
 ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Semua';
 ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branches TEXT DEFAULT 'Semua';
 ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "appIcon" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "invoiceLogo" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "invoiceSignature" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "heroSlides" JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroTitle" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroSubtitle" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroBannerUrl" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroBadgeText" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroPrimaryBtnText" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroPrimaryBtnAction" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroSecondaryBtnText" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroSecondaryBtnAction" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobilePopularServicesTitle" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileRecommendedTitle" TEXT;
 
 INSERT INTO app_settings (id, branch, branches, "bankName", "bankAccountNo", "bankAccountHolder", "defaultSppAmount", "accentColor", "defaultTeacherName", "invoicePrefix", "updatedAt")
 VALUES ('default', 'Semua', 'Semua', 'Bank BCA', '1234567890', 'Admin Math Fingers', 250000, 'emerald', 'Admin Math Fingers', 'INV/MF', 1719600000)
@@ -706,7 +754,7 @@ ALTER TABLE classes ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read-write for demo" ON classes;
 CREATE POLICY "Allow public read-write for demo" ON classes FOR ALL USING (true) WITH CHECK (true);
 
--- 9. Tambahkan kolom 'branch', 'branches', dan 'appIcon' pada tabel 'app_settings'
+-- 9. Tambahkan kolom pengaturan terbaru (Multi-Cabang, Ikon PWA, Logo, TTD, Banner Hero HP & Gradien) pada tabel 'app_settings'
 CREATE TABLE IF NOT EXISTS app_settings (
   id TEXT PRIMARY KEY DEFAULT 'default',
   branch TEXT DEFAULT 'Semua',
@@ -721,12 +769,40 @@ CREATE TABLE IF NOT EXISTS app_settings (
   "invoiceLogo" TEXT,
   "invoiceSignature" TEXT,
   "appIcon" TEXT,
+  "heroSlides" JSONB DEFAULT '[]'::jsonb,
+  "mobileHeroTitle" TEXT,
+  "mobileHeroSubtitle" TEXT,
+  "mobileHeroBannerUrl" TEXT,
+  "mobileHeroBadgeText" TEXT,
+  "mobileHeroPrimaryBtnText" TEXT,
+  "mobileHeroPrimaryBtnAction" TEXT,
+  "mobileHeroSecondaryBtnText" TEXT,
+  "mobileHeroSecondaryBtnAction" TEXT,
+  "mobilePopularServicesTitle" TEXT,
+  "mobileRecommendedTitle" TEXT,
   "updatedAt" BIGINT DEFAULT 1719600000
 );
+
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON app_settings;
+CREATE POLICY "Allow public read-write for demo" ON app_settings FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Semua';
 ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branches TEXT DEFAULT 'Semua';
 ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "appIcon" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "invoiceLogo" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "invoiceSignature" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "heroSlides" JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroTitle" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroSubtitle" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroBannerUrl" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroBadgeText" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroPrimaryBtnText" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroPrimaryBtnAction" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroSecondaryBtnText" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroSecondaryBtnAction" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobilePopularServicesTitle" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileRecommendedTitle" TEXT;
 
 -- 10. Tambah Tabel Keuangan (Pemasukan & Pengeluaran) jika belum ada
 CREATE TABLE IF NOT EXISTS finance_incomes (
@@ -761,7 +837,12 @@ CREATE TABLE IF NOT EXISTS finance_expenses (
 ALTER TABLE finance_expenses ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read-write for demo" ON finance_expenses;
 CREATE POLICY "Allow public read-write for demo" ON finance_expenses FOR ALL USING (true) WITH CHECK (true);`,
-    app_settings: `-- Melengkapi kolom 'app_settings' untuk Ikon PWA (appIcon), Logo Invoice, dan Multi-Cabang
+    app_settings: `-- ====================================================================
+-- MIGRASI TABEL APP_SETTINGS (PENGATURAN, HERO SLIDES, PWA & LOGO)
+-- ====================================================================
+-- Skrip ini memastikan tabel app_settings memiliki seluruh kolom konfigurasi
+-- tanpa merusak atau menghapus data pengaturan rekening/cabang yang sudah tersimpan.
+
 CREATE TABLE IF NOT EXISTS app_settings (
   id TEXT PRIMARY KEY DEFAULT 'default',
   branch TEXT DEFAULT 'Semua',
@@ -776,12 +857,51 @@ CREATE TABLE IF NOT EXISTS app_settings (
   "invoiceLogo" TEXT,
   "invoiceSignature" TEXT,
   "appIcon" TEXT,
+  "heroSlides" JSONB DEFAULT '[]'::jsonb,
+  "mobileHeroTitle" TEXT,
+  "mobileHeroSubtitle" TEXT,
+  "mobileHeroBannerUrl" TEXT,
+  "mobileHeroBadgeText" TEXT,
+  "mobileHeroPrimaryBtnText" TEXT,
+  "mobileHeroPrimaryBtnAction" TEXT,
+  "mobileHeroSecondaryBtnText" TEXT,
+  "mobileHeroSecondaryBtnAction" TEXT,
+  "mobilePopularServicesTitle" TEXT,
+  "mobileRecommendedTitle" TEXT,
   "updatedAt" BIGINT DEFAULT 1719600000
 );
 
+-- Atur Hak Akses (Row Level Security)
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for demo" ON app_settings;
+CREATE POLICY "Allow public read-write for demo" ON app_settings FOR ALL USING (true) WITH CHECK (true);
+
+-- 1. Kolom Identitas Cabang & Ikon PWA
 ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Semua';
 ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS branches TEXT DEFAULT 'Semua';
-ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "appIcon" TEXT;`,
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "appIcon" TEXT;
+
+-- 2. Kolom Logo Kuitansi & Tanda Tangan Digital
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "invoiceLogo" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "invoiceSignature" TEXT;
+
+-- 3. Kolom Slide Banner Carousel & Pengaturan Tampilan Mobile HP
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "heroSlides" JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroTitle" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroSubtitle" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroBannerUrl" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroBadgeText" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroPrimaryBtnText" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroPrimaryBtnAction" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroSecondaryBtnText" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileHeroSecondaryBtnAction" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobilePopularServicesTitle" TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "mobileRecommendedTitle" TEXT;
+
+-- 4. Baris Default untuk Sinkronisasi Awal
+INSERT INTO app_settings (id, branch, branches, "bankName", "bankAccountNo", "bankAccountHolder", "defaultSppAmount", "accentColor", "defaultTeacherName", "invoicePrefix", "updatedAt")
+VALUES ('default', 'Semua', 'Semua', 'Bank BCA', '1234567890', 'Admin Math Fingers', 250000, 'emerald', 'Admin Math Fingers', 'INV/MF', 1719600000)
+ON CONFLICT (id) DO NOTHING;`,
 
     students: `-- Melengkapi kolom students tanpa merubah data lama
 ALTER TABLE students ADD COLUMN IF NOT EXISTS keterangan TEXT;
@@ -971,6 +1091,44 @@ CREATE POLICY "Allow public read-write for demo" ON finance_expenses FOR ALL USI
         </div>
       </div>
 
+      {/* App Settings & Mobile Hero Column Migration Callout Banner */}
+      <div className={`p-4 rounded-2xl border flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
+        isLight ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
+      }`}>
+        <div className="flex items-start gap-3 w-full">
+          <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
+            <Sliders size={20} />
+          </div>
+          <div className="space-y-1.5 flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <h4 className="font-bold text-sm text-emerald-400 flex items-center gap-1.5">
+                <span>Pembaruan Skema Pengaturan & Banner Mobile HP (<code className="font-mono text-xs text-emerald-300">app_settings</code>)</span>
+              </h4>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">
+                Terbaru v3.2
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed font-medium">
+              Menambahkan dukungan penyimpanan Cloud Supabase untuk <strong>Slide Banner Carousel HP</strong>, <strong>Kustomisasi Gradien Hijau</strong>, <strong>Ikon PWA Aplikasi</strong>, serta <strong>Logo & TTD Kuitansi</strong>.
+            </p>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Jalankan perintah SQL ini di Supabase SQL Editor agar seluruh perubahan pengaturan dan banner carousel tersimpan permanen di cloud:
+            </p>
+            <div className="p-2.5 rounded-lg bg-slate-950 text-emerald-400 font-mono text-xs border border-slate-800 mt-2 flex items-center justify-between gap-2 overflow-x-auto">
+              <code className="whitespace-nowrap">ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "heroSlides" JSONB DEFAULT '[]'::jsonb; ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "appIcon" TEXT;</code>
+              <button
+                type="button"
+                onClick={() => handleCopy(alterSqlScripts.app_settings, 'settings-fix-cmd')}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold px-3 py-1.5 rounded-md shrink-0 transition flex items-center gap-1 cursor-pointer"
+              >
+                {copiedIndex === 'settings-fix-cmd' ? <Check size={13} /> : <Copy size={13} />}
+                <span>{copiedIndex === 'settings-fix-cmd' ? 'Disalin!' : 'Salin SQL Pengaturan Lengkap'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Grid of Sub-sections */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Sidebar Nav */}
@@ -1116,6 +1274,16 @@ CREATE POLICY "Allow public read-write for demo" ON finance_expenses FOR ALL USI
                   }`}
                 >
                   Semua Perubahan (Gabungan)
+                </button>
+                <button
+                  onClick={() => setSelectedTable('app_settings')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                    selectedTable === 'app_settings'
+                      ? 'bg-slate-800 text-emerald-400 border border-emerald-500/20'
+                      : 'bg-slate-950/40 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Pengaturan & Mobile Hero (app_settings)
                 </button>
                 <button
                   onClick={() => setSelectedTable('students')}

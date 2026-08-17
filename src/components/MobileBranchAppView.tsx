@@ -148,6 +148,10 @@ export function MobileBranchAppView({
   ];
 
   const extendedServices = [
+    ...(canSwitchBranch ? [
+      { id: 'branches_mgmt', name: 'Kelola Cabang', sub: 'Multi-Cabang & Admin', icon: Building2, color: 'text-teal-600', bg: isLight ? 'bg-teal-50' : 'bg-teal-950/40', border: 'border-teal-200 dark:border-teal-800' },
+      { id: 'supabase_sql', name: 'SQL Supabase', sub: 'Editor Database', icon: Globe, color: 'text-sky-600', bg: isLight ? 'bg-sky-50' : 'bg-sky-950/40', border: 'border-sky-200 dark:border-sky-800' },
+    ] : []),
     { id: 'finance', name: 'Keuangan Cabang', sub: 'Pemasukan & Biaya', icon: Wallet, color: 'text-amber-600', bg: isLight ? 'bg-amber-50' : 'bg-amber-950/40', border: 'border-amber-200 dark:border-amber-800' },
     { id: 'alumni', name: 'Alumni Lulus', sub: 'Arsip Sertifikat', icon: GraduationCap, color: 'text-blue-600', bg: isLight ? 'bg-blue-50' : 'bg-blue-950/40', border: 'border-blue-200 dark:border-blue-800' },
     { id: 'simulator', name: 'Materi & Modul', sub: 'Kurikulum Resmi', icon: BookOpen, color: 'text-pink-600', bg: isLight ? 'bg-pink-50' : 'bg-pink-950/40', border: 'border-pink-200 dark:border-pink-800' },
@@ -167,6 +171,49 @@ export function MobileBranchAppView({
         s.sub.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : allDisplayServices;
+
+  // Gradient and visual customization resolver
+  const resolveSlideGradient = (slide?: HeroSlide) => {
+    if (!slide) {
+      return {
+        background: 'linear-gradient(135deg, #064e3b 0%, #022c22 100%)',
+        borderColor: '#064e3b88',
+        intensity: 85,
+        bannerOpacity: 30
+      };
+    }
+
+    const preset = slide.gradientPreset || 'emerald';
+    let start = slide.gradientStartColor || '#064e3b';
+    let end = slide.gradientEndColor || '#022c22';
+
+    if (preset === 'forest') {
+      start = '#052e16';
+      end = '#064e3b';
+    } else if (preset === 'lime') {
+      start = '#14532d';
+      end = '#365314';
+    } else if (preset === 'teal') {
+      start = '#134e4a';
+      end = '#083344';
+    } else if (preset === 'dark') {
+      start = '#022c22';
+      end = '#0f172a';
+    } else if (preset === 'emerald') {
+      start = '#064e3b';
+      end = '#022c22';
+    }
+
+    const intensity = slide.gradientIntensity !== undefined ? slide.gradientIntensity : 85;
+    const bannerOpacity = slide.bannerOpacity !== undefined ? slide.bannerOpacity : 30;
+
+    return {
+      background: `linear-gradient(135deg, ${start} 0%, ${end} 100%)`,
+      borderColor: `${start}88`,
+      intensity,
+      bannerOpacity
+    };
+  };
 
   // Carousel Slides (Up to 3 slides configured by Super Admin)
   const defaultSlides: HeroSlide[] = [
@@ -459,136 +506,152 @@ export function MobileBranchAppView({
       </AnimatePresence>
 
       {/* 3. HERO PROMOTIONAL BANNER CAROUSEL (Maksimal 3 Slide Otomatis) */}
-      <div 
-        className="relative group"
-        onMouseEnter={() => setIsPaused(true)}
-        onMouseLeave={() => setIsPaused(false)}
-        onTouchStart={() => setIsPaused(true)}
-        onTouchEnd={() => setIsPaused(false)}
-      >
-        <div className={`relative overflow-hidden rounded-3xl border shadow-md transition-all min-h-[178px] ${
-          isLight 
-            ? 'bg-gradient-to-br from-emerald-900 via-teal-900 to-slate-900 text-white border-emerald-800/40' 
-            : 'bg-gradient-to-br from-emerald-950 via-slate-900 to-slate-950 text-white border-emerald-500/20'
-        }`}>
-          
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={currentSlide.id || activeSlideIndex}
-              initial={{ opacity: 0, x: slideDirection === 'right' ? 40 : -40 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: slideDirection === 'right' ? -40 : 40 }}
-              transition={{ duration: 0.35, ease: 'easeInOut' }}
-              className="relative w-full h-full"
+      {(() => {
+        const slideGrad = resolveSlideGradient(currentSlide);
+
+        return (
+          <div 
+            className="relative group"
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
+            onTouchStart={() => setIsPaused(true)}
+            onTouchEnd={() => setIsPaused(false)}
+          >
+            <div 
+              className="relative overflow-hidden rounded-3xl border shadow-md transition-all duration-500 min-h-[178px] text-white"
+              style={{
+                background: slideGrad.background,
+                borderColor: slideGrad.borderColor
+              }}
             >
-              {/* Background Overlay image with soft fade */}
-              <div 
-                className="absolute inset-0 opacity-20 bg-cover bg-center pointer-events-none mix-blend-overlay transition-all duration-500"
-                style={{
-                  backgroundImage: `url(${currentSlide.bannerUrl || 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800'})`
-                }}
-              />
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={currentSlide.id || activeSlideIndex}
+                  initial={{ opacity: 0, x: slideDirection === 'right' ? 40 : -40 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: slideDirection === 'right' ? -40 : 40 }}
+                  transition={{ duration: 0.35, ease: 'easeInOut' }}
+                  className="relative w-full h-full"
+                >
+                  {/* Background Overlay image with custom opacity from device gallery or preset */}
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center pointer-events-none mix-blend-overlay transition-all duration-500"
+                    style={{
+                      backgroundImage: `url(${currentSlide.bannerUrl || 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800'})`,
+                      opacity: slideGrad.bannerOpacity / 100
+                    }}
+                  />
 
-              <div className="relative z-10 p-5 space-y-3">
-                <div className="space-y-1 max-w-[74%]">
-                  <h2 className="text-lg sm:text-xl font-black tracking-tight leading-snug">
-                    {currentSlide.title}
-                  </h2>
-                  <p className="text-[11px] text-emerald-100/90 leading-relaxed font-medium line-clamp-2">
-                    {currentSlide.subtitle}
-                  </p>
-                </div>
+                  {/* Gradient Darkness/Intensity adjustment overlay */}
+                  <div 
+                    className="absolute inset-0 pointer-events-none transition-all duration-500"
+                    style={{
+                      background: `rgba(0,0,0,${Math.max(0, (1 - (slideGrad.intensity / 100)) * 0.6)})`
+                    }}
+                  />
 
-                {currentSlide.badgeText && (
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-300">
-                    <Zap size={12} className="text-amber-400" />
-                    <span>{currentSlide.badgeText}</span>
+                  <div className="relative z-10 p-5 space-y-3">
+                    <div className="space-y-1 max-w-[74%]">
+                      <h2 className="text-lg sm:text-xl font-black tracking-tight leading-snug">
+                        {currentSlide.title}
+                      </h2>
+                      <p className="text-[11px] text-emerald-100/90 leading-relaxed font-medium line-clamp-2">
+                        {currentSlide.subtitle}
+                      </p>
+                    </div>
+
+                    {currentSlide.badgeText && (
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-300">
+                        <Zap size={12} className="text-amber-400" />
+                        <span>{currentSlide.badgeText}</span>
+                      </div>
+                    )}
+
+                    {/* Quick Action Pill Buttons in Hero */}
+                    <div className="flex items-center gap-2 pt-0.5">
+                      {currentSlide.primaryBtnText && (
+                        <button
+                          type="button"
+                          onClick={() => onNavigate(currentSlide.primaryBtnAction || 'attendance')}
+                          className="px-3.5 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-sm transition"
+                        >
+                          <Zap size={13} className="fill-current" />
+                          <span>{currentSlide.primaryBtnText}</span>
+                        </button>
+                      )}
+
+                      {currentSlide.secondaryBtnText && (
+                        <button
+                          type="button"
+                          onClick={() => onNavigate(currentSlide.secondaryBtnAction || 'spp')}
+                          className="px-3.5 py-2 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 text-white backdrop-blur-md font-bold text-xs flex items-center gap-1.5 border border-white/20 transition"
+                        >
+                          <Calendar size={13} />
+                          <span>{currentSlide.secondaryBtnText}</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
-                )}
 
-                {/* Quick Action Pill Buttons in Hero */}
-                <div className="flex items-center gap-2 pt-0.5">
-                  {currentSlide.primaryBtnText && (
-                    <button
-                      type="button"
-                      onClick={() => onNavigate(currentSlide.primaryBtnAction || 'attendance')}
-                      className="px-3.5 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-sm transition"
-                    >
-                      <Zap size={13} className="fill-current" />
-                      <span>{currentSlide.primaryBtnText}</span>
-                    </button>
-                  )}
+                  {/* Floating Right Hero Avatar/Illustration */}
+                  <div className="absolute right-2 bottom-0 w-28 h-32 pointer-events-none opacity-90 hidden xs:block">
+                    <img 
+                      src="https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=300"
+                      alt="Teacher Avatar"
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover object-top rounded-tl-3xl mask-gradient-to-b"
+                    />
+                  </div>
+                </motion.div>
+              </AnimatePresence>
 
-                  {currentSlide.secondaryBtnText && (
-                    <button
-                      type="button"
-                      onClick={() => onNavigate(currentSlide.secondaryBtnAction || 'spp')}
-                      className="px-3.5 py-2 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 text-white backdrop-blur-md font-bold text-xs flex items-center gap-1.5 border border-white/20 transition"
-                    >
-                      <Calendar size={13} />
-                      <span>{currentSlide.secondaryBtnText}</span>
-                    </button>
-                  )}
-                </div>
+              {/* Prev/Next arrows on hover or desktop */}
+              {activeSlides.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handlePrevSlide}
+                    className="absolute left-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-950/40 hover:bg-slate-950/70 text-white backdrop-blur-md transition opacity-0 group-hover:opacity-100 z-20"
+                    title="Slide Sebelumnya"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNextSlide}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-950/40 hover:bg-slate-950/70 text-white backdrop-blur-md transition opacity-0 group-hover:opacity-100 z-20"
+                    title="Slide Selanjutnya"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Carousel Pagination Dots */}
+            {activeSlides.length > 1 && (
+              <div className="flex items-center justify-center gap-1.5 pt-2">
+                {activeSlides.map((slide, idx) => (
+                  <button
+                    key={slide.id || idx}
+                    type="button"
+                    onClick={() => {
+                      setSlideDirection(idx > activeSlideIndex ? 'right' : 'left');
+                      setActiveSlideIndex(idx);
+                    }}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      activeSlideIndex === idx
+                        ? 'w-6 bg-emerald-500'
+                        : 'w-2 bg-slate-300 dark:bg-slate-700 hover:bg-slate-400'
+                    }`}
+                    title={`Buka Slide ${idx + 1}`}
+                  />
+                ))}
               </div>
-
-              {/* Floating Right Hero Avatar/Illustration */}
-              <div className="absolute right-2 bottom-0 w-28 h-32 pointer-events-none opacity-90 hidden xs:block">
-                <img 
-                  src="https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=300"
-                  alt="Teacher Avatar"
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover object-top rounded-tl-3xl mask-gradient-to-b"
-                />
-              </div>
-            </motion.div>
-          </AnimatePresence>
-
-          {/* Prev/Next arrows on hover or desktop */}
-          {activeSlides.length > 1 && (
-            <>
-              <button
-                type="button"
-                onClick={handlePrevSlide}
-                className="absolute left-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-950/40 hover:bg-slate-950/70 text-white backdrop-blur-md transition opacity-0 group-hover:opacity-100 z-20"
-                title="Slide Sebelumnya"
-              >
-                <ChevronLeft size={14} />
-              </button>
-              <button
-                type="button"
-                onClick={handleNextSlide}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-950/40 hover:bg-slate-950/70 text-white backdrop-blur-md transition opacity-0 group-hover:opacity-100 z-20"
-                title="Slide Selanjutnya"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* Carousel Pagination Dots */}
-        {activeSlides.length > 1 && (
-          <div className="flex items-center justify-center gap-1.5 pt-2">
-            {activeSlides.map((slide, idx) => (
-              <button
-                key={slide.id || idx}
-                type="button"
-                onClick={() => {
-                  setSlideDirection(idx > activeSlideIndex ? 'right' : 'left');
-                  setActiveSlideIndex(idx);
-                }}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  activeSlideIndex === idx
-                    ? 'w-6 bg-emerald-500'
-                    : 'w-2 bg-slate-300 dark:bg-slate-700 hover:bg-slate-400'
-                }`}
-                title={`Buka Slide ${idx + 1}`}
-              />
-            ))}
+            )}
           </div>
-        )}
-      </div>
+        );
+      })()}
 
       {/* 4. POPULAR SERVICES GRID (4x2 / 4x4 Grid with clean icons & titles) */}
       <div className="space-y-2.5 pt-1">

@@ -35,7 +35,13 @@ import {
   CheckCheck,
   ExternalLink,
   ShieldCheck,
-  ChevronRight
+  ChevronRight,
+  FolderOpen,
+  Sliders,
+  SlidersHorizontal,
+  Layers,
+  Eye,
+  Sun
 } from 'lucide-react';
 import { CustomDropdown } from './CustomDropdown';
 import { OfflineIndicator } from './OfflineIndicator';
@@ -68,6 +74,92 @@ const ACCENT_COLORS = [
   { id: 'sky', name: 'Sky Blue', colorClass: 'bg-sky-500', hoverClass: 'hover:bg-sky-600', ringClass: 'ring-sky-400' },
 ] as const;
 
+export interface SlideGradientPresetOption {
+  id: 'emerald' | 'forest' | 'lime' | 'teal' | 'dark' | 'custom';
+  name: string;
+  desc: string;
+  start: string;
+  end: string;
+  previewBg: string;
+}
+
+export const SLIDE_GRADIENT_PRESETS: SlideGradientPresetOption[] = [
+  {
+    id: 'emerald',
+    name: 'Emerald Klasik',
+    desc: 'Hijau Zamrud Math Fingers',
+    start: '#064e3b',
+    end: '#022c22',
+    previewBg: 'from-emerald-900 to-teal-950'
+  },
+  {
+    id: 'forest',
+    name: 'Hijau Hutan Tropis',
+    desc: 'Nuansa Alam Deep Forest',
+    start: '#052e16',
+    end: '#064e3b',
+    previewBg: 'from-green-950 to-emerald-900'
+  },
+  {
+    id: 'lime',
+    name: 'Lime Muda Fresh',
+    desc: 'Gradasi Hijau Neon Ceria',
+    start: '#14532d',
+    end: '#365314',
+    previewBg: 'from-green-900 to-lime-950'
+  },
+  {
+    id: 'teal',
+    name: 'Teal Toska Elegan',
+    desc: 'Biru Laut & Toska Modern',
+    start: '#134e4a',
+    end: '#083344',
+    previewBg: 'from-teal-900 to-cyan-950'
+  },
+  {
+    id: 'dark',
+    name: 'Hijau Gelap Mewah',
+    desc: 'Gelap Pekat Kontras Tinggi',
+    start: '#022c22',
+    end: '#0f172a',
+    previewBg: 'from-emerald-950 to-slate-950'
+  },
+  {
+    id: 'custom',
+    name: 'Kustom Bebas',
+    desc: 'Pilih Warna Hex Sendiri',
+    start: '#064e3b',
+    end: '#022c22',
+    previewBg: 'from-emerald-800 to-slate-900'
+  }
+];
+
+export const getSlideGradientConfig = (slide?: HeroSlide) => {
+  const presetId = slide?.gradientPreset || 'emerald';
+  const foundPreset = SLIDE_GRADIENT_PRESETS.find(p => p.id === presetId) || SLIDE_GRADIENT_PRESETS[0];
+  
+  let start = presetId === 'custom' 
+    ? (slide?.gradientStartColor || '#064e3b')
+    : (slide?.gradientStartColor || foundPreset.start);
+    
+  let end = presetId === 'custom'
+    ? (slide?.gradientEndColor || '#022c22')
+    : (slide?.gradientEndColor || foundPreset.end);
+
+  const intensity = slide?.gradientIntensity !== undefined ? slide.gradientIntensity : 85;
+  const bannerOpacity = slide?.bannerOpacity !== undefined ? slide.bannerOpacity : 30;
+
+  return {
+    presetId,
+    start,
+    end,
+    intensity, // 10 - 100
+    bannerOpacity, // 0 - 100
+    cssGradient: `linear-gradient(135deg, ${start} 0%, ${end} 100%)`,
+    borderColor: `${start}88`
+  };
+};
+
 const DEFAULT_HERO_SLIDES: HeroSlide[] = [
   {
     id: 'slide-1',
@@ -79,7 +171,12 @@ const DEFAULT_HERO_SLIDES: HeroSlide[] = [
     primaryBtnAction: 'attendance',
     secondaryBtnText: 'Tagihan SPP',
     secondaryBtnAction: 'spp',
-    enabled: true
+    enabled: true,
+    gradientPreset: 'emerald',
+    gradientStartColor: '#064e3b',
+    gradientEndColor: '#022c22',
+    gradientIntensity: 85,
+    bannerOpacity: 30
   },
   {
     id: 'slide-2',
@@ -91,7 +188,12 @@ const DEFAULT_HERO_SLIDES: HeroSlide[] = [
     primaryBtnAction: 'qr_cards',
     secondaryBtnText: 'Input Nilai',
     secondaryBtnAction: 'grades',
-    enabled: true
+    enabled: true,
+    gradientPreset: 'forest',
+    gradientStartColor: '#052e16',
+    gradientEndColor: '#064e3b',
+    gradientIntensity: 85,
+    bannerOpacity: 30
   },
   {
     id: 'slide-3',
@@ -103,7 +205,12 @@ const DEFAULT_HERO_SLIDES: HeroSlide[] = [
     primaryBtnAction: 'spp',
     secondaryBtnText: 'Data Siswa',
     secondaryBtnAction: 'students',
-    enabled: true
+    enabled: true,
+    gradientPreset: 'teal',
+    gradientStartColor: '#134e4a',
+    gradientEndColor: '#083344',
+    gradientIntensity: 85,
+    bannerOpacity: 30
   }
 ];
 
@@ -116,7 +223,12 @@ const getNormalizedHeroSlides = (sourceSettings: AppSettings): HeroSlide[] => {
           ...DEFAULT_HERO_SLIDES[i],
           ...custom[i],
           id: `slide-${i + 1}`,
-          enabled: custom[i].enabled !== undefined ? custom[i].enabled : true
+          enabled: custom[i].enabled !== undefined ? custom[i].enabled : true,
+          gradientPreset: custom[i].gradientPreset || DEFAULT_HERO_SLIDES[i].gradientPreset || 'emerald',
+          gradientStartColor: custom[i].gradientStartColor || DEFAULT_HERO_SLIDES[i].gradientStartColor || '#064e3b',
+          gradientEndColor: custom[i].gradientEndColor || DEFAULT_HERO_SLIDES[i].gradientEndColor || '#022c22',
+          gradientIntensity: custom[i].gradientIntensity !== undefined ? custom[i].gradientIntensity : (DEFAULT_HERO_SLIDES[i].gradientIntensity ?? 85),
+          bannerOpacity: custom[i].bannerOpacity !== undefined ? custom[i].bannerOpacity : (DEFAULT_HERO_SLIDES[i].bannerOpacity ?? 30)
         };
       }
       return {
@@ -248,6 +360,28 @@ export function SettingsManager({
     }
   };
   
+  const slideFileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingSlideImg, setIsUploadingSlideImg] = useState(false);
+
+  const handleSlideImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingSlideImg(true);
+      // Compress to high quality web resolution (~950px max, 0.85 quality)
+      const compressed = await compressImageFile(file, 950, 0.85);
+      updateSlideField(activeSlideTab, 'bannerUrl', compressed);
+    } catch (err) {
+      console.error('Gagal memproses gambar galeri:', err);
+    } finally {
+      setIsUploadingSlideImg(false);
+      if (slideFileInputRef.current) {
+        slideFileInputRef.current.value = '';
+      }
+    }
+  };
+
   const [isSaved, setIsSaved] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -1394,8 +1528,20 @@ export function SettingsManager({
             {/* Form Editor for Selected Slide */}
             {(() => {
               const currentSlide = heroSlides[activeSlideTab] || DEFAULT_HERO_SLIDES[activeSlideTab];
+              const slideGrad = getSlideGradientConfig(currentSlide);
+
               return (
-                <div className="space-y-4 pt-1">
+                <div className="space-y-5 pt-1">
+                  {/* Hidden File Input for Device Gallery / Camera upload */}
+                  <input
+                    type="file"
+                    ref={slideFileInputRef}
+                    onChange={handleSlideImageUpload}
+                    accept="image/*"
+                    className="hidden"
+                  />
+
+                  {/* Toggle Active Status */}
                   <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
                     <label className="flex items-center gap-2.5 cursor-pointer">
                       <input
@@ -1462,45 +1608,121 @@ export function SettingsManager({
                       />
                     </div>
 
-                    {/* Field 4: URL Gambar Latar Banner Hero */}
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                        URL Gambar Banner Latar
-                      </label>
-                      <input
-                        type="url"
-                        value={currentSlide.bannerUrl || ''}
-                        onChange={(e) => updateSlideField(activeSlideTab, 'bannerUrl', e.target.value)}
-                        placeholder="https://images.unsplash.com/..."
-                        className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none text-xs font-mono mb-1.5 ${
-                          isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-950/40 border-slate-800 text-white'
-                        }`}
-                      />
-                      {/* Presets Cepat */}
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[10px] text-slate-400 font-semibold">Preset Cepat:</span>
-                        <button
-                          type="button"
-                          onClick={() => updateSlideField(activeSlideTab, 'bannerUrl', 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800')}
-                          className="text-[10px] px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800 hover:bg-emerald-500 hover:text-white transition"
-                        >
-                          Sekolah & Buku
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => updateSlideField(activeSlideTab, 'bannerUrl', 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=800')}
-                          className="text-[10px] px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800 hover:bg-emerald-500 hover:text-white transition"
-                        >
-                          Guru & Siswa
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => updateSlideField(activeSlideTab, 'bannerUrl', 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800')}
-                          className="text-[10px] px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800 hover:bg-emerald-500 hover:text-white transition"
-                        >
-                          Kuitansi & SPP
-                        </button>
+                    {/* Field 4: Upload Gambar Slide dari Galeri Perangkat / URL */}
+                    <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                          <Image size={14} className="text-emerald-500" />
+                          <span>Foto Banner Slide {activeSlideTab + 1}</span>
+                        </label>
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                          Galeri / File Perangkat
+                        </span>
                       </div>
+
+                      {/* Upload Button from Device Gallery */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => slideFileInputRef.current?.click()}
+                          disabled={isUploadingSlideImg}
+                          className="flex-1 py-2.5 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition disabled:opacity-50"
+                        >
+                          {isUploadingSlideImg ? (
+                            <>
+                              <RefreshCw size={14} className="animate-spin" />
+                              <span>Memproses Gambar...</span>
+                            </>
+                          ) : (
+                            <>
+                              <FolderOpen size={14} />
+                              <span>Pilih Dari Galeri Perangkat</span>
+                            </>
+                          )}
+                        </button>
+
+                        {currentSlide.bannerUrl && (
+                          <button
+                            type="button"
+                            onClick={() => updateSlideField(activeSlideTab, 'bannerUrl', '')}
+                            className="p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/20 transition"
+                            title="Hapus Foto Banner"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Image Thumbnail Preview if available */}
+                      {currentSlide.bannerUrl ? (
+                        <div className="relative rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 h-20 bg-slate-900 flex items-center justify-center group">
+                          <img
+                            src={currentSlide.bannerUrl}
+                            alt="Banner Preview"
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover opacity-80"
+                          />
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-between px-3">
+                            <span className="text-[10px] font-bold text-white bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-xs flex items-center gap-1">
+                              <Check size={11} className="text-emerald-400" />
+                              Gambar Terpasang
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => slideFileInputRef.current?.click()}
+                              className="text-[10px] font-bold bg-white/90 hover:bg-white text-slate-900 px-2.5 py-1 rounded-md shadow-xs transition"
+                            >
+                              Ganti Foto
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-slate-400 italic">
+                          Belum ada foto banner. Klik tombol di atas untuk memilih foto dari galeri HP / laptop Anda.
+                        </p>
+                      )}
+
+                      {/* Alternative: URL / Preset Options */}
+                      <details className="text-xs">
+                        <summary className="cursor-pointer text-[11px] font-semibold text-slate-500 hover:text-emerald-500 select-none">
+                          + Atau Gunakan URL / Preset Gambar
+                        </summary>
+                        <div className="pt-2 space-y-2">
+                          <input
+                            type="url"
+                            value={currentSlide.bannerUrl || ''}
+                            onChange={(e) => updateSlideField(activeSlideTab, 'bannerUrl', e.target.value)}
+                            placeholder="https://images.unsplash.com/..."
+                            className={`w-full px-3 py-1.5 border rounded-lg focus:outline-none text-[11px] font-mono ${
+                              isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
+                            }`}
+                          />
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] text-slate-400 font-semibold">Preset Cepat:</span>
+                            <button
+                              type="button"
+                              onClick={() => updateSlideField(activeSlideTab, 'bannerUrl', 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800')}
+                              className="text-[10px] px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800 hover:bg-emerald-500 hover:text-white transition"
+                            >
+                              Sekolah & Buku
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateSlideField(activeSlideTab, 'bannerUrl', 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=800')}
+                              className="text-[10px] px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800 hover:bg-emerald-500 hover:text-white transition"
+                            >
+                              Guru & Siswa
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateSlideField(activeSlideTab, 'bannerUrl', 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800')}
+                              className="text-[10px] px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800 hover:bg-emerald-500 hover:text-white transition"
+                            >
+                              Kuitansi & SPP
+                            </button>
+                          </div>
+                        </div>
+                      </details>
                     </div>
 
                     {/* Field 5: Tombol Aksi 1 */}
@@ -1575,6 +1797,170 @@ export function SettingsManager({
                       </div>
                     </div>
                   </div>
+
+                  {/* PENGATURAN WARNA GRADIEN HIJAU & INTENSITAS (Custom Green Gradient & Intensity) */}
+                  <div className="p-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 space-y-4">
+                    <div className="flex items-center justify-between border-b pb-2.5 border-emerald-500/20">
+                      <div className="flex items-center gap-2">
+                        <SlidersHorizontal size={16} className="text-emerald-500" />
+                        <div>
+                          <h4 className="text-xs font-bold text-emerald-950 dark:text-emerald-200 uppercase tracking-wider">
+                            Kustomisasi Warna Gradien Hijau & Intensitas
+                          </h4>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                            Atur tema gradasi hijau, kepekatan warna latar, serta visibilitas foto galeri.
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-500 text-slate-950">
+                        Slide {activeSlideTab + 1}
+                      </span>
+                    </div>
+
+                    {/* 1. Pilihan Preset Warna Gradasi */}
+                    <div className="space-y-2">
+                      <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                        Pilihan Warna Gradien Hijau
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                        {SLIDE_GRADIENT_PRESETS.map((preset) => {
+                          const isSelected = (currentSlide.gradientPreset || 'emerald') === preset.id;
+                          return (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => {
+                                updateSlideField(activeSlideTab, 'gradientPreset', preset.id);
+                                if (preset.id !== 'custom') {
+                                  updateSlideField(activeSlideTab, 'gradientStartColor', preset.start);
+                                  updateSlideField(activeSlideTab, 'gradientEndColor', preset.end);
+                                }
+                              }}
+                              className={`p-2.5 rounded-xl border text-left transition flex items-center gap-2.5 ${
+                                isSelected
+                                  ? 'border-emerald-500 bg-emerald-500/20 shadow-xs ring-1 ring-emerald-500'
+                                  : isLight
+                                    ? 'bg-white border-slate-200 hover:border-emerald-300'
+                                    : 'bg-slate-900 border-slate-800 hover:border-emerald-700'
+                              }`}
+                            >
+                              <div 
+                                className="w-7 h-7 rounded-lg shrink-0 border border-white/20 shadow-xs"
+                                style={{ background: `linear-gradient(135deg, ${preset.start}, ${preset.end})` }}
+                              />
+                              <div className="min-w-0">
+                                <div className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                                  {preset.name}
+                                </div>
+                                <div className="text-[9px] text-slate-400 truncate">
+                                  {preset.desc}
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Custom Color Pickers if Custom is chosen */}
+                    {(currentSlide.gradientPreset === 'custom') && (
+                      <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-700 grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fadeIn">
+                        <div>
+                          <label className="block text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-1">
+                            Warna Awal Gradien (Kiri Atas)
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="color"
+                              value={currentSlide.gradientStartColor || '#064e3b'}
+                              onChange={(e) => updateSlideField(activeSlideTab, 'gradientStartColor', e.target.value)}
+                              className="w-9 h-9 rounded-lg cursor-pointer border border-slate-600 bg-transparent"
+                            />
+                            <input
+                              type="text"
+                              value={currentSlide.gradientStartColor || '#064e3b'}
+                              onChange={(e) => updateSlideField(activeSlideTab, 'gradientStartColor', e.target.value)}
+                              className="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-white text-xs font-mono"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-1">
+                            Warna Akhir Gradien (Kanan Bawah)
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="color"
+                              value={currentSlide.gradientEndColor || '#022c22'}
+                              onChange={(e) => updateSlideField(activeSlideTab, 'gradientEndColor', e.target.value)}
+                              className="w-9 h-9 rounded-lg cursor-pointer border border-slate-600 bg-transparent"
+                            />
+                            <input
+                              type="text"
+                              value={currentSlide.gradientEndColor || '#022c22'}
+                              onChange={(e) => updateSlideField(activeSlideTab, 'gradientEndColor', e.target.value)}
+                              className="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-white text-xs font-mono"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 2 Sliders: Intensitas Gradien & Opasitas Gambar */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                      {/* Slider 1: Intensitas Gradien */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1">
+                            <Sliders size={13} className="text-emerald-500" />
+                            <span>Intensitas Gradien Latar</span>
+                          </span>
+                          <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs px-2 py-0.5 rounded-md bg-emerald-500/10">
+                            {currentSlide.gradientIntensity !== undefined ? currentSlide.gradientIntensity : 85}%
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="10"
+                          max="100"
+                          step="5"
+                          value={currentSlide.gradientIntensity !== undefined ? currentSlide.gradientIntensity : 85}
+                          onChange={(e) => updateSlideField(activeSlideTab, 'gradientIntensity', Number(e.target.value))}
+                          className="w-full accent-emerald-500 cursor-pointer h-2 bg-slate-200 dark:bg-slate-800 rounded-lg"
+                        />
+                        <div className="flex justify-between text-[10px] text-slate-400 font-medium">
+                          <span>Lembut (10%)</span>
+                          <span>Pekat Solid (100%)</span>
+                        </div>
+                      </div>
+
+                      {/* Slider 2: Opasitas Foto Latar dari Galeri */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1">
+                            <Eye size={13} className="text-emerald-500" />
+                            <span>Kecerahan Foto Galeri</span>
+                          </span>
+                          <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs px-2 py-0.5 rounded-md bg-emerald-500/10">
+                            {currentSlide.bannerOpacity !== undefined ? currentSlide.bannerOpacity : 30}%
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="5"
+                          value={currentSlide.bannerOpacity !== undefined ? currentSlide.bannerOpacity : 30}
+                          onChange={(e) => updateSlideField(activeSlideTab, 'bannerOpacity', Number(e.target.value))}
+                          className="w-full accent-emerald-500 cursor-pointer h-2 bg-slate-200 dark:bg-slate-800 rounded-lg"
+                        />
+                        <div className="flex justify-between text-[10px] text-slate-400 font-medium">
+                          <span>Samar (0%)</span>
+                          <span>Terang Jelas (100%)</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               );
             })()}
@@ -1609,18 +1995,36 @@ export function SettingsManager({
 
               {(() => {
                 const pSlide = heroSlides[previewSlideIdx] || DEFAULT_HERO_SLIDES[previewSlideIdx];
+                const pGrad = getSlideGradientConfig(pSlide);
+
                 return (
-                  <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-950 via-teal-950 to-slate-950 text-white p-5 border border-emerald-500/30 max-w-md mx-auto shadow-md">
+                  <div 
+                    className="relative overflow-hidden rounded-2xl text-white p-5 border max-w-md mx-auto shadow-md transition-all duration-300"
+                    style={{
+                      background: pGrad.cssGradient,
+                      borderColor: pGrad.borderColor
+                    }}
+                  >
+                    {/* Background Image Layer with custom opacity */}
                     <div 
-                      className="absolute inset-0 opacity-25 bg-cover bg-center pointer-events-none mix-blend-overlay"
+                      className="absolute inset-0 bg-cover bg-center pointer-events-none mix-blend-overlay transition-all duration-300"
                       style={{
-                        backgroundImage: `url(${pSlide.bannerUrl || DEFAULT_HERO_SLIDES[0].bannerUrl})`
+                        backgroundImage: `url(${pSlide.bannerUrl || DEFAULT_HERO_SLIDES[0].bannerUrl})`,
+                        opacity: pGrad.bannerOpacity / 100
+                      }}
+                    />
+
+                    {/* Gradient Darkness/Intensity adjustment overlay */}
+                    <div 
+                      className="absolute inset-0 pointer-events-none transition-all duration-300"
+                      style={{
+                        background: `rgba(0,0,0,${Math.max(0, (1 - (pGrad.intensity / 100)) * 0.6)})`
                       }}
                     />
 
                     <div className="relative z-10 space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-black/40 text-emerald-300 border border-emerald-500/30 backdrop-blur-xs">
                           Slide {previewSlideIdx + 1} {pSlide.enabled !== false ? '• Aktif' : '• Nonaktif'}
                         </span>
                         {pSlide.badgeText && (
@@ -1646,7 +2050,7 @@ export function SettingsManager({
                           </span>
                         )}
                         {pSlide.secondaryBtnText && (
-                          <span className="px-3 py-1.5 rounded-full bg-white/20 text-white font-bold text-[11px] border border-white/20">
+                          <span className="px-3 py-1.5 rounded-full bg-white/20 text-white font-bold text-[11px] border border-white/20 backdrop-blur-xs">
                             {pSlide.secondaryBtnText}
                           </span>
                         )}

@@ -102,6 +102,12 @@ export interface HeroSlide {
   secondaryBtnText?: string;
   secondaryBtnAction?: string;
   enabled?: boolean;
+  // Gradient & Visual Customization
+  gradientPreset?: 'emerald' | 'forest' | 'lime' | 'teal' | 'dark' | 'custom';
+  gradientStartColor?: string;
+  gradientEndColor?: string;
+  gradientIntensity?: number; // 10 to 100 (%)
+  bannerOpacity?: number; // 0 to 100 (%)
 }
 
 export interface AppSettings {

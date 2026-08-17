@@ -4,6 +4,7 @@ import { Student, Attendance, Invoice, Grade, AppSettings, DashboardTask, Branch
 import { formatRupiah, getWhatsAppLink, getStudentUniqueCode } from '../utils';
 import { MathFingerLogo } from './MathFingerLogo';
 import { MobileBranchAppView } from './MobileBranchAppView';
+import { SuperAdminDashboard } from './SuperAdminDashboard';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import {
   ResponsiveContainer,
@@ -61,6 +62,7 @@ interface DashboardOverviewProps {
   theme?: string;
   isSuperAdmin?: boolean;
   branches?: Branch[];
+  adminUsers?: AdminUser[];
   activeBranch?: string;
   allStudents?: Student[];
   allAttendance?: Attendance[];
@@ -87,6 +89,7 @@ export function DashboardOverview({
   theme = 'dark',
   isSuperAdmin = false,
   branches = [],
+  adminUsers = [],
   activeBranch = 'all',
   allStudents = [],
   allAttendance = [],
@@ -100,29 +103,6 @@ export function DashboardOverview({
 }: DashboardOverviewProps) {
   const isDesktop = useMediaQuery('(min-width: 768px)');
   const [newTaskText, setNewTaskText] = useState('');
-
-  // When on mobile view, render the dedicated Mobile Branch App experience with configurable elements
-  if (!isDesktop) {
-    return (
-      <MobileBranchAppView
-        students={students}
-        attendance={attendance}
-        invoices={invoices}
-        grades={grades}
-        settings={settings}
-        theme={theme}
-        isSuperAdmin={isSuperAdmin}
-        branches={branches}
-        activeBranch={activeBranch}
-        currentUser={currentUser}
-        onNavigate={onNavigate}
-        onOpenUpdateModal={onOpenUpdateModal}
-        isUpdateAvailable={isUpdateAvailable}
-        onSelectBranch={onSelectBranch}
-        onToggleTheme={onToggleTheme}
-      />
-    );
-  }
 
   // Get active admin from prop, or fallback to localStorage if null/undefined
   const getActiveUser = () => {
@@ -142,6 +122,55 @@ export function DashboardOverview({
   };
 
   const activeUser = getActiveUser();
+
+  // 1. MOBILE VIEW: Always render the dedicated Mobile Branch App experience for ALL roles (Super Admin & Branch Admin)
+  if (!isDesktop) {
+    return (
+      <MobileBranchAppView
+        students={students}
+        attendance={attendance}
+        invoices={invoices}
+        grades={grades}
+        settings={settings}
+        theme={theme}
+        isSuperAdmin={isSuperAdmin || currentUser?.role === 'super_admin' || activeUser?.role === 'super_admin'}
+        branches={branches}
+        activeBranch={activeBranch}
+        currentUser={currentUser || activeUser}
+        onNavigate={onNavigate}
+        onOpenUpdateModal={onOpenUpdateModal}
+        isUpdateAvailable={isUpdateAvailable}
+        onSelectBranch={onSelectBranch}
+        onToggleTheme={onToggleTheme}
+      />
+    );
+  }
+
+  // 2. DESKTOP VIEW: If user is Super Admin (e.g. Wahyudin Hafiz), render the dedicated Super Admin Command Center Dashboard
+  if (isSuperAdmin || currentUser?.role === 'super_admin' || activeUser?.role === 'super_admin') {
+    return (
+      <SuperAdminDashboard
+        students={allStudents.length > 0 ? allStudents : students}
+        attendance={allAttendance.length > 0 ? allAttendance : attendance}
+        invoices={allInvoices.length > 0 ? allInvoices : invoices}
+        grades={allGrades.length > 0 ? allGrades : grades}
+        settings={settings}
+        branches={branches}
+        adminUsers={adminUsers}
+        activeBranch={activeBranch}
+        onSelectBranch={onSelectBranch || (() => {})}
+        onNavigate={onNavigate}
+        dashboardTasks={dashboardTasks}
+        onAddDashboardTask={onAddDashboardTask}
+        onToggleDashboardTask={onToggleDashboardTask}
+        onDeleteDashboardTask={onDeleteDashboardTask}
+        theme={theme as 'light' | 'dark'}
+        currentUser={currentUser || activeUser}
+        onOpenUpdateModal={onOpenUpdateModal}
+        isUpdateAvailable={isUpdateAvailable}
+      />
+    );
+  }
 
   const resolveAdminName = () => {
     if (!activeUser) return 'Wahyudin Hafiz, S.Pd';

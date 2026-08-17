@@ -832,6 +832,7 @@ export default function App() {
             theme={theme} 
             isSuperAdmin={isSuperAdmin}
             branches={branches}
+            adminUsers={adminUsers}
             activeBranch={activeBranch}
             allStudents={students}
             allAttendance={attendance}

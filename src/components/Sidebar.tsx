@@ -89,7 +89,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       title: 'UTAMA',
       items: [
-        { id: 'overview', name: 'Dashboard', icon: Home },
+        { id: 'overview', name: isSuperAdmin ? 'Pusat Komando' : 'Dashboard', icon: Home },
         { id: 'students', name: 'Siswa', icon: Users, badge: studentsCount, badgeColor: 'bg-lime-400 text-slate-950' },
         { id: 'classes', name: 'Kelas', icon: Layers },
         { id: 'qr_cards', name: 'Kartu QR Siswa', icon: QrCode }
@@ -131,6 +131,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <aside className={`relative h-screen sticky top-0 flex flex-col transition-all duration-300 z-30 p-2 sm:p-3 select-none ${
       isCollapsed ? 'w-20' : 'w-64 sm:w-72'
     }`}>
+      {/* Floating Edge Toggle Button on the Right Border */}
+      <button
+        type="button"
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className={`absolute -right-2.5 top-7 z-40 p-1.5 rounded-full border shadow-lg transition-all duration-200 cursor-pointer flex items-center justify-center hover:scale-110 active:scale-95 ${
+          isLight 
+            ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-white shadow-emerald-950/20' 
+            : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 border-slate-900 shadow-black/50'
+        }`}
+        title={isCollapsed ? 'Perluas / Memperbesar Sidebar' : 'Mengecilkan Sidebar'}
+      >
+        {isCollapsed ? <ChevronRight size={16} className="font-extrabold" /> : <ChevronLeft size={16} className="font-extrabold" />}
+      </button>
+
       {/* Outer Rounded Panel matching image styling */}
       <div className={`h-full w-full rounded-[24px] sm:rounded-[28px] border shadow-xl flex flex-col overflow-hidden transition-colors duration-200 ${
         isLight 
@@ -139,17 +153,119 @@ export const Sidebar: React.FC<SidebarProps> = ({
       }`}>
         
         {/* 1. TOP HEADER (Traffic Lights + Logo + Search & Theme Toggle) */}
-        <div className={`p-4 border-b flex flex-col gap-3 shrink-0 ${isLight ? 'border-slate-100' : 'border-slate-800/80'}`}>
-          {/* Traffic Light Dots & Rail Toggle */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-full bg-[#ff5f56] inline-block shadow-xs" />
-              <span className="w-3 h-3 rounded-full bg-[#ffbd2e] inline-block shadow-xs" />
-              <span className="w-3 h-3 rounded-full bg-[#27c93f] inline-block shadow-xs" />
-            </div>
+        <div className={`border-b flex flex-col shrink-0 ${
+          isCollapsed ? 'p-2.5 gap-2 text-center' : 'p-4 gap-3'
+        } ${isLight ? 'border-slate-100' : 'border-slate-800/80'}`}>
+          
+          {/* Expanded State Header */}
+          {!isCollapsed ? (
+            <>
+              {/* Traffic Light Dots & Rail Toggle */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-[#ff5f56] inline-block shadow-xs" />
+                  <span className="w-3 h-3 rounded-full bg-[#ffbd2e] inline-block shadow-xs" />
+                  <span className="w-3 h-3 rounded-full bg-[#27c93f] inline-block shadow-xs" />
+                </div>
 
-            <div className="flex items-center gap-1">
-              {/* Theme Toggle Button */}
+                <div className="flex items-center gap-1">
+                  {/* Theme Toggle Button */}
+                  <button
+                    type="button"
+                    onClick={toggleTheme}
+                    className={`p-1.5 rounded-xl border transition cursor-pointer ${
+                      isLight 
+                        ? 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200' 
+                        : 'bg-slate-800 border-slate-700 text-amber-400 hover:bg-slate-700'
+                    }`}
+                    title={isLight ? 'Beralih ke Mode Gelap' : 'Beralih ke Mode Terang'}
+                  >
+                    {isLight ? <Moon size={14} /> : <Sun size={14} />}
+                  </button>
+
+                  {/* Expand / Collapse Button */}
+                  <button
+                    type="button"
+                    onClick={() => setIsCollapsed(!isCollapsed)}
+                    className={`p-1.5 rounded-xl border transition cursor-pointer ${
+                      isLight 
+                        ? 'bg-slate-100 border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-200' 
+                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:bg-slate-700'
+                    }`}
+                    title="Ciutkan / Kecilkan Sidebar"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Logo & App Version Title */}
+              <div className="flex items-center justify-between pt-1">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20">
+                    <MathFingerLogo size={24} showText={false} theme={theme} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-extrabold text-sm tracking-tight truncate">Math Fingers</span>
+                      <span className="text-[9px] font-bold px-1.5 py-0.2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-md">
+                        v3.3
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 truncate">Sistem Olah Data Bimbingan</p>
+                  </div>
+                </div>
+
+                {/* Version update button */}
+                <button
+                  type="button"
+                  onClick={onOpenUpdateModal}
+                  className={`p-1.5 rounded-lg border text-xs transition cursor-pointer ${
+                    isUpdateAvailable
+                      ? 'bg-amber-500/15 border-amber-500/30 text-amber-500 animate-pulse'
+                      : 'bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-200'
+                  }`}
+                  title={isUpdateAvailable ? 'Pembaruan aplikasi tersedia' : 'Versi aplikasi terbaru'}
+                >
+                  <Sparkles size={13} />
+                </button>
+              </div>
+            </>
+          ) : (
+            /* Collapsed State Header */
+            <div className="flex flex-col items-center gap-2 pt-0.5">
+              {/* Traffic light dots */}
+              <div className="flex items-center justify-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#27c93f]" />
+              </div>
+
+              {/* Dedicated Expand Sidebar Button */}
+              <button
+                type="button"
+                onClick={() => setIsCollapsed(false)}
+                className={`w-full py-2 px-1.5 rounded-xl border flex items-center justify-center gap-1 transition cursor-pointer group shadow-xs ${
+                  isLight 
+                    ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700' 
+                    : 'bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/40 text-emerald-400'
+                }`}
+                title="Klik untuk Memperbesar Sidebar"
+              >
+                <ChevronRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
+              </button>
+
+              {/* Clickable Logo */}
+              <button
+                type="button"
+                onClick={() => setIsCollapsed(false)}
+                className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/20 hover:scale-105 transition cursor-pointer"
+                title="Klik untuk Memperbesar Sidebar"
+              >
+                <MathFingerLogo size={22} showText={false} theme={theme} />
+              </button>
+
+              {/* Theme Toggle in Collapsed mode */}
               <button
                 type="button"
                 onClick={toggleTheme}
@@ -160,62 +276,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 }`}
                 title={isLight ? 'Beralih ke Mode Gelap' : 'Beralih ke Mode Terang'}
               >
-                {isLight ? <Moon size={14} /> : <Sun size={14} />}
+                {isLight ? <Moon size={13} /> : <Sun size={13} />}
               </button>
-
-              {/* Expand / Collapse Button */}
-              <button
-                type="button"
-                onClick={() => setIsCollapsed(!isCollapsed)}
-                className={`p-1.5 rounded-xl border transition cursor-pointer ${
-                  isLight 
-                    ? 'bg-slate-100 border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-200' 
-                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:bg-slate-700'
-                }`}
-                title={isCollapsed ? 'Perluas Sidebar' : 'Ciutkan Sidebar'}
-              >
-                {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-              </button>
-            </div>
-          </div>
-
-          {/* Logo & App Version Title */}
-          {!isCollapsed ? (
-            <div className="flex items-center justify-between pt-1">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20">
-                  <MathFingerLogo size={24} showText={false} theme={theme} />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-extrabold text-sm tracking-tight truncate">Math Fingers</span>
-                    <span className="text-[9px] font-bold px-1.5 py-0.2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-md">
-                      v2.5
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-slate-400 truncate">Sistem Olah Data Bimbingan</p>
-                </div>
-              </div>
-
-              {/* Version update button */}
-              <button
-                type="button"
-                onClick={onOpenUpdateModal}
-                className={`p-1.5 rounded-lg border text-xs transition cursor-pointer ${
-                  isUpdateAvailable
-                    ? 'bg-amber-500/15 border-amber-500/30 text-amber-500 animate-pulse'
-                    : 'bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-200'
-                }`}
-                title={isUpdateAvailable ? 'Pembaruan aplikasi tersedia' : 'Versi aplikasi terbaru'}
-              >
-                <Sparkles size={13} />
-              </button>
-            </div>
-          ) : (
-            <div className="flex justify-center pt-1">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
-                <MathFingerLogo size={22} showText={false} theme={theme} />
-              </div>
             </div>
           )}
 

@@ -494,92 +494,474 @@ export default function FinanceManager({
   };
 
   const handleExportPDF = () => {
-    const doc = new jsPDF();
-    doc.setFont("Helvetica");
-    
-    // Header
-    doc.setFillColor(16, 185, 129); // emerald-500
-    doc.rect(0, 0, 210, 40, "F");
-    
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(22);
-    doc.text("MATH FINGERS BIMBEL", 15, 18);
-    doc.setFontSize(12);
-    doc.text(`Laporan Keuangan Periodik (${reportTransactions.startDate} s/d ${reportTransactions.endDate})`, 15, 28);
-    
-    // Summary Box
-    doc.setTextColor(80, 80, 80);
-    doc.setFontSize(11);
-    doc.text(`Total Pemasukan: ${formatIDR(currentTotalIncome)}`, 15, 55);
-    doc.text(`Total Pengeluaran: ${formatIDR(currentTotalExpense)}`, 15, 63);
-    
-    const profitColor = currentNetProfit >= 0 ? [16, 185, 129] : [239, 68, 68];
-    doc.setTextColor(profitColor[0], profitColor[1], profitColor[2]);
-    doc.setFontSize(12);
-    doc.text(`Laba / Rugi Bersih: ${formatIDR(currentNetProfit)}`, 15, 72);
-    
-    // Draw Dividers
-    doc.setDrawColor(220, 220, 220);
-    doc.line(15, 78, 195, 78);
-    
-    // Incomes Header
-    doc.setTextColor(50, 50, 50);
-    doc.setFontSize(14);
-    doc.text("Rincian Pemasukan", 15, 88);
-    
-    doc.setFontSize(10);
-    let y = 96;
-    doc.text("Tanggal", 15, y);
-    doc.text("Kategori", 40, y);
-    doc.text("Sumber", 85, y);
-    doc.text("Nominal", 145, y);
-    doc.line(15, y + 2, 195, y + 2);
-    
-    y += 8;
-    reportTransactions.incomes.slice(0, 15).forEach(inc => {
-      if (y < 270) {
-        doc.text(inc.date, 15, y);
-        doc.text(inc.category, 40, y);
-        doc.text(inc.source.substring(0, 25), 85, y);
-        doc.text(formatIDR(inc.amount), 145, y);
-        y += 7;
-      }
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const marginX = 14;
+    const contentWidth = pageWidth - (marginX * 2); // 182mm
+    const bottomMargin = 22;
+
+    const branchLabel = filterBranch === 'all' ? 'Semua Cabang' : `Cabang ${filterBranch}`;
+    const printDateStr = new Date().toLocaleDateString('id-ID', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+    const printDateTimeStr = new Date().toLocaleString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
 
-    if (reportTransactions.incomes.length > 15) {
-      doc.text(`... dan ${reportTransactions.incomes.length - 15} transaksi pemasukan lainnya`, 15, y);
-      y += 8;
+    // Helper: Draw header on pages
+    const drawPageHeader = (isFirstPage: boolean) => {
+      if (isFirstPage) {
+        // Emerald Header Banner
+        doc.setFillColor(16, 185, 129); // emerald-500
+        doc.rect(0, 0, pageWidth, 36, "F");
+
+        // Math Fingers Brand
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("Helvetica", "bold");
+        doc.setFontSize(18);
+        doc.text("MATH FINGERS BIMBEL", marginX, 14);
+
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(8.5);
+        doc.text("Berhitung Cepat & Akurat Tanpa Alat | Sistem Keuangan Resmi", marginX, 20);
+
+        // Report Title & Period
+        doc.setFontSize(11);
+        doc.setFont("Helvetica", "bold");
+        doc.text("LAPORAN KEUANGAN PERIODIK", marginX, 29.5);
+
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(8);
+        doc.text(`Periode: ${reportTransactions.startDate} s/d ${reportTransactions.endDate} | ${branchLabel}`, pageWidth - marginX, 29.5, { align: "right" });
+      } else {
+        // Sleek continuation running header for subsequent pages
+        doc.setFillColor(248, 250, 252);
+        doc.rect(0, 0, pageWidth, 13, "F");
+
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.3);
+        doc.line(0, 13, pageWidth, 13);
+
+        doc.setFont("Helvetica", "bold");
+        doc.setFontSize(8.5);
+        doc.setTextColor(16, 185, 129);
+        doc.text("MATH FINGERS BIMBEL", marginX, 8.5);
+
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Laporan Keuangan (${reportTransactions.startDate} s/d ${reportTransactions.endDate}) - ${branchLabel}`, pageWidth - marginX, 8.5, { align: "right" });
+      }
+    };
+
+    // Helper: Draw Incomes Table Header
+    const drawIncomesTableHeader = (curY: number) => {
+      doc.setFillColor(16, 185, 129); // emerald-500
+      doc.roundedRect(marginX, curY, contentWidth, 7, 1, 1, 'F');
+
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(255, 255, 255);
+      doc.text("No", marginX + 5, curY + 4.8, { align: "center" });
+      doc.text("Tanggal", marginX + 11, curY + 4.8);
+      doc.text("Kategori", marginX + 35, curY + 4.8);
+      doc.text("Sumber / Keterangan", marginX + 69, curY + 4.8);
+      doc.text("Cabang", marginX + 133, curY + 4.8);
+      doc.text("Nominal (Rp)", pageWidth - marginX - 3, curY + 4.8, { align: "right" });
+      return curY + 7;
+    };
+
+    // Helper: Draw Expenses Table Header
+    const drawExpensesTableHeader = (curY: number) => {
+      doc.setFillColor(225, 29, 72); // rose-600
+      doc.roundedRect(marginX, curY, contentWidth, 7, 1, 1, 'F');
+
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(255, 255, 255);
+      doc.text("No", marginX + 5, curY + 4.8, { align: "center" });
+      doc.text("Tanggal", marginX + 11, curY + 4.8);
+      doc.text("Kategori", marginX + 35, curY + 4.8);
+      doc.text("Dibayar Kepada / Keterangan", marginX + 67, curY + 4.8);
+      doc.text("Metode", marginX + 121, curY + 4.8);
+      doc.text("Cabang", marginX + 137, curY + 4.8);
+      doc.text("Nominal (Rp)", pageWidth - marginX - 3, curY + 4.8, { align: "right" });
+      return curY + 7;
+    };
+
+    // 1. Initial Page Header
+    drawPageHeader(true);
+
+    // 2. Executive Summary Cards on Page 1
+    let y = 41;
+    const cardW = (contentWidth - 6) / 3;
+    const cardH = 21;
+
+    // Card 1: Total Pemasukan
+    doc.setFillColor(240, 253, 244); // emerald-50
+    doc.setDrawColor(187, 247, 208); // emerald-200
+    doc.setLineWidth(0.3);
+    doc.roundedRect(marginX, y, cardW, cardH, 2, 2, 'FD');
+
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(5, 150, 105);
+    doc.text("TOTAL PEMASUKAN", marginX + 3.5, y + 5);
+
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(10.5);
+    doc.setTextColor(6, 95, 70);
+    doc.text(formatIDR(currentTotalIncome), marginX + 3.5, y + 12);
+
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`${reportTransactions.incomes.length} transaksi pemasukan`, marginX + 3.5, y + 17.5);
+
+    // Card 2: Total Pengeluaran
+    const card2X = marginX + cardW + 3;
+    doc.setFillColor(255, 241, 242); // rose-50
+    doc.setDrawColor(254, 205, 211); // rose-200
+    doc.roundedRect(card2X, y, cardW, cardH, 2, 2, 'FD');
+
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(225, 29, 72);
+    doc.text("TOTAL PENGELUARAN", card2X + 3.5, y + 5);
+
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(10.5);
+    doc.setTextColor(159, 18, 57);
+    doc.text(formatIDR(currentTotalExpense), card2X + 3.5, y + 12);
+
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`${reportTransactions.expenses.length} transaksi pengeluaran`, card2X + 3.5, y + 17.5);
+
+    // Card 3: Laba / Rugi Bersih
+    const card3X = marginX + (cardW + 3) * 2;
+    const isProfit = currentNetProfit >= 0;
+    if (isProfit) {
+      doc.setFillColor(240, 253, 244);
+      doc.setDrawColor(187, 247, 208);
+    } else {
+      doc.setFillColor(255, 241, 242);
+      doc.setDrawColor(254, 205, 211);
     }
+    doc.roundedRect(card3X, y, cardW, cardH, 2, 2, 'FD');
 
-    y += 10;
-    if (y < 270) {
-      doc.setFontSize(14);
-      doc.text("Rincian Pengeluaran", 15, y);
-      y += 8;
-      doc.setFontSize(10);
-      doc.text("Tanggal", 15, y);
-      doc.text("Kategori", 40, y);
-      doc.text("Dibayar Kepada", 85, y);
-      doc.text("Nominal", 145, y);
-      doc.line(15, y + 2, 195, y + 2);
-      y += 8;
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(7.5);
+    if (isProfit) {
+      doc.setTextColor(5, 150, 105);
+    } else {
+      doc.setTextColor(225, 29, 72);
+    }
+    doc.text("LABA / RUGI BERSIH", card3X + 3.5, y + 5);
 
-      reportTransactions.expenses.slice(0, 15).forEach(exp => {
-        if (y < 270) {
-          doc.text(exp.date, 15, y);
-          doc.text(exp.category, 40, y);
-          doc.text(exp.paidTo.substring(0, 25), 85, y);
-          doc.text(formatIDR(exp.amount), 145, y);
-          y += 7;
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(10.5);
+    if (isProfit) {
+      doc.setTextColor(6, 95, 70);
+    } else {
+      doc.setTextColor(159, 18, 57);
+    }
+    doc.text(formatIDR(currentNetProfit), card3X + 3.5, y + 12);
+
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(7);
+    if (isProfit) {
+      doc.setTextColor(5, 150, 105);
+    } else {
+      doc.setTextColor(225, 29, 72);
+    }
+    doc.text(isProfit ? "STATUS: SURPLUS KAS" : "STATUS: DEFISIT KAS", card3X + 3.5, y + 17.5);
+
+    y += cardH + 7;
+
+    // 3. Section: Rincian Pemasukan (Complete List of ALL Incomes)
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(10.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`1. Rincian Pemasukan (${reportTransactions.incomes.length} Transaksi)`, marginX, y);
+    y += 4;
+
+    y = drawIncomesTableHeader(y);
+
+    if (reportTransactions.incomes.length === 0) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(marginX, y, contentWidth, 7, 'F');
+      doc.setFont("Helvetica", "italic");
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text("Tidak ada data transaksi pemasukan pada periode ini.", marginX + 5, y + 4.8);
+      y += 7;
+    } else {
+      const rowHeight = 6.2;
+      reportTransactions.incomes.forEach((inc, idx) => {
+        // Page break check
+        if (y + rowHeight > pageHeight - bottomMargin) {
+          doc.addPage();
+          drawPageHeader(false);
+          y = 19;
+          y = drawIncomesTableHeader(y);
         }
+
+        // Alternating row background
+        if (idx % 2 === 1) {
+          doc.setFillColor(248, 250, 252);
+          doc.rect(marginX, y, contentWidth, rowHeight, 'F');
+        }
+
+        // Draw light bottom border
+        doc.setDrawColor(241, 245, 249);
+        doc.setLineWidth(0.2);
+        doc.line(marginX, y + rowHeight, marginX + contentWidth, y + rowHeight);
+
+        // Row Content
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(51, 65, 85);
+
+        // No
+        doc.text(String(idx + 1), marginX + 5, y + 4.3, { align: "center" });
+
+        // Tanggal
+        doc.text(inc.date, marginX + 11, y + 4.3);
+
+        // Kategori
+        doc.setFont("Helvetica", "bold");
+        doc.text(inc.category, marginX + 35, y + 4.3);
+
+        // Sumber / Keterangan (Truncate if excessively long)
+        doc.setFont("Helvetica", "normal");
+        const fullSource = inc.notes ? `${inc.source} (${inc.notes})` : inc.source;
+        const formattedSource = fullSource.length > 38 ? fullSource.slice(0, 36) + '...' : fullSource;
+        doc.text(formattedSource, marginX + 69, y + 4.3);
+
+        // Cabang
+        doc.setTextColor(100, 116, 139);
+        doc.text(inc.branch || 'Pusat', marginX + 133, y + 4.3);
+
+        // Nominal
+        doc.setFont("Helvetica", "bold");
+        doc.setTextColor(5, 150, 105);
+        doc.text(formatIDR(inc.amount), pageWidth - marginX - 3, y + 4.3, { align: "right" });
+
+        y += rowHeight;
       });
 
-      if (reportTransactions.expenses.length > 15) {
-        doc.text(`... dan ${reportTransactions.expenses.length - 15} transaksi pengeluaran lainnya`, 15, y);
+      // Incomes Subtotal Bar
+      if (y + 7 > pageHeight - bottomMargin) {
+        doc.addPage();
+        drawPageHeader(false);
+        y = 19;
       }
+      doc.setFillColor(236, 253, 245); // emerald-50
+      doc.setDrawColor(167, 243, 208); // emerald-200
+      doc.setLineWidth(0.3);
+      doc.roundedRect(marginX, y, contentWidth, 6.8, 1, 1, 'FD');
+
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(6, 95, 70);
+      doc.text(`Subtotal Pemasukan (${reportTransactions.incomes.length} Transaksi)`, marginX + 5, y + 4.6);
+      doc.text(formatIDR(currentTotalIncome), pageWidth - marginX - 3, y + 4.6, { align: "right" });
+      y += 6.8;
     }
-    
-    doc.save(`Laporan_Keuangan_MathFingers_${reportTransactions.startDate}.pdf`);
+
+    y += 7;
+
+    // 4. Section: Rincian Pengeluaran (Complete List of ALL Expenses)
+    // Check if there's enough room for section header + table header + at least 2 rows (approx 28mm)
+    if (y + 28 > pageHeight - bottomMargin) {
+      doc.addPage();
+      drawPageHeader(false);
+      y = 19;
+    }
+
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(10.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`2. Rincian Pengeluaran (${reportTransactions.expenses.length} Transaksi)`, marginX, y);
+    y += 4;
+
+    y = drawExpensesTableHeader(y);
+
+    if (reportTransactions.expenses.length === 0) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(marginX, y, contentWidth, 7, 'F');
+      doc.setFont("Helvetica", "italic");
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text("Tidak ada data transaksi pengeluaran pada periode ini.", marginX + 5, y + 4.8);
+      y += 7;
+    } else {
+      const rowHeight = 6.2;
+      reportTransactions.expenses.forEach((exp, idx) => {
+        // Page break check
+        if (y + rowHeight > pageHeight - bottomMargin) {
+          doc.addPage();
+          drawPageHeader(false);
+          y = 19;
+          y = drawExpensesTableHeader(y);
+        }
+
+        // Alternating row background
+        if (idx % 2 === 1) {
+          doc.setFillColor(248, 250, 252);
+          doc.rect(marginX, y, contentWidth, rowHeight, 'F');
+        }
+
+        // Draw light bottom border
+        doc.setDrawColor(241, 245, 249);
+        doc.setLineWidth(0.2);
+        doc.line(marginX, y + rowHeight, marginX + contentWidth, y + rowHeight);
+
+        // Row Content
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(51, 65, 85);
+
+        // No
+        doc.text(String(idx + 1), marginX + 5, y + 4.3, { align: "center" });
+
+        // Tanggal
+        doc.text(exp.date, marginX + 11, y + 4.3);
+
+        // Kategori
+        doc.setFont("Helvetica", "bold");
+        doc.text(exp.category, marginX + 35, y + 4.3);
+
+        // Dibayar Kepada / Keterangan
+        doc.setFont("Helvetica", "normal");
+        const fullDetail = exp.notes ? `${exp.paidTo} (${exp.notes})` : exp.paidTo;
+        const formattedDetail = fullDetail.length > 32 ? fullDetail.slice(0, 30) + '...' : fullDetail;
+        doc.text(formattedDetail, marginX + 67, y + 4.3);
+
+        // Metode
+        doc.setTextColor(100, 116, 139);
+        doc.text(exp.paymentMethod || 'Transfer', marginX + 121, y + 4.3);
+
+        // Cabang
+        doc.text(exp.branch || 'Pusat', marginX + 137, y + 4.3);
+
+        // Nominal
+        doc.setFont("Helvetica", "bold");
+        doc.setTextColor(225, 29, 72);
+        doc.text(formatIDR(exp.amount), pageWidth - marginX - 3, y + 4.3, { align: "right" });
+
+        y += rowHeight;
+      });
+
+      // Expenses Subtotal Bar
+      if (y + 7 > pageHeight - bottomMargin) {
+        doc.addPage();
+        drawPageHeader(false);
+        y = 19;
+      }
+      doc.setFillColor(255, 241, 242); // rose-50
+      doc.setDrawColor(254, 205, 211); // rose-200
+      doc.setLineWidth(0.3);
+      doc.roundedRect(marginX, y, contentWidth, 6.8, 1, 1, 'FD');
+
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(159, 18, 57);
+      doc.text(`Subtotal Pengeluaran (${reportTransactions.expenses.length} Transaksi)`, marginX + 5, y + 4.6);
+      doc.text(formatIDR(currentTotalExpense), pageWidth - marginX - 3, y + 4.6, { align: "right" });
+      y += 6.8;
+    }
+
+    y += 7;
+
+    // 5. Final Summary & Official Signatures
+    // Check if there is enough space for summary statement + signature block (approx 48mm)
+    if (y + 48 > pageHeight - bottomMargin) {
+      doc.addPage();
+      drawPageHeader(false);
+      y = 19;
+    }
+
+    // Final Statement Box
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(marginX, y, contentWidth, 14, 2, 2, 'FD');
+
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(71, 85, 105);
+    doc.text(`Rekapitulasi Arus Kas:`, marginX + 5, y + 5.5);
+    doc.text(`Total Pemasukan: ${formatIDR(currentTotalIncome)}  |  Total Pengeluaran: ${formatIDR(currentTotalExpense)}`, marginX + 5, y + 10);
+
+    doc.setFont("Helvetica", "bold");
+    if (isProfit) {
+      doc.setTextColor(5, 150, 105);
+    } else {
+      doc.setTextColor(225, 29, 72);
+    }
+    doc.text(`SALDO BERSIH: ${formatIDR(currentNetProfit)}`, pageWidth - marginX - 5, y + 8, { align: "right" });
+
+    y += 18;
+
+    // Signatures Section
+    const sigY = y;
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+
+    // Left: Admin Keuangan
+    doc.text(`Mengetahui,`, marginX + 15, sigY);
+    doc.text(`Admin Keuangan Math Fingers`, marginX + 15, sigY + 4.5);
+
+    // Right: Pimpinan Lembaga / Kepala Cabang
+    doc.text(`Disahkan di Cabang ${filterBranch === 'all' ? 'Pusat' : filterBranch}, ${printDateStr}`, pageWidth - marginX - 65, sigY);
+    doc.text(`Pimpinan / Kepala Cabang`, pageWidth - marginX - 65, sigY + 4.5);
+
+    // Signature lines & names
+    const sigNameY = sigY + 22;
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(30, 41, 59);
+
+    doc.text(`( ......................................... )`, marginX + 15, sigNameY);
+    doc.line(marginX + 15, sigNameY + 1, marginX + 60, sigNameY + 1);
+
+    doc.text(`( ......................................... )`, pageWidth - marginX - 65, sigNameY);
+    doc.line(pageWidth - marginX - 65, sigNameY + 1, pageWidth - marginX - 20, sigNameY + 1);
+
+    // 6. Running Footers & Page Numbering across ALL generated pages
+    const totalPages = (doc as any).internal.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+
+      // Footer Divider
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.3);
+      doc.line(marginX, 287, pageWidth - marginX, 287);
+
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(148, 163, 184);
+
+      // Left Footer
+      doc.text(`Sistem Keuangan Math Fingers • Dicetak: ${printDateTimeStr}`, marginX, 291.5);
+
+      // Right Footer: Halaman X dari Y
+      doc.setFont("Helvetica", "bold");
+      doc.text(`Halaman ${p} dari ${totalPages}`, pageWidth - marginX, 291.5, { align: "right" });
+    }
+
+    doc.save(`Laporan_Keuangan_MathFingers_${reportTransactions.startDate}_ke_${reportTransactions.endDate}.pdf`);
   };
 
   const handlePrint = () => {

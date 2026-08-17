@@ -113,9 +113,9 @@ export async function generateStudentQrCardPDF(
 
   // Card dimensions on A4: centered card
   const cardX = 35;
-  const cardY = 24;
+  const cardY = 18;
   const cardW = 140;
-  const cardH = 248;
+  const cardH = 260;
 
   // 1. Card Container Background
   doc.setFillColor(255, 255, 255);
@@ -136,190 +136,192 @@ export async function generateStudentQrCardPDF(
   // 4. Header Branding
   doc.setTextColor(...primaryColor);
   doc.setFont("Helvetica", "bold");
-  doc.setFontSize(18);
-  doc.text("MATH FINGERS", 105, cardY + 13, { align: "center" });
+  doc.setFontSize(17);
+  doc.text("MATH FINGERS", 105, cardY + 11.5, { align: "center" });
 
   doc.setFont("Helvetica", "normal");
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setTextColor(100, 116, 139);
-  doc.text("Berhitung Cepat & Akurat Tanpa Alat", 105, cardY + 17.5, { align: "center" });
+  doc.text("Berhitung Cepat & Akurat Tanpa Alat", 105, cardY + 15.5, { align: "center" });
 
   // Badge: KARTU PRESENSI RESMI
   if (inkSaver) {
     doc.setFillColor(241, 245, 249);
     doc.setDrawColor(203, 213, 225);
-    doc.roundedRect(80, cardY + 20.5, 50, 5.5, 1.5, 1.5, 'FD');
+    doc.roundedRect(81, cardY + 18, 48, 5, 1.5, 1.5, 'FD');
     doc.setFont("Helvetica", "bold");
-    doc.setFontSize(7.5);
+    doc.setFontSize(7);
     doc.setTextColor(51, 65, 85);
   } else {
     doc.setFillColor(...primaryColor);
-    doc.roundedRect(80, cardY + 20.5, 50, 5.5, 1.5, 1.5, 'F');
+    doc.roundedRect(81, cardY + 18, 48, 5, 1.5, 1.5, 'F');
     doc.setFont("Helvetica", "bold");
-    doc.setFontSize(7.5);
+    doc.setFontSize(7);
     doc.setTextColor(255, 255, 255);
   }
-  doc.text("KARTU PRESENSI RESMI", 105, cardY + 24.3, { align: "center" });
+  doc.text("KARTU PRESENSI RESMI", 105, cardY + 21.5, { align: "center" });
 
-  // 5. QR Code & Student Photo Box
+  // 5. Large Student Photo on Top (Centered & Prominent)
+  const photoBoxW = 40;
+  const photoBoxH = 44;
+  const photoBoxX = 105 - photoBoxW / 2;
+  const photoBoxY = cardY + 26;
+
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(...primaryColor);
+  doc.setLineWidth(0.6);
+  doc.roundedRect(photoBoxX, photoBoxY, photoBoxW, photoBoxH, 3.5, 3.5, 'FD');
+
   if (student.photoUrl) {
-    // Side-by-Side: Photo on Left, QR on Right
-    const itemBoxSize = 48;
-    const gap = 6;
-    const totalW = itemBoxSize * 2 + gap;
-    const startX = 105 - totalW / 2;
-    const boxY = cardY + 32;
-
-    // 5a. Photo Frame
-    doc.setFillColor(248, 250, 252);
-    doc.setDrawColor(187, 247, 208);
-    doc.roundedRect(startX, boxY, itemBoxSize, itemBoxSize, 4, 4, 'FD');
-
     try {
-      doc.addImage(student.photoUrl, 'JPEG', startX + 2, boxY + 2, itemBoxSize - 4, itemBoxSize - 4);
+      doc.addImage(student.photoUrl, 'JPEG', photoBoxX + 1.5, photoBoxY + 1.5, photoBoxW - 3, photoBoxH - 3);
     } catch (e) {
       console.warn('Could not add student photo to PDF:', e);
-    }
-
-    // 5b. QR Box
-    const qrBoxX = startX + itemBoxSize + gap;
-    if (inkSaver) {
-      doc.setFillColor(255, 255, 255);
-      doc.setDrawColor(203, 213, 225);
-    } else {
-      doc.setFillColor(240, 253, 244);
-      doc.setDrawColor(187, 247, 208);
-    }
-    doc.roundedRect(qrBoxX, boxY, itemBoxSize, itemBoxSize, 4, 4, 'FD');
-
-    try {
-      doc.addImage(qrDataUrl, 'PNG', qrBoxX + 2, boxY + 2, itemBoxSize - 4, itemBoxSize - 4);
-    } catch (e) {
-      console.error('Failed to draw QR image into PDF:', e);
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(22);
+      doc.setTextColor(...primaryColor);
+      doc.text(student.name.charAt(0).toUpperCase(), 105, photoBoxY + 26, { align: "center" });
     }
   } else {
-    // Standard Centered QR Box
-    const qrBoxSize = 58;
-    const qrBoxX = 105 - qrBoxSize / 2;
-    const qrBoxY = cardY + 29;
-
-    if (inkSaver) {
-      doc.setFillColor(255, 255, 255);
-      doc.setDrawColor(203, 213, 225);
-    } else {
-      doc.setFillColor(240, 253, 244); // emerald-50
-      doc.setDrawColor(187, 247, 208); // emerald-200
-    }
-    doc.roundedRect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 4, 4, 'FD');
-
-    // Insert QR Code image
-    const qrImgSize = 50;
-    const qrImgX = 105 - qrImgSize / 2;
-    const qrImgY = qrBoxY + 4;
-    try {
-      doc.addImage(qrDataUrl, 'PNG', qrImgX, qrImgY, qrImgSize, qrImgSize);
-    } catch (e) {
-      console.error('Failed to draw QR image into PDF:', e);
-    }
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(...primaryColor);
+    doc.text(student.name.charAt(0).toUpperCase(), 105, photoBoxY + 25, { align: "center" });
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(6.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text("Siswa Math Fingers", 105, photoBoxY + 33, { align: "center" });
   }
 
   // 6. Student Name & Code
   doc.setFont("Helvetica", "bold");
-  doc.setFontSize(14);
+  doc.setFontSize(13);
   doc.setTextColor(15, 23, 42); // slate-900
   const studentNameFormatted = student.name.length > 28 ? student.name.slice(0, 26) + '...' : student.name;
-  doc.text(studentNameFormatted, 105, cardY + 94, { align: "center" });
+  doc.text(studentNameFormatted, 105, cardY + 75.5, { align: "center" });
 
   // Student ID Badge
   doc.setFillColor(241, 245, 249);
   doc.setDrawColor(203, 213, 225);
-  doc.roundedRect(85, cardY + 97, 40, 6, 2, 2, 'FD');
+  doc.setLineWidth(0.25);
+  doc.roundedRect(85, cardY + 78.5, 40, 5, 1.5, 1.5, 'FD');
   doc.setFont("Helvetica", "bold");
-  doc.setFontSize(8.5);
+  doc.setFontSize(7.5);
   doc.setTextColor(71, 85, 105);
-  doc.text(`ID: #${getStudentUniqueCode(student)}`, 105, cardY + 101.2, { align: "center" });
+  doc.text(`ID: #${getStudentUniqueCode(student)}`, 105, cardY + 82, { align: "center" });
 
   // 7. Student Info Details Box
   const infoBoxX = cardX + 8;
-  const infoBoxY = cardY + 106;
+  const infoBoxY = cardY + 86.5;
   const infoBoxW = cardW - 16;
-  const infoBoxH = 46;
+  const infoBoxH = 43;
 
   doc.setFillColor(248, 250, 252);
   doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.3);
   doc.roundedRect(infoBoxX, infoBoxY, infoBoxW, infoBoxH, 3, 3, 'FD');
 
-  doc.setFontSize(8.5);
+  doc.setFontSize(8);
   // Row 1: Cabang & Kelas
   doc.setFont("Helvetica", "normal");
   doc.setTextColor(100, 116, 139);
-  doc.text("Cabang", infoBoxX + 4, infoBoxY + 7);
-  doc.text(":", infoBoxX + 22, infoBoxY + 7);
+  doc.text("Cabang", infoBoxX + 4, infoBoxY + 6.5);
+  doc.text(":", infoBoxX + 22, infoBoxY + 6.5);
   doc.setFont("Helvetica", "bold");
   doc.setTextColor(30, 41, 59);
-  doc.text(student.branch || 'Pusat', infoBoxX + 25, infoBoxY + 7);
+  doc.text(student.branch || 'Pusat', infoBoxX + 25, infoBoxY + 6.5);
 
   doc.setFont("Helvetica", "normal");
   doc.setTextColor(100, 116, 139);
-  doc.text("Kelas", infoBoxX + 68, infoBoxY + 7);
-  doc.text(":", infoBoxX + 80, infoBoxY + 7);
+  doc.text("Kelas", infoBoxX + 68, infoBoxY + 6.5);
+  doc.text(":", infoBoxX + 80, infoBoxY + 6.5);
   doc.setFont("Helvetica", "bold");
   doc.setTextColor(5, 150, 105);
-  doc.text(student.kelas || '-', infoBoxX + 83, infoBoxY + 7);
+  doc.text(student.kelas || '-', infoBoxX + 83, infoBoxY + 6.5);
 
   // Row 2: Level & Status
   doc.setFont("Helvetica", "normal");
   doc.setTextColor(100, 116, 139);
-  doc.text("Level", infoBoxX + 4, infoBoxY + 15);
-  doc.text(":", infoBoxX + 22, infoBoxY + 15);
+  doc.text("Level", infoBoxX + 4, infoBoxY + 14.5);
+  doc.text(":", infoBoxX + 22, infoBoxY + 14.5);
   doc.setFont("Helvetica", "bold");
   doc.setTextColor(30, 41, 59);
   const lvlText = student.level ? student.level.split(':')[0] : 'Dasar';
-  doc.text(lvlText, infoBoxX + 25, infoBoxY + 15);
+  doc.text(lvlText, infoBoxX + 25, infoBoxY + 14.5);
 
   doc.setFont("Helvetica", "normal");
   doc.setTextColor(100, 116, 139);
-  doc.text("Status", infoBoxX + 68, infoBoxY + 15);
-  doc.text(":", infoBoxX + 80, infoBoxY + 15);
+  doc.text("Status", infoBoxX + 68, infoBoxY + 14.5);
+  doc.text(":", infoBoxX + 80, infoBoxY + 14.5);
   doc.setFont("Helvetica", "bold");
   doc.setTextColor(student.status === 'active' ? 5 : 100, student.status === 'active' ? 150 : 116, student.status === 'active' ? 105 : 139);
-  doc.text(student.status === 'active' ? 'Aktif' : 'Nonaktif', infoBoxX + 83, infoBoxY + 15);
+  doc.text(student.status === 'active' ? 'Aktif' : 'Nonaktif', infoBoxX + 83, infoBoxY + 14.5);
 
   // Row 3: Wali / Orang Tua
   doc.setFont("Helvetica", "normal");
   doc.setTextColor(100, 116, 139);
-  doc.text("Wali / Ortu", infoBoxX + 4, infoBoxY + 23);
-  doc.text(":", infoBoxX + 22, infoBoxY + 23);
+  doc.text("Wali / Ortu", infoBoxX + 4, infoBoxY + 22.5);
+  doc.text(":", infoBoxX + 22, infoBoxY + 22.5);
   doc.setFont("Helvetica", "bold");
   doc.setTextColor(30, 41, 59);
   const parentNameFormatted = (student.parentName || '-').length > 25 ? (student.parentName || '').slice(0, 23) + '...' : (student.parentName || '-');
-  doc.text(parentNameFormatted, infoBoxX + 25, infoBoxY + 23);
+  doc.text(parentNameFormatted, infoBoxX + 25, infoBoxY + 22.5);
 
   // Row 4: No. Kontak
   doc.setFont("Helvetica", "normal");
   doc.setTextColor(100, 116, 139);
-  doc.text("No. Kontak", infoBoxX + 4, infoBoxY + 31);
-  doc.text(":", infoBoxX + 22, infoBoxY + 31);
+  doc.text("No. Kontak", infoBoxX + 4, infoBoxY + 30.5);
+  doc.text(":", infoBoxX + 22, infoBoxY + 30.5);
   doc.setFont("Helvetica", "bold");
   doc.setTextColor(30, 41, 59);
-  doc.text(student.parentPhone || '-', infoBoxX + 25, infoBoxY + 31);
+  doc.text(student.parentPhone || '-', infoBoxX + 25, infoBoxY + 30.5);
 
   // Row 5: Mulai Bergabung
   doc.setFont("Helvetica", "normal");
   doc.setTextColor(100, 116, 139);
-  doc.text("Bergabung", infoBoxX + 4, infoBoxY + 39);
-  doc.text(":", infoBoxX + 22, infoBoxY + 39);
+  doc.text("Bergabung", infoBoxX + 4, infoBoxY + 38.5);
+  doc.text(":", infoBoxX + 22, infoBoxY + 38.5);
   doc.setFont("Helvetica", "normal");
   doc.setTextColor(71, 85, 105);
-  doc.text(student.joinDate || '-', infoBoxX + 25, infoBoxY + 39);
+  doc.text(student.joinDate || '-', infoBoxX + 25, infoBoxY + 38.5);
 
-  // 8. Parent & Tutor Signature Space (Crucial User Requirement)
-  const sigDividerY = cardY + 156;
+  // 8. Large QR Code at Bottom (Prominent, High-Resolution, Easy to Scan)
+  const qrBoxSize = 42;
+  const qrBoxX = 105 - qrBoxSize / 2;
+  const qrBoxY = cardY + 133;
+
+  if (inkSaver) {
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(203, 213, 225);
+  } else {
+    doc.setFillColor(240, 253, 244); // emerald-50
+    doc.setDrawColor(187, 247, 208); // emerald-200
+  }
+  doc.setLineWidth(0.4);
+  doc.roundedRect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 4, 4, 'FD');
+
+  // Insert QR Code image inside container
+  const qrImgSize = 36;
+  const qrImgX = 105 - qrImgSize / 2;
+  const qrImgY = qrBoxY + 2;
+  try {
+    doc.addImage(qrDataUrl, 'PNG', qrImgX, qrImgY, qrImgSize, qrImgSize);
+  } catch (e) {
+    console.error('Failed to draw QR image into PDF:', e);
+  }
+
+  doc.setFont("Helvetica", "bold");
+  doc.setFontSize(6.5);
+  doc.setTextColor(...primaryColor);
+  doc.text("KODE SCAN PRESENSI", 105, qrBoxY + 40, { align: "center" });
+
+  // 9. Parent & Tutor Signature Space (Crucial Requirement)
+  const sigDividerY = cardY + 180;
   doc.setDrawColor(226, 232, 240);
   doc.setLineWidth(0.4);
   doc.line(cardX + 8, sigDividerY, cardX + cardW - 8, sigDividerY);
 
-  const sigTitleY = cardY + 162;
+  const sigTitleY = cardY + 186;
   doc.setFont("Helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(100, 116, 139);
@@ -327,7 +329,7 @@ export async function generateStudentQrCardPDF(
   doc.text("Pengajar / Tutor Math Fingers", cardX + cardW - 32, sigTitleY, { align: "center" });
 
   // Signature lines & names
-  const sigNameY = cardY + 185;
+  const sigNameY = cardY + 208;
   doc.setFont("Helvetica", "bold");
   doc.setFontSize(8.5);
   doc.setTextColor(30, 41, 59);
@@ -342,13 +344,13 @@ export async function generateStudentQrCardPDF(
   doc.text(`( ${teacherSignature} )`, cardX + cardW - 32, sigNameY, { align: "center" });
   doc.line(cardX + cardW - 52, sigNameY + 1, cardX + cardW - 12, sigNameY + 1);
 
-  // 9. Official Footer Instructions
+  // 10. Official Footer Instructions
   doc.setFont("Helvetica", "italic");
-  doc.setFontSize(7.2);
+  doc.setFontSize(7);
   doc.setTextColor(148, 163, 184);
-  doc.text("Simpan kartu ini di ID Card holder atau tempel pada buku modul siswa.", 105, cardY + 196, { align: "center" });
-  doc.text("Tunjukkan kode QR kepada tutor saat masuk kelas untuk mencatat presensi.", 105, cardY + 200, { align: "center" });
-  doc.text("Math Fingers - Berhitung Cepat & Akurat Tanpa Alat.", 105, cardY + 204, { align: "center" });
+  doc.text("Simpan kartu ini di ID Card holder atau tempel pada buku modul siswa.", 105, cardY + 219, { align: "center" });
+  doc.text("Tunjukkan kode QR kepada tutor saat masuk kelas untuk mencatat presensi.", 105, cardY + 223, { align: "center" });
+  doc.text("Math Fingers - Berhitung Cepat & Akurat Tanpa Alat.", 105, cardY + 227, { align: "center" });
 
   // Download the resulting PDF
   doc.save(`Kartu_QR_${student.name.replace(/\s+/g, '_')}_MathFingers.pdf`);
@@ -371,13 +373,11 @@ export async function generateBatchStudentQrCardsPDF(
 
   const primaryColor: [number, number, number] = inkSaver ? [30, 41, 59] : [5, 150, 105];
 
-  // 2 cards per A4 page (Top & Bottom), beautifully aligned with signatures
+  // 2 cards per A4 page (Top & Bottom), beautifully aligned with photo & QR layout
   const cardsPerPage = 2;
-  const totalPages = Math.ceil(students.length / cardsPerPage);
 
   for (let i = 0; i < students.length; i++) {
     const student = students[i];
-    const pageIndex = Math.floor(i / cardsPerPage);
     const cardSlot = i % cardsPerPage; // 0 for top, 1 for bottom
 
     if (i > 0 && cardSlot === 0) {
@@ -410,91 +410,139 @@ export async function generateBatchStudentQrCardsPDF(
     doc.roundedRect(cardX + 2, cardY + 2, cardW - 4, cardH - 4, 4, 4, 'S');
     doc.setLineDashPattern([], 0);
 
-    // Left Column: QR Code & Header
+    // Left Column: Student Photo & QR Code
+    // 1. Photo on Top Left (Prominent)
+    const photoBoxW = 44;
+    const photoBoxH = 46;
+    const photoBoxX = cardX + 8;
+    const photoBoxY = cardY + 8;
+
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(...primaryColor);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(photoBoxX, photoBoxY, photoBoxW, photoBoxH, 3, 3, 'FD');
+
+    if (student.photoUrl) {
+      try {
+        doc.addImage(student.photoUrl, 'JPEG', photoBoxX + 1.5, photoBoxY + 1.5, photoBoxW - 3, photoBoxH - 3);
+      } catch (e) {
+        doc.setFont("Helvetica", "bold");
+        doc.setFontSize(22);
+        doc.setTextColor(...primaryColor);
+        doc.text(student.name.charAt(0).toUpperCase(), photoBoxX + photoBoxW / 2, photoBoxY + 26, { align: "center" });
+      }
+    } else {
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(22);
+      doc.setTextColor(...primaryColor);
+      doc.text(student.name.charAt(0).toUpperCase(), photoBoxX + photoBoxW / 2, photoBoxY + 25, { align: "center" });
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(6.5);
+      doc.setTextColor(100, 116, 139);
+      doc.text("Siswa Math Fingers", photoBoxX + photoBoxW / 2, photoBoxY + 34, { align: "center" });
+    }
+
+    // 2. Large QR Box at Bottom Left
+    const qrBoxW = 44;
+    const qrBoxH = 46;
+    const qrBoxX = cardX + 8;
+    const qrBoxY = cardY + 58;
+
+    doc.setFillColor(240, 253, 244);
+    doc.setDrawColor(187, 247, 208);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(qrBoxX, qrBoxY, qrBoxW, qrBoxH, 3, 3, 'FD');
+
+    try {
+      doc.addImage(qrDataUrl, 'PNG', qrBoxX + 2, qrBoxY + 2, qrBoxW - 4, qrBoxH - 9);
+    } catch (e) {}
+
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(6);
+    doc.setTextColor(...primaryColor);
+    doc.text("KODE SCAN PRESENSI", qrBoxX + qrBoxW / 2, qrBoxY + qrBoxH - 2, { align: "center" });
+
+    // ID Badge below photo/above QR
+    doc.setFillColor(241, 245, 249);
+    doc.setDrawColor(203, 213, 225);
+    doc.roundedRect(photoBoxX, cardY + 54.5, photoBoxW, 3.5, 1, 1, 'FD');
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(6.5);
+    doc.setTextColor(71, 85, 105);
+    doc.text(`ID: #${getStudentUniqueCode(student)}`, photoBoxX + photoBoxW / 2, cardY + 57.2, { align: "center" });
+
+    // Right Column: Branding & Student Info
+    const rightColX = cardX + 58;
+    
+    // Header
     doc.setTextColor(...primaryColor);
     doc.setFont("Helvetica", "bold");
     doc.setFontSize(13);
-    doc.text("MATH FINGERS", cardX + 32, cardY + 10, { align: "center" });
+    doc.text("MATH FINGERS", rightColX, cardY + 11);
 
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(6.5);
     doc.setTextColor(100, 116, 139);
-    doc.text("KARTU PRESENSI RESMI", cardX + 32, cardY + 14, { align: "center" });
+    doc.text("KARTU PRESENSI RESMI", rightColX + 50, cardY + 11);
 
-    // QR Box
-    const qrBoxSize = 42;
-    const qrBoxX = cardX + 11;
-    const qrBoxY = cardY + 17;
-    doc.setFillColor(240, 253, 244);
-    doc.setDrawColor(187, 247, 208);
-    doc.roundedRect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 3, 3, 'FD');
-
-    try {
-      doc.addImage(qrDataUrl, 'PNG', qrBoxX + 2.5, qrBoxY + 2.5, qrBoxSize - 5, qrBoxSize - 5);
-    } catch (e) {}
-
-    // ID Badge below QR
-    doc.setFillColor(241, 245, 249);
-    doc.setDrawColor(203, 213, 225);
-    doc.roundedRect(cardX + 14, cardY + 62, 36, 5, 1.5, 1.5, 'FD');
     doc.setFont("Helvetica", "bold");
-    doc.setFontSize(7.5);
-    doc.setTextColor(71, 85, 105);
-    doc.text(`ID: #${getStudentUniqueCode(student)}`, cardX + 32, cardY + 65.5, { align: "center" });
-
-    // Right Column: Student Info
-    const rightColX = cardX + 58;
-    doc.setFont("Helvetica", "bold");
-    doc.setFontSize(12);
+    doc.setFontSize(11);
     doc.setTextColor(15, 23, 42);
-    doc.text(student.name, rightColX, cardY + 11);
+    doc.text(student.name, rightColX, cardY + 18);
 
     // Info details table
-    const infoW = cardW - 64;
-    const infoH = 34;
+    const infoW = cardW - 66;
+    const infoH = 40;
     doc.setFillColor(248, 250, 252);
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(rightColX, cardY + 16, infoW, infoH, 2, 2, 'FD');
+    doc.roundedRect(rightColX, cardY + 21, infoW, infoH, 2, 2, 'FD');
 
     doc.setFontSize(7.5);
     // Info items
     doc.setFont("Helvetica", "normal");
     doc.setTextColor(100, 116, 139);
-    doc.text("Cabang :", rightColX + 3, cardY + 22);
+    doc.text("Cabang :", rightColX + 3, cardY + 28);
     doc.setFont("Helvetica", "bold");
     doc.setTextColor(30, 41, 59);
-    doc.text(student.branch || 'Pusat', rightColX + 18, cardY + 22);
+    doc.text(student.branch || 'Pusat', rightColX + 18, cardY + 28);
 
     doc.setFont("Helvetica", "normal");
     doc.setTextColor(100, 116, 139);
-    doc.text("Kelas :", rightColX + 55, cardY + 22);
+    doc.text("Kelas :", rightColX + 55, cardY + 28);
     doc.setFont("Helvetica", "bold");
     doc.setTextColor(5, 150, 105);
-    doc.text(student.kelas || '-', rightColX + 66, cardY + 22);
+    doc.text(student.kelas || '-', rightColX + 66, cardY + 28);
 
     doc.setFont("Helvetica", "normal");
     doc.setTextColor(100, 116, 139);
-    doc.text("Level   :", rightColX + 3, cardY + 29);
+    doc.text("Level   :", rightColX + 3, cardY + 36);
     doc.setFont("Helvetica", "bold");
     doc.setTextColor(30, 41, 59);
-    doc.text(student.level ? student.level.split(':')[0] : 'Dasar', rightColX + 18, cardY + 29);
+    doc.text(student.level ? student.level.split(':')[0] : 'Dasar', rightColX + 18, cardY + 36);
 
     doc.setFont("Helvetica", "normal");
     doc.setTextColor(100, 116, 139);
-    doc.text("Wali    :", rightColX + 3, cardY + 36);
+    doc.text("Wali    :", rightColX + 3, cardY + 44);
     doc.setFont("Helvetica", "bold");
     doc.setTextColor(30, 41, 59);
-    doc.text(student.parentName || '-', rightColX + 18, cardY + 36);
+    doc.text(student.parentName || '-', rightColX + 18, cardY + 44);
 
     doc.setFont("Helvetica", "normal");
     doc.setTextColor(100, 116, 139);
-    doc.text("Kontak :", rightColX + 3, cardY + 43);
+    doc.text("Kontak :", rightColX + 3, cardY + 52);
     doc.setFont("Helvetica", "bold");
     doc.setTextColor(30, 41, 59);
-    doc.text(student.parentPhone || '-', rightColX + 18, cardY + 43);
+    doc.text(student.parentPhone || '-', rightColX + 18, cardY + 52);
+
+    doc.setFont("Helvetica", "normal");
+    doc.setTextColor(100, 116, 139);
+    doc.text("Gabung :", rightColX + 55, cardY + 52);
+    doc.setFont("Helvetica", "normal");
+    doc.setTextColor(71, 85, 105);
+    doc.text(student.joinDate || '-', rightColX + 68, cardY + 52);
 
     // Signatures in Batch card
-    const sigY = cardY + 54;
+    const sigY = cardY + 68;
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(7);
     doc.setTextColor(100, 116, 139);
@@ -502,7 +550,7 @@ export async function generateBatchStudentQrCardsPDF(
     doc.text("Pengajar / Tutor", rightColX + infoW - 22, sigY, { align: "center" });
 
     // Underlines & Names
-    const sigNameY = cardY + 70;
+    const sigNameY = cardY + 86;
     doc.setFont("Helvetica", "bold");
     doc.setFontSize(7.5);
     doc.setTextColor(30, 41, 59);

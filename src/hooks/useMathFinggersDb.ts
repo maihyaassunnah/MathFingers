@@ -264,6 +264,17 @@ export function useMathFinggersDb() {
         const loadedMap: Record<string, AppSettings> = { ...allSettingsMap };
         appSettingsRows.forEach(row => {
           const branchKey = row.branch || row.branches || (row.id !== 'default' ? row.id : 'Semua');
+          let parsedHeroSlides = undefined;
+          if (row.heroSlides) {
+            if (Array.isArray(row.heroSlides)) {
+              parsedHeroSlides = row.heroSlides;
+            } else if (typeof row.heroSlides === 'string') {
+              try {
+                parsedHeroSlides = JSON.parse(row.heroSlides);
+              } catch {}
+            }
+          }
+
           const remoteSettings: AppSettings = {
             bankName: row.bankName ?? 'Bank BCA',
             bankAccountNo: row.bankAccountNo ?? '1234567890',
@@ -277,6 +288,7 @@ export function useMathFinggersDb() {
             appIcon: row.appIcon || undefined,
             branch: branchKey,
             branches: branchKey,
+            heroSlides: parsedHeroSlides,
             mobileHeroTitle: row.mobileHeroTitle || undefined,
             mobileHeroSubtitle: row.mobileHeroSubtitle || undefined,
             mobileHeroBannerUrl: row.mobileHeroBannerUrl || undefined,
@@ -1135,14 +1147,27 @@ export function useMathFinggersDb() {
           invoiceLogo: updatedSetting.invoiceLogo || null,
           invoiceSignature: updatedSetting.invoiceSignature || null,
           appIcon: updatedSetting.appIcon || null,
+          heroSlides: updatedSetting.heroSlides || null,
+          mobileHeroTitle: updatedSetting.mobileHeroTitle || null,
+          mobileHeroSubtitle: updatedSetting.mobileHeroSubtitle || null,
+          mobileHeroBannerUrl: updatedSetting.mobileHeroBannerUrl || null,
+          mobileHeroBadgeText: updatedSetting.mobileHeroBadgeText || null,
+          mobileHeroPrimaryBtnText: updatedSetting.mobileHeroPrimaryBtnText || null,
+          mobileHeroPrimaryBtnAction: updatedSetting.mobileHeroPrimaryBtnAction || null,
+          mobileHeroSecondaryBtnText: updatedSetting.mobileHeroSecondaryBtnText || null,
+          mobileHeroSecondaryBtnAction: updatedSetting.mobileHeroSecondaryBtnAction || null,
+          mobilePopularServicesTitle: updatedSetting.mobilePopularServicesTitle || null,
+          mobileRecommendedTitle: updatedSetting.mobileRecommendedTitle || null,
           updatedAt: Date.now()
         };
 
         const { error } = await supabase.from('app_settings').upsert([payload]);
         if (error) {
-          console.warn('Upsert with branch/branches column failed, trying fallback payload:', error.message);
+          console.warn('Upsert with full columns failed, trying fallback payload:', error.message);
           const fallbackPayload = {
             id: recordId,
+            branch: branchName,
+            branches: branchName,
             bankName: updatedSetting.bankName,
             bankAccountNo: updatedSetting.bankAccountNo,
             bankAccountHolder: updatedSetting.bankAccountHolder,

@@ -38,21 +38,14 @@ export function MobileBottomNavigation({
 }: MobileBottomNavigationProps) {
   const isDark = theme === 'dark';
 
-  // Items configuration based on user role
-  const navItems: NavItem[] = isSuperAdmin
-    ? [
-        { id: 'overview', label: 'Statistik', icon: Home },
-        { id: 'branches_mgmt', label: 'Cabang', icon: Building },
-        { id: 'settings', label: 'Pengaturan', icon: Settings },
-        { id: 'more', label: 'Lainnya', icon: Menu, isDrawer: true },
-      ]
-    : [
-        { id: 'overview', label: 'Home', icon: Home },
-        { id: 'students', label: 'Siswa', icon: Users },
-        { id: 'attendance', label: 'Absensi', icon: CheckSquare },
-        { id: 'grades', label: 'Nilai', icon: Award },
-        { id: 'more', label: 'Lainnya', icon: Menu, isDrawer: true },
-      ];
+  // Unified items configuration for consistent mobile experience across all roles
+  const navItems: NavItem[] = [
+    { id: 'overview', label: 'Home', icon: Home },
+    { id: 'students', label: 'Siswa', icon: Users },
+    { id: 'attendance', label: 'Absensi', icon: CheckSquare },
+    { id: 'grades', label: 'Nilai', icon: Award },
+    { id: 'more', label: 'Lainnya', icon: Menu, isDrawer: true },
+  ];
 
   // Determine which nav item is active
   const activeIndex = (() => {

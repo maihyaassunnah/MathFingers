@@ -271,11 +271,11 @@ export function StudentQrCards({
     try {
       const canvas = document.createElement('canvas');
       canvas.width = 600;
-      canvas.height = 960;
+      canvas.height = 1120;
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Canvas context not available');
 
-      // Create QR Code Image with crossOrigin enabled to avoid tainted canvas security issues
+      // Load QR Code Image
       const qrImg = new Image();
       qrImg.crossOrigin = 'anonymous';
       qrImg.src = getQrImgSrc(student, 320);
@@ -285,10 +285,27 @@ export function StudentQrCards({
         qrImg.onerror = () => reject(new Error('Failed to load QR code image'));
       });
 
+      // Load Student Photo if available
+      let photoImg: HTMLImageElement | null = null;
+      if (student.photoUrl) {
+        try {
+          photoImg = new Image();
+          photoImg.crossOrigin = 'anonymous';
+          photoImg.src = student.photoUrl;
+          await new Promise((resolve) => {
+            if (!photoImg) return resolve(false);
+            photoImg.onload = () => resolve(true);
+            photoImg.onerror = () => resolve(false); // Graceful fallback
+          });
+        } catch (e) {
+          photoImg = null;
+        }
+      }
+
       // Clear rect for background
-      ctx.clearRect(0, 0, 600, 960);
+      ctx.clearRect(0, 0, 600, 1120);
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, 600, 960);
+      ctx.fillRect(0, 0, 600, 1120);
 
       // Helper function to draw rounded rectangles
       const drawRoundedRect = (
@@ -320,54 +337,72 @@ export function StudentQrCards({
       // 1. Draw outer border (Emerald solid line)
       ctx.strokeStyle = '#059669'; // Emerald-600
       ctx.lineWidth = 5;
-      drawRoundedRect(20, 20, 560, 920, 28, false, true, false);
+      drawRoundedRect(20, 20, 560, 1080, 28, false, true, false);
 
       // 2. Draw inner border (Emerald-400 dashed line)
       ctx.strokeStyle = '#34d399'; // Emerald-400
       ctx.lineWidth = 2;
-      drawRoundedRect(32, 32, 536, 896, 20, false, true, true);
+      drawRoundedRect(32, 32, 536, 1056, 20, false, true, true);
 
       // 3. Header: "MATH FINGERS"
       ctx.fillStyle = '#059669';
-      ctx.font = '900 38px system-ui, -apple-system, sans-serif';
+      ctx.font = '900 36px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('MATH FINGERS', 300, 82);
+      ctx.fillText('MATH FINGERS', 300, 80);
 
       // 4. Subtitle: "Berhitung Cepat & Akurat Tanpa Alat"
-      ctx.fillStyle = '#64748b'; // Slate-500
-      ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
-      ctx.fillText('Berhitung Cepat & Akurat Tanpa Alat', 300, 108);
+      ctx.fillStyle = '#64748b';
+      ctx.font = 'bold 13px system-ui, -apple-system, sans-serif';
+      ctx.fillText('Berhitung Cepat & Akurat Tanpa Alat', 300, 104);
 
       // Badge: KARTU PRESENSI RESMI
       ctx.fillStyle = '#059669';
-      drawRoundedRect(190, 120, 220, 28, 8, true, false);
+      drawRoundedRect(190, 116, 220, 26, 8, true, false);
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 12px system-ui, -apple-system, sans-serif';
-      ctx.fillText('KARTU PRESENSI RESMI', 300, 139);
+      ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
+      ctx.fillText('KARTU PRESENSI RESMI', 300, 134);
 
-      // 5. White container specifically behind the QR Code
-      ctx.fillStyle = '#f0fdf4';
-      ctx.strokeStyle = '#bbf7d0';
-      ctx.lineWidth = 2;
-      drawRoundedRect(170, 164, 260, 260, 18, true, true, false);
+      // 5. Large Student Photo on Top (Centered & Prominent)
+      const photoBoxX = 195;
+      const photoBoxY = 156;
+      const photoBoxW = 210;
+      const photoBoxH = 230;
 
-      // Draw loaded QR Code image
-      ctx.drawImage(qrImg, 185, 179, 230, 230);
+      ctx.fillStyle = '#f1f5f9';
+      ctx.strokeStyle = '#059669';
+      ctx.lineWidth = 3;
+      drawRoundedRect(photoBoxX, photoBoxY, photoBoxW, photoBoxH, 20, true, true);
+
+      if (photoImg && photoImg.complete && photoImg.naturalWidth > 0) {
+        ctx.save();
+        ctx.beginPath();
+        drawRoundedRect(photoBoxX + 3, photoBoxY + 3, photoBoxW - 6, photoBoxH - 6, 18, false, false);
+        ctx.clip();
+        ctx.drawImage(photoImg, photoBoxX + 3, photoBoxY + 3, photoBoxW - 6, photoBoxH - 6);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = '#059669';
+        ctx.font = '900 68px system-ui, -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(student.name.charAt(0).toUpperCase(), 300, photoBoxY + 135);
+        ctx.font = 'bold 13px system-ui, -apple-system, sans-serif';
+        ctx.fillText('Siswa Math Fingers', 300, photoBoxY + 175);
+      }
 
       // 6. Student Name
-      ctx.fillStyle = '#0f172a'; // Slate-900
-      ctx.font = '900 30px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '900 28px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(student.name, 300, 462);
+      ctx.fillText(student.name, 300, 424);
 
       // 7. Student ID Code Badge
       const idText = `ID: #${getStudentUniqueCode(student)}`;
-      ctx.font = 'bold 16px monospace';
+      ctx.font = 'bold 15px monospace';
       const textWidth = ctx.measureText(idText).width;
-      const badgeW = textWidth + 28;
-      const badgeH = 30;
+      const badgeW = textWidth + 24;
+      const badgeH = 28;
       const badgeX = 300 - badgeW / 2;
-      const badgeY = 478;
+      const badgeY = 438;
 
       ctx.fillStyle = '#f1f5f9';
       ctx.strokeStyle = '#cbd5e1';
@@ -375,11 +410,11 @@ export function StudentQrCards({
       drawRoundedRect(badgeX, badgeY, badgeW, badgeH, 6, true, true);
 
       ctx.fillStyle = '#475569';
-      ctx.fillText(idText, 300, 499);
+      ctx.fillText(idText, 300, 457);
 
       // 8. Info Details Card
       const infoBoxX = 50;
-      const infoBoxY = 522;
+      const infoBoxY = 478;
       const infoBoxW = 500;
       const infoBoxH = 175;
 
@@ -445,45 +480,64 @@ export function StudentQrCards({
       ctx.fillStyle = '#475569';
       ctx.fillText(student.joinDate || '-', infoBoxX + 110, infoBoxY + 163);
 
-      // 9. Parent & Teacher Signature Space
+      // 9. QR Code at Bottom (Prominent Container)
+      const qrBoxX = 205;
+      const qrBoxY = 668;
+      const qrBoxW = 190;
+      const qrBoxH = 190;
+
+      ctx.fillStyle = '#f0fdf4';
+      ctx.strokeStyle = '#bbf7d0';
+      ctx.lineWidth = 2;
+      drawRoundedRect(qrBoxX, qrBoxY, qrBoxW, qrBoxH, 18, true, true, false);
+
+      // Draw loaded QR Code image
+      ctx.drawImage(qrImg, qrBoxX + 18, qrBoxY + 12, 154, 154);
+
+      ctx.fillStyle = '#065f46';
+      ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('KODE SCAN PRESENSI', 300, qrBoxY + 180);
+
+      // 10. Parent & Teacher Signature Space
       ctx.strokeStyle = '#e2e8f0';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(50, 715);
-      ctx.lineTo(550, 715);
+      ctx.moveTo(50, 874);
+      ctx.lineTo(550, 874);
       ctx.stroke();
 
       // Signature Headers
       ctx.fillStyle = '#64748b';
       ctx.font = '14px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Orang Tua / Wali Siswa', 170, 740);
-      ctx.fillText('Pengajar / Tutor Math Fingers', 430, 740);
+      ctx.fillText('Orang Tua / Wali Siswa', 170, 898);
+      ctx.fillText('Pengajar / Tutor Math Fingers', 430, 898);
 
       // Signature Lines
       ctx.strokeStyle = '#94a3b8';
       ctx.lineWidth = 1.2;
       ctx.beginPath();
-      ctx.moveTo(80, 835);
-      ctx.lineTo(260, 835);
+      ctx.moveTo(80, 990);
+      ctx.lineTo(260, 990);
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.moveTo(340, 835);
-      ctx.lineTo(520, 835);
+      ctx.moveTo(340, 990);
+      ctx.lineTo(520, 990);
       ctx.stroke();
 
       // Signature Names
       ctx.fillStyle = '#0f172a';
       ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
-      ctx.fillText(`( ${student.parentName || '................................'} )`, 170, 825);
-      ctx.fillText(`( ${teacherSignature} )`, 430, 825);
+      ctx.fillText(`( ${student.parentName || '................................'} )`, 170, 980);
+      ctx.fillText(`( ${teacherSignature} )`, 430, 980);
 
-      // 10. Footer Notice
+      // 11. Footer Notice
       ctx.fillStyle = '#94a3b8';
       ctx.font = 'italic 12px system-ui, -apple-system, sans-serif';
-      ctx.fillText('Simpan kartu ini di ID Card holder atau tempel pada buku modul siswa.', 300, 875);
-      ctx.fillText('Math Fingers - Berhitung Cepat & Akurat Tanpa Alat.', 300, 895);
+      ctx.fillText('Simpan kartu ini di ID Card holder atau tempel pada buku modul siswa.', 300, 1030);
+      ctx.fillText('Math Fingers - Berhitung Cepat & Akurat Tanpa Alat.', 300, 1050);
 
       // Generate Data URL and Trigger download link
       const dataUrl = canvas.toDataURL('image/png');
@@ -867,7 +921,7 @@ export function StudentQrCards({
             .card {
               border: 3.5px solid #059669;
               border-radius: 24px;
-              padding: 24px 20px 18px 20px;
+              padding: 22px 18px 16px 18px;
               width: 360px;
               text-align: center;
               background: #ffffff;
@@ -894,7 +948,7 @@ export function StudentQrCards({
               font-size: 9px;
               color: #64748b;
               font-style: italic;
-              margin-bottom: 8px;
+              margin-bottom: 6px;
             }
             .badge-resmi {
               display: inline-block;
@@ -906,26 +960,37 @@ export function StudentQrCards({
               text-transform: uppercase;
               padding: 3px 12px;
               border-radius: 6px;
-              margin-bottom: 12px;
+              margin-bottom: 10px;
             }
-            .qr-container {
-              background: #f0fdf4;
-              border: 1.5px solid #bbf7d0;
-              padding: 12px;
-              border-radius: 16px;
-              display: inline-block;
-              margin: 4px 0 10px 0;
+            .photo-container {
+              width: 140px;
+              height: 155px;
+              border: 2.5px solid #059669;
+              border-radius: 18px;
+              overflow: hidden;
+              margin: 4px auto 10px auto;
+              background: #f1f5f9;
+              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+              display: flex;
+              align-items: center;
+              justify-content: center;
             }
-            .qr-image {
-              width: 170px;
-              height: 170px;
+            .student-photo {
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
               display: block;
             }
+            .photo-placeholder {
+              font-size: 48px;
+              font-weight: 900;
+              color: #059669;
+            }
             .student-name {
-              font-size: 18px;
+              font-size: 19px;
               font-weight: 900;
               color: #0f172a;
-              margin: 6px 0 2px 0;
+              margin: 4px 0 2px 0;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
@@ -940,7 +1005,7 @@ export function StudentQrCards({
               border-radius: 6px;
               border: 1px solid #cbd5e1;
               display: inline-block;
-              margin-bottom: 12px;
+              margin-bottom: 10px;
             }
             .info-box {
               background: #f8fafc;
@@ -949,12 +1014,12 @@ export function StudentQrCards({
               font-size: 11px;
               border: 1px solid #e2e8f0;
               text-align: left;
-              margin-bottom: 14px;
+              margin-bottom: 12px;
             }
             .info-row {
               display: flex;
               justify-content: space-between;
-              margin-bottom: 5px;
+              margin-bottom: 4px;
             }
             .info-row:last-child {
               margin-bottom: 0;
@@ -971,27 +1036,49 @@ export function StudentQrCards({
               color: #059669;
               font-weight: 800;
             }
+            .qr-container {
+              background: #f0fdf4;
+              border: 1.5px solid #bbf7d0;
+              padding: 8px 12px;
+              border-radius: 16px;
+              display: inline-block;
+              margin: 4px auto 8px auto;
+            }
+            .qr-image {
+              width: 120px;
+              height: 120px;
+              display: block;
+              margin: 0 auto;
+            }
+            .qr-label {
+              font-size: 8.5px;
+              font-weight: 800;
+              color: #065f46;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              margin-top: 4px;
+            }
             
             /* Tanda Tangan Section */
             .signature-divider {
               border-top: 1px solid #e2e8f0;
-              margin: 12px 0 10px 0;
+              margin: 10px 0 8px 0;
             }
             .signature-grid {
               display: grid;
               grid-template-columns: 1fr 1fr;
               gap: 12px;
-              margin-top: 6px;
+              margin-top: 4px;
               text-align: center;
             }
             .signature-title {
-              font-size: 9.5px;
+              font-size: 9px;
               color: #64748b;
               font-weight: 600;
-              margin-bottom: 34px;
+              margin-bottom: 30px;
             }
             .signature-name {
-              font-size: 10px;
+              font-size: 9.5px;
               font-weight: 800;
               color: #0f172a;
               border-top: 1px solid #94a3b8;
@@ -1002,9 +1089,9 @@ export function StudentQrCards({
             }
             
             .footer {
-              font-size: 8.5px;
+              font-size: 8px;
               color: #94a3b8;
-              margin-top: 12px;
+              margin-top: 10px;
               font-style: italic;
               line-height: 1.3;
             }
@@ -1020,8 +1107,12 @@ export function StudentQrCards({
             <div class="tagline">Berhitung Cepat & Akurat Tanpa Alat</div>
             <div class="badge-resmi">Kartu Presensi Resmi</div>
             
-            <div class="qr-container">
-              <img class="qr-image" src="${qrSrc}" alt="QR Code" />
+            <!-- Large Student Photo on Top -->
+            <div class="photo-container">
+              ${student.photoUrl 
+                ? `<img class="student-photo" src="${student.photoUrl}" alt="${student.name}" />`
+                : `<div class="photo-placeholder">${student.name.charAt(0).toUpperCase()}</div>`
+              }
             </div>
 
             <div class="student-name">${student.name}</div>
@@ -1048,6 +1139,12 @@ export function StudentQrCards({
                 <span class="label">No. Kontak:</span>
                 <span class="value">${student.parentPhone || '-'}</span>
               </div>
+            </div>
+
+            <!-- QR Code at Bottom -->
+            <div class="qr-container">
+              <img class="qr-image" src="${qrSrc}" alt="QR Code" />
+              <div class="qr-label">Kode Scan Presensi</div>
             </div>
 
             <div class="signature-divider"></div>
@@ -1704,7 +1801,7 @@ export function StudentQrCards({
               </div>
             </div>
 
-            {/* CARD PREVIEW CANVAS (Exact Match with PDF and Print Output) */}
+            {/* CARD PREVIEW CANVAS (Large Photo on Top, Details in Middle, QR Code at the Bottom) */}
             <div className="w-full max-w-[320px] mx-auto bg-white border-[3px] border-emerald-600 rounded-3xl p-4 sm:p-5 relative shadow-xl text-center text-slate-900">
               {/* Inner Dashed Border */}
               <div className="absolute inset-1.5 border-[1.5px] border-dashed border-emerald-400 rounded-2xl pointer-events-none" />
@@ -1718,10 +1815,10 @@ export function StudentQrCards({
                 </span>
               </div>
 
-              {/* QR Code & Photo container */}
-              <div className="my-2 flex items-center justify-center gap-3 relative z-10">
-                {selectedStudent.photoUrl && (
-                  <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-emerald-500/40 shadow-sm shrink-0 bg-slate-100">
+              {/* Large Student Photo at Top (Prominent & Centered) */}
+              <div className="my-3 flex justify-center relative z-10">
+                {selectedStudent.photoUrl ? (
+                  <div className="w-32 h-36 rounded-2xl overflow-hidden border-[2.5px] border-emerald-500 shadow-md bg-slate-100">
                     <img
                       src={selectedStudent.photoUrl}
                       alt={selectedStudent.name}
@@ -1729,29 +1826,28 @@ export function StudentQrCards({
                       referrerPolicy="no-referrer"
                     />
                   </div>
+                ) : (
+                  <div className="w-32 h-36 rounded-2xl border-[2.5px] border-emerald-500/40 bg-gradient-to-br from-emerald-50 to-teal-100 flex flex-col items-center justify-center shadow-xs">
+                    <span className="text-4xl font-black text-emerald-600">
+                      {selectedStudent.name.charAt(0).toUpperCase()}
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-700 mt-1">Siswa Math Fingers</span>
+                  </div>
                 )}
-                <div className="bg-emerald-50 border border-emerald-200 p-2 rounded-2xl inline-block shadow-sm">
-                  <img
-                    src={getQrImgSrc(selectedStudent, 220)}
-                    alt="QR Code Preview"
-                    className={`${selectedStudent.photoUrl ? 'w-24 h-24' : 'w-32 h-32'} object-contain`}
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
               </div>
 
               {/* Student Name and ID */}
-              <div className="relative z-10">
-                <div className="font-black text-base text-slate-900 truncate" title={selectedStudent.name}>
+              <div className="relative z-10 mb-2">
+                <div className="font-black text-lg text-slate-900 truncate" title={selectedStudent.name}>
                   {selectedStudent.name}
                 </div>
-                <div className="text-[11px] font-mono font-bold text-slate-600 bg-slate-100 border border-slate-300 px-2 py-0.5 rounded-md inline-block mt-0.5">
+                <div className="text-[11px] font-mono font-bold text-slate-600 bg-slate-100 border border-slate-300 px-2.5 py-0.5 rounded-md inline-block mt-0.5">
                   ID: #{getStudentUniqueCode(selectedStudent)}
                 </div>
               </div>
 
               {/* Info Details Box */}
-              <div className="mt-2 bg-slate-50 border border-slate-200 rounded-xl p-2 text-left text-[11px] space-y-1 relative z-10">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-left text-[11px] space-y-1 relative z-10">
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500 font-medium">Cabang:</span>
                   <span className="text-slate-900 font-bold">{selectedStudent.branch || 'Pusat'}</span>
@@ -1778,13 +1874,28 @@ export function StudentQrCards({
                 </div>
               </div>
 
+              {/* QR Code at Bottom (Prominent, High-Resolution, Easy to Scan) */}
+              <div className="my-3 relative z-10">
+                <div className="bg-emerald-50 border border-emerald-300 p-2 rounded-2xl inline-block shadow-sm">
+                  <img
+                    src={getQrImgSrc(selectedStudent, 260)}
+                    alt="QR Code Presensi"
+                    className="w-28 h-28 object-contain mx-auto"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="text-[8.5px] font-black uppercase text-emerald-800 tracking-wider mt-1">
+                    Kode Scan Presensi
+                  </div>
+                </div>
+              </div>
+
               {/* Tanda Tangan Section (Parent & Tutor Signature Space) */}
-              <div className="mt-2.5 pt-2 border-t border-slate-200 relative z-10">
+              <div className="pt-2 border-t border-slate-200 relative z-10">
                 <div className="grid grid-cols-2 gap-2 text-center">
                   {/* Parent Signature */}
                   <div>
                     <div className="text-[9px] font-semibold text-slate-500">Orang Tua / Wali Siswa</div>
-                    <div className="h-8" />
+                    <div className="h-7" />
                     <div className="text-[9.5px] font-extrabold text-slate-900 border-t border-slate-400 pt-0.5 truncate" title={selectedStudent.parentName || 'Orang Tua / Wali'}>
                       ( {selectedStudent.parentName || '................................'} )
                     </div>
@@ -1793,7 +1904,7 @@ export function StudentQrCards({
                   {/* Tutor Signature (Auto-resolved from branch) */}
                   <div>
                     <div className="text-[9px] font-semibold text-slate-500">Pengajar / Tutor</div>
-                    <div className="h-8" />
+                    <div className="h-7" />
                     <div className="text-[9.5px] font-extrabold text-slate-900 border-t border-slate-400 pt-0.5 truncate" title={getTeacherSignatureName(selectedStudent, currentUser, (notes || []).filter(n => n.studentId === selectedStudent.id))}>
                       ( {getTeacherSignatureName(selectedStudent, currentUser, (notes || []).filter(n => n.studentId === selectedStudent.id))} )
                     </div>

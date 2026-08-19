@@ -97,35 +97,9 @@ export function MobileBranchAppView({
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
-  const [isBranchModalOpen, setIsBranchModalOpen] = useState(false);
-  const [switchToast, setSwitchToast] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Super Admin branch switching capability check
-  const canSwitchBranch = isSuperAdmin || currentUser?.role === 'super_admin' || currentUser?.username === 'wahyudin' || !currentUser;
-
-  // Derive all unique branch names across database branches, students, classes, and default fallback
-  const allBranchNames = Array.from(
-    new Set([
-      'Singkut',
-      'bangko',
-      'Pusat',
-      'Bandung',
-      ...branches.map(b => b.name),
-      ...students.map(s => s.branch).filter((b): b is string => Boolean(b && b.trim())),
-      ...classes.map(c => c.branch).filter((b): b is string => Boolean(b && b.trim()))
-    ])
-  ).filter((name): name is string => Boolean(name && name.trim() && name.toLowerCase() !== 'all' && name.toLowerCase() !== 'semua'));
-
-  const handleSelectBranchOption = (selectedName: string) => {
-    if (onSelectBranch) {
-      onSelectBranch(selectedName);
-    }
-    setIsBranchModalOpen(false);
-    const label = selectedName === 'all' ? 'Akun Super Admin (Semua Cabang)' : `Cabang ${selectedName}`;
-    setSwitchToast(`Berhasil beralih ke ${label}`);
-    setTimeout(() => setSwitchToast(null), 3000);
-  };
+  const isUserSuperAdmin = isSuperAdmin || currentUser?.role === 'super_admin' || currentUser?.username === 'wahyudin';
 
   // Derive location / branch info
   const branchName = currentUser?.role === 'branch_admin' 
@@ -148,7 +122,7 @@ export function MobileBranchAppView({
   ];
 
   const extendedServices = [
-    ...(canSwitchBranch ? [
+    ...(isUserSuperAdmin ? [
       { id: 'branches_mgmt', name: 'Kelola Cabang', sub: 'Multi-Cabang & Admin', icon: Building2, color: 'text-teal-600', bg: isLight ? 'bg-teal-50' : 'bg-teal-950/40', border: 'border-teal-200 dark:border-teal-800' },
       { id: 'supabase_sql', name: 'SQL Supabase', sub: 'Editor Database', icon: Globe, color: 'text-sky-600', bg: isLight ? 'bg-sky-50' : 'bg-sky-950/40', border: 'border-sky-200 dark:border-sky-800' },
     ] : []),
@@ -296,58 +270,16 @@ export function MobileBranchAppView({
   return (
     <div id="mobile-branch-app-view" className="space-y-4 max-w-md mx-auto pb-6">
       
-      {/* Toast Feedback Banner */}
-      <AnimatePresence>
-        {switchToast && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-extrabold shadow-lg flex items-center justify-between gap-2"
-          >
-            <div className="flex items-center gap-2">
-              <ShieldCheck size={16} />
-              <span>{switchToast}</span>
-            </div>
-            <button type="button" onClick={() => setSwitchToast(null)} className="p-0.5 text-white/80 hover:text-white">
-              <X size={14} />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* 1. TOP BAR: Location Dropdown + Action Icons (Theme Toggle NEXT TO Search, Bell, Profile Avatar) */}
       <div className="flex items-center justify-between gap-2 pt-1 px-1">
-        {/* Left: Upgraded Professional Location Icon Badge & Branch Switcher Name */}
-        <button
-          type="button"
-          onClick={() => {
-            if (canSwitchBranch) {
-              setIsBranchModalOpen(true);
-            }
-          }}
-          disabled={!canSwitchBranch}
-          className={`flex items-center gap-2.5 min-w-0 p-1 -ml-1 rounded-2xl transition text-left group ${
-            canSwitchBranch
-              ? isLight
-                ? 'hover:bg-emerald-50/80 active:bg-emerald-100/60 cursor-pointer'
-                : 'hover:bg-slate-800/80 active:bg-slate-800 cursor-pointer'
-              : 'cursor-default'
-          }`}
-          title={canSwitchBranch ? 'Klik untuk Beralih Akun Cabang (Khusus Super Admin)' : `Cabang Aktif: ${branchName}`}
-        >
-          {/* Upgraded Professional Location Pin Icon Badge */}
+        {/* Left: Location Pin Icon Badge & Branch Name */}
+        <div className="flex items-center gap-2.5 min-w-0 p-1 -ml-1 text-left">
+          {/* Location Pin Icon Badge */}
           <div className="relative shrink-0">
-            <div className="w-[38px] h-[38px] rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 text-white flex items-center justify-center shadow-md shadow-emerald-500/25 ring-2 ring-emerald-500/20 dark:ring-emerald-400/30 group-hover:scale-105 transition-transform">
+            <div className="w-[38px] h-[38px] rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 text-white flex items-center justify-center shadow-md shadow-emerald-500/25 ring-2 ring-emerald-500/20 dark:ring-emerald-400/30">
               <MapPin size={19} className="drop-shadow-xs stroke-[2.2]" />
             </div>
-            {canSwitchBranch ? (
-              <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center text-[9px] font-black ring-2 ring-white dark:ring-slate-900 shadow-xs" title="Super Admin Switcher">
-                <Repeat size={10} className="stroke-[3]" />
-              </span>
-            ) : (
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-slate-900 animate-pulse" />
-            )}
+            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-slate-900 animate-pulse" />
           </div>
 
           <div className="min-w-0">
@@ -355,19 +287,12 @@ export function MobileBranchAppView({
               <span className={`text-xs font-black truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>
                 Cabang {branchName}
               </span>
-              {canSwitchBranch ? (
-                <span className="p-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center shrink-0">
-                  <ChevronDown size={14} className="stroke-[2.5]" />
-                </span>
-              ) : (
-                <ChevronDown size={14} className="text-slate-400 shrink-0 opacity-40" />
-              )}
             </div>
             <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[145px] sm:max-w-[200px]">
               {branchAddress}
             </p>
           </div>
-        </button>
+        </div>
 
         {/* Right: Action Buttons Group (Light/Dark Mode Toggle NEXT TO Search icon) */}
         <div className="flex items-center gap-1.5 shrink-0">
@@ -735,129 +660,6 @@ export function MobileBranchAppView({
           </span>
         </div>
       </div>
-
-      {/* 6. SUPER ADMIN BRANCH SWITCHER MODAL */}
-      <AnimatePresence>
-        {isBranchModalOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/65 backdrop-blur-xs p-3 sm:p-4"
-            onClick={() => setIsBranchModalOpen(false)}
-          >
-            <motion.div
-              initial={{ y: '100%', opacity: 0.8 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: '100%', opacity: 0 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 280 }}
-              className={`w-full max-w-md rounded-3xl p-5 shadow-2xl border ${
-                isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
-              }`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between border-b pb-3 mb-3 dark:border-slate-800 border-slate-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 text-white flex items-center justify-center shadow-md shadow-emerald-500/20 shrink-0">
-                    <Building2 size={20} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <h3 className="text-base font-bold tracking-tight">Beralih Akun Cabang</h3>
-                      <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-extrabold border border-amber-500/20">
-                        Super Admin
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Pilih cabang atau kembali ke Super Admin
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsBranchModalOpen(false)}
-                  className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Branch Options List */}
-              <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
-                {/* Option 1: Kembali ke Akun Super Admin (Semua Cabang) */}
-                <button
-                  type="button"
-                  onClick={() => handleSelectBranchOption('all')}
-                  className={`w-full text-left p-3 rounded-2xl border transition flex items-center justify-between ${
-                    activeBranch === 'all'
-                      ? 'bg-emerald-500/10 border-emerald-500 text-emerald-600 dark:text-emerald-400 font-extrabold shadow-xs'
-                      : isLight
-                        ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                        : 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8.5 h-8.5 rounded-xl flex items-center justify-center shrink-0 ${
-                      activeBranch === 'all' ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                    }`}>
-                      <Globe size={16} />
-                    </div>
-                    <span className="font-bold text-sm">Super Admin (Semua Cabang)</span>
-                  </div>
-                  {activeBranch === 'all' && (
-                    <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                      <Check size={13} className="stroke-[3]" />
-                    </span>
-                  )}
-                </button>
-
-                {/* Individual Branch Accounts */}
-                {allBranchNames.map((name) => {
-                  const isSelected = activeBranch.toLowerCase() === name.toLowerCase();
-
-                  return (
-                    <button
-                      key={name}
-                      type="button"
-                      onClick={() => handleSelectBranchOption(name)}
-                      className={`w-full text-left p-3 rounded-2xl border transition flex items-center justify-between ${
-                        isSelected
-                          ? 'bg-emerald-500/10 border-emerald-500 text-emerald-600 dark:text-emerald-400 font-extrabold shadow-xs'
-                          : isLight
-                            ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                            : 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-8.5 h-8.5 rounded-xl flex items-center justify-center shrink-0 ${
-                          isSelected ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                        }`}>
-                          <MapPin size={16} />
-                        </div>
-                        <span className="font-bold text-sm truncate">Cabang {name}</span>
-                      </div>
-                      {isSelected && (
-                        <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                          <Check size={13} className="stroke-[3]" />
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Footer Note */}
-              <div className="mt-4 pt-3 border-t dark:border-slate-800 border-slate-100 text-center">
-                <span className="text-[11px] text-slate-400 flex items-center justify-center gap-1">
-                  <ShieldCheck size={13} className="text-emerald-500" />
-                  <span>Memilih cabang akan menyaring seluruh data siswa, SPP, dan absensi</span>
-                </span>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
     </div>
   );

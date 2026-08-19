@@ -523,18 +523,18 @@ export function SuperAdminDashboard({
           }`}
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">Cabang Terdaftar</span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <span className={`text-[11px] font-black uppercase tracking-wider ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Cabang Terdaftar</span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Building size={18} />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-black text-slate-900 dark:text-white">{branchList.length}</span>
-            <span className="text-xs font-bold text-emerald-500">Cabang</span>
+            <span className={`text-3xl font-black ${isLight ? 'text-slate-900' : 'text-white'}`}>{branchList.length}</span>
+            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Cabang</span>
           </div>
-          <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+          <div className={`flex items-center justify-between text-[11px] mt-2 pt-2 border-t ${isLight ? 'text-slate-600 border-slate-100' : 'text-slate-400 border-slate-800/80'}`}>
             <span>{adminUsers.filter(u => u.role === 'branch_admin').length} Admin Bertugas</span>
-            <span className="text-emerald-500 font-bold flex items-center gap-0.5">Kelola <ChevronRight size={12} /></span>
+            <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-0.5">Kelola <ChevronRight size={12} /></span>
           </div>
         </motion.div>
 
@@ -548,18 +548,18 @@ export function SuperAdminDashboard({
           }`}
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+            <span className={`text-[11px] font-black uppercase tracking-wider ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
               {selectedMetricBranch === 'all' ? 'Total Siswa Aktif' : `Siswa (${selectedMetricBranch})`}
             </span>
-            <div className="w-9 h-9 rounded-xl bg-teal-500/15 text-teal-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <div className="w-9 h-9 rounded-xl bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Users size={18} />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-black text-slate-900 dark:text-white">{activeStudents.length}</span>
-            <span className="text-xs font-bold text-teal-500">Siswa Aktif</span>
+            <span className={`text-3xl font-black ${isLight ? 'text-slate-900' : 'text-white'}`}>{activeStudents.length}</span>
+            <span className="text-xs font-bold text-teal-600 dark:text-teal-400">Siswa Aktif</span>
           </div>
-          <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+          <div className={`flex items-center justify-between text-[11px] mt-2 pt-2 border-t ${isLight ? 'text-slate-600 border-slate-100' : 'text-slate-400 border-slate-800/80'}`}>
             <span>{alumniStudents.length} Alumni Lulus</span>
             <span className="font-semibold">{effectiveStudents.length} Total</span>
           </div>
@@ -575,10 +575,10 @@ export function SuperAdminDashboard({
           }`}
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+            <span className={`text-[11px] font-black uppercase tracking-wider ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
               {selectedMetricBranch === 'all' ? 'SPP Terkumpul' : `SPP (${selectedMetricBranch})`}
             </span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Receipt size={18} />
             </div>
           </div>
@@ -587,9 +587,9 @@ export function SuperAdminDashboard({
               {formatRupiah(totalPaidAmount)}
             </span>
           </div>
-          <div className="flex items-center justify-between text-[11px] mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
-            <span className="text-rose-500 font-bold truncate">Tunggakan: {formatRupiah(totalUnpaidAmount)}</span>
-            <span className="text-xs font-extrabold text-emerald-500">{sppCollectionRate}%</span>
+          <div className={`flex items-center justify-between text-[11px] mt-2 pt-2 border-t ${isLight ? 'border-slate-100' : 'border-slate-800/80'}`}>
+            <span className="text-rose-600 dark:text-rose-400 font-bold truncate">Tunggakan: {formatRupiah(totalUnpaidAmount)}</span>
+            <span className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400">{sppCollectionRate}%</span>
           </div>
         </motion.div>
 
@@ -603,17 +603,17 @@ export function SuperAdminDashboard({
           }`}
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">Rata-Rata Kuis & Presensi</span>
-            <div className="w-9 h-9 rounded-xl bg-sky-500/15 text-sky-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <span className={`text-[11px] font-black uppercase tracking-wider ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Rata-Rata Kuis & Presensi</span>
+            <div className="w-9 h-9 rounded-xl bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Award size={18} />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-black text-slate-900 dark:text-white">{avgScore}</span>
-            <span className="text-xs font-bold text-sky-500">/ 100</span>
+            <span className={`text-3xl font-black ${isLight ? 'text-slate-900' : 'text-white'}`}>{avgScore}</span>
+            <span className="text-xs font-bold text-sky-600 dark:text-sky-400">/ 100</span>
           </div>
-          <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
-            <span>Presensi Hari Ini: <strong className="text-emerald-500">{attendanceRate}%</strong></span>
+          <div className={`flex items-center justify-between text-[11px] mt-2 pt-2 border-t ${isLight ? 'text-slate-600 border-slate-100' : 'text-slate-400 border-slate-800/80'}`}>
+            <span>Presensi Hari Ini: <strong className="text-emerald-600 dark:text-emerald-400">{attendanceRate}%</strong></span>
             <span>{presentCount} Hadir</span>
           </div>
         </motion.div>
@@ -621,18 +621,18 @@ export function SuperAdminDashboard({
 
       {/* 5. MULTI-BRANCH OPERATIONS HUB (GRID OF ALL BRANCHES) */}
       <div className={`p-6 rounded-3xl border shadow-sm space-y-5 backdrop-blur-md ${
-        isLight ? 'bg-white/80 border-slate-200' : 'bg-slate-900/70 border-slate-800'
+        isLight ? 'bg-white/90 border-slate-200' : 'bg-slate-900/70 border-slate-800'
       }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800 gap-3">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-emerald-500/15 text-emerald-500">
+            <div className="p-2.5 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
               <Building size={22} />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+              <h3 className={`text-base sm:text-lg font-black ${isLight ? 'text-slate-900' : 'text-white'}`}>
                 Hub Manajemen Seluruh Cabang Bimbingan
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
                 Pilih cabang untuk memfokuskan data atau mengelola operasional cabang secara spesifik
               </p>
             </div>
@@ -673,11 +673,11 @@ export function SuperAdminDashboard({
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                        <h4 className="font-black text-base text-slate-900 dark:text-white">
+                        <h4 className={`font-black text-base ${isLight ? 'text-slate-900' : 'text-white'}`}>
                           Cabang {b.name}
                         </h4>
                       </div>
-                      <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-1">
+                      <p className={`text-[11px] flex items-center gap-1 mt-1 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                         <MapPin size={11} className="shrink-0 text-emerald-500" />
                         <span className="truncate">{b.address}</span>
                       </p>
@@ -691,7 +691,9 @@ export function SuperAdminDashboard({
                       className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition cursor-pointer shrink-0 ${
                         isCurrentlySelected
                           ? 'bg-emerald-500 text-slate-950'
-                          : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-emerald-500 hover:text-slate-950'
+                          : isLight 
+                            ? 'bg-slate-200 text-slate-700 hover:bg-emerald-500 hover:text-slate-950' 
+                            : 'bg-slate-800 text-slate-300 hover:bg-emerald-500 hover:text-slate-950'
                       }`}
                     >
                       {isCurrentlySelected ? 'Fokus Aktif' : 'Fokuskan'}
@@ -699,11 +701,13 @@ export function SuperAdminDashboard({
                   </div>
 
                   {/* Branch Admin Assignment */}
-                  <div className="p-2.5 rounded-xl bg-white/60 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 mb-3.5 flex items-center justify-between">
+                  <div className={`p-2.5 rounded-xl border mb-3.5 flex items-center justify-between ${
+                    isLight ? 'bg-white/90 border-slate-200' : 'bg-slate-900/60 border-slate-800'
+                  }`}>
                     <div className="flex items-center gap-2 min-w-0">
                       <UserCheck size={14} className="text-emerald-500 shrink-0" />
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0">Admin:</span>
-                      <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate">
+                      <span className={`text-[11px] shrink-0 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Admin:</span>
+                      <span className={`text-[11px] font-bold truncate ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>
                         {b.admins.length > 0 ? b.admins.map(a => a.name).join(', ') : 'Belum Ditugaskan'}
                       </span>
                     </div>
@@ -719,30 +723,30 @@ export function SuperAdminDashboard({
 
                   {/* 4 Stats Mini Grid */}
                   <div className="grid grid-cols-2 gap-2.5 text-xs mb-4">
-                    <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800">
-                      <span className="text-[10px] text-slate-400 font-bold block">Siswa Aktif</span>
-                      <span className="font-extrabold text-sm text-slate-900 dark:text-white">
-                        {b.activeCount} <span className="text-[10px] text-slate-400 font-normal">({b.alumniCount} alumni)</span>
+                    <div className={`p-2 rounded-xl border ${isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'}`}>
+                      <span className={`text-[10px] font-bold block ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Siswa Aktif</span>
+                      <span className={`font-extrabold text-sm ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                        {b.activeCount} <span className={`text-[10px] font-normal ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>({b.alumniCount} alumni)</span>
                       </span>
                     </div>
 
-                    <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800">
-                      <span className="text-[10px] text-slate-400 font-bold block">Rata-Rata Kuis</span>
-                      <span className="font-extrabold text-sm text-sky-500">
-                        {b.avgScore} <span className="text-[10px] text-slate-400 font-normal">/ 100</span>
+                    <div className={`p-2 rounded-xl border ${isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'}`}>
+                      <span className={`text-[10px] font-bold block ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Rata-Rata Kuis</span>
+                      <span className="font-extrabold text-sm text-sky-600 dark:text-sky-400">
+                        {b.avgScore} <span className={`text-[10px] font-normal ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>/ 100</span>
                       </span>
                     </div>
 
-                    <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800">
-                      <span className="text-[10px] text-slate-400 font-bold block">Presensi Hari Ini</span>
-                      <span className="font-extrabold text-sm text-emerald-500">
+                    <div className={`p-2 rounded-xl border ${isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'}`}>
+                      <span className={`text-[10px] font-bold block ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Presensi Hari Ini</span>
+                      <span className="font-extrabold text-sm text-emerald-600 dark:text-emerald-400">
                         {b.attendanceRate !== null ? `${b.attendanceRate}%` : 'Belum Absen'}
                       </span>
                     </div>
 
-                    <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800">
-                      <span className="text-[10px] text-slate-400 font-bold block">Tunggakan SPP</span>
-                      <span className={`font-extrabold text-xs block truncate ${b.unpaidAmount > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                    <div className={`p-2 rounded-xl border ${isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'}`}>
+                      <span className={`text-[10px] font-bold block ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Tunggakan SPP</span>
+                      <span className={`font-extrabold text-xs block truncate ${b.unpaidAmount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                         {b.unpaidAmount > 0 ? formatRupiah(b.unpaidAmount) : 'Lunas'}
                       </span>
                     </div>
@@ -750,13 +754,15 @@ export function SuperAdminDashboard({
                 </div>
 
                 {/* Bottom Actions for This Branch */}
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                <div className={`grid grid-cols-2 gap-2 pt-2 border-t ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
                   <button
                     onClick={() => {
                       onSelectBranch(b.name);
                       onNavigate('students');
                     }}
-                    className="py-2 px-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-700 dark:text-slate-300 text-[11px] font-extrabold transition text-center cursor-pointer"
+                    className={`py-2 px-2 rounded-xl hover:bg-emerald-600 hover:text-white text-[11px] font-extrabold transition text-center cursor-pointer ${
+                      isLight ? 'bg-slate-100 text-slate-800' : 'bg-slate-800 text-slate-300'
+                    }`}
                   >
                     Buka Siswa Cabang
                   </button>
@@ -766,7 +772,9 @@ export function SuperAdminDashboard({
                       onSelectBranch(b.name);
                       onNavigate('spp');
                     }}
-                    className="py-2 px-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-700 dark:text-slate-300 text-[11px] font-extrabold transition text-center cursor-pointer"
+                    className={`py-2 px-2 rounded-xl hover:bg-emerald-600 hover:text-white text-[11px] font-extrabold transition text-center cursor-pointer ${
+                      isLight ? 'bg-slate-100 text-slate-800' : 'bg-slate-800 text-slate-300'
+                    }`}
                   >
                     Buka SPP Cabang
                   </button>
@@ -782,23 +790,23 @@ export function SuperAdminDashboard({
         
         {/* Chart 1: Perbandingan Siswa & Performa Nilai per Cabang */}
         <div className={`p-5 sm:p-6 rounded-3xl border shadow-sm space-y-4 backdrop-blur-md ${
-          isLight ? 'bg-white/80 border-slate-200' : 'bg-slate-900/70 border-slate-800'
+          isLight ? 'bg-white/90 border-slate-200' : 'bg-slate-900/70 border-slate-800'
         }`}>
-          <div className="flex items-center justify-between border-b pb-3 border-slate-200 dark:border-slate-800">
+          <div className={`flex items-center justify-between border-b pb-3 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
             <div className="flex items-center gap-2">
               <Users className="text-teal-500" size={18} />
               <div>
-                <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                <h4 className={`font-bold text-sm ${isLight ? 'text-slate-900' : 'text-white'}`}>
                   Perbandingan Siswa & Nilai per Cabang
                 </h4>
-                <p className="text-[11px] text-slate-400">Total siswa aktif dan rata-rata skor per cabang</p>
+                <p className={`text-[11px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Total siswa aktif dan rata-rata skor per cabang</p>
               </div>
             </div>
           </div>
 
           <div className="w-full h-[280px]">
             {branchStudentChartData.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-xs text-slate-400">Belum ada data</div>
+              <div className={`h-full flex items-center justify-center text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Belum ada data</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={branchStudentChartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
@@ -833,23 +841,23 @@ export function SuperAdminDashboard({
 
         {/* Chart 2: Realisasi SPP per Cabang (Lunas vs Tunggakan) */}
         <div className={`p-5 sm:p-6 rounded-3xl border shadow-sm space-y-4 backdrop-blur-md ${
-          isLight ? 'bg-white/80 border-slate-200' : 'bg-slate-900/70 border-slate-800'
+          isLight ? 'bg-white/90 border-slate-200' : 'bg-slate-900/70 border-slate-800'
         }`}>
-          <div className="flex items-center justify-between border-b pb-3 border-slate-200 dark:border-slate-800">
+          <div className={`flex items-center justify-between border-b pb-3 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
             <div className="flex items-center gap-2">
               <Receipt className="text-emerald-500" size={18} />
               <div>
-                <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                <h4 className={`font-bold text-sm ${isLight ? 'text-slate-900' : 'text-white'}`}>
                   Realisasi SPP Lunas vs Tunggakan
                 </h4>
-                <p className="text-[11px] text-slate-400">Total penerimaan SPP dan sisa piutang per cabang</p>
+                <p className={`text-[11px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Total penerimaan SPP dan sisa piutang per cabang</p>
               </div>
             </div>
           </div>
 
           <div className="w-full h-[280px]">
             {sppChartData.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-xs text-slate-400">Belum ada data</div>
+              <div className={`h-full flex items-center justify-center text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Belum ada data</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={sppChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
@@ -894,18 +902,18 @@ export function SuperAdminDashboard({
         
         {/* Left 2 Cols: Daftar Admin Cabang Bertugas */}
         <div className={`p-5 sm:p-6 rounded-3xl border shadow-sm lg:col-span-2 space-y-4 backdrop-blur-md ${
-          isLight ? 'bg-white/80 border-slate-200' : 'bg-slate-900/70 border-slate-800'
+          isLight ? 'bg-white/90 border-slate-200' : 'bg-slate-900/70 border-slate-800'
         }`}>
-          <div className="flex items-center justify-between border-b pb-3 border-slate-200 dark:border-slate-800">
+          <div className={`flex items-center justify-between border-b pb-3 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
             <div className="flex items-center gap-2">
               <UserCheck className="text-emerald-500" size={18} />
-              <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+              <h4 className={`font-bold text-sm ${isLight ? 'text-slate-900' : 'text-white'}`}>
                 Roster Petugas & Admin Cabang Aktif
               </h4>
             </div>
             <button
               onClick={() => onNavigate('branches_mgmt')}
-              className="text-xs font-bold text-emerald-500 hover:underline cursor-pointer"
+              className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
             >
               + Kelola Akun Admin
             </button>
@@ -913,7 +921,7 @@ export function SuperAdminDashboard({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[260px] overflow-y-auto pr-1">
             {adminUsers.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">Belum ada akun admin terdaftar.</p>
+              <p className={`text-xs italic ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Belum ada akun admin terdaftar.</p>
             ) : (
               adminUsers.map((admin) => {
                 const avatar = getAdminAvatar(admin);
@@ -934,15 +942,15 @@ export function SuperAdminDashboard({
                       />
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <h5 className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                          <h5 className={`font-bold text-xs truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>
                             {admin.name}
                           </h5>
                           {admin.role === 'super_admin' && (
                             <span className="text-[9px] font-black px-1.5 py-0.2 bg-amber-400 text-slate-950 rounded">Pusat</span>
                           )}
                         </div>
-                        <p className="text-[11px] text-slate-400 truncate mt-0.5">
-                          @{admin.username} • <span className="font-bold text-emerald-500">Cabang {admin.branch}</span>
+                        <p className={`text-[11px] truncate mt-0.5 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                          @{admin.username} • <span className="font-bold text-emerald-600 dark:text-emerald-400">Cabang {admin.branch}</span>
                         </p>
                       </div>
                     </div>
@@ -957,12 +965,12 @@ export function SuperAdminDashboard({
 
         {/* Right Col: Agenda & Tugas Strategis Super Admin */}
         <div className={`p-5 sm:p-6 rounded-3xl border shadow-sm space-y-4 backdrop-blur-md ${
-          isLight ? 'bg-white/80 border-slate-200' : 'bg-slate-900/70 border-slate-800'
+          isLight ? 'bg-white/90 border-slate-200' : 'bg-slate-900/70 border-slate-800'
         }`}>
-          <div className="flex items-center justify-between border-b pb-3 border-slate-200 dark:border-slate-800">
+          <div className={`flex items-center justify-between border-b pb-3 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
             <div className="flex items-center gap-2">
               <CheckSquare className="text-indigo-500" size={18} />
-              <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+              <h4 className={`font-bold text-sm ${isLight ? 'text-slate-900' : 'text-white'}`}>
                 Agenda Pusat & Ekspansi
               </h4>
             </div>

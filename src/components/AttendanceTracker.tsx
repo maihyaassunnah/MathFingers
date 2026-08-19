@@ -939,32 +939,6 @@ export function AttendanceTracker({
                                     isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950/30 border-slate-800 text-white'
                                   }`}
                                 />
-
-                                {/* Mobile Quick Note Pills */}
-                                <div className="flex items-center gap-1.5 flex-wrap mt-2">
-                                  <span className="text-[9.5px] text-slate-400 font-semibold">Pilihan Cepat:</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleAppendNotePill(student.id, 'Izin makan')}
-                                    className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-300 border border-amber-500/25 transition cursor-pointer active:scale-95"
-                                  >
-                                    + Izin Makan
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleAppendNotePill(student.id, 'Hadir kembali')}
-                                    className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-300 border border-emerald-500/25 transition cursor-pointer active:scale-95"
-                                  >
-                                    + Hadir Kembali
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleAppendNotePill(student.id, 'Izin sakit')}
-                                    className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-600 dark:text-indigo-300 border border-indigo-500/25 transition cursor-pointer active:scale-95"
-                                  >
-                                    + Izin Sakit
-                                  </button>
-                                </div>
                               </div>
 
                               <div className="flex items-center gap-2">

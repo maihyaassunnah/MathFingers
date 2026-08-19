@@ -905,6 +905,34 @@ export function useMathFinggersDb() {
     }
   };
 
+  const createInvoicesBatch = async (invoicesData: Omit<Invoice, 'id' | 'invoiceNo' | 'createdAt'>[]) => {
+    const basePrefix = settings.invoicePrefix || 'INV/MF';
+    const dateStr = new Date().toISOString().slice(2, 7).replace('-', '');
+    const newInvoices: Invoice[] = invoicesData.map((inv, index) => {
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      const invoiceNo = `${basePrefix}/${dateStr}/${rand}`;
+      return {
+        ...inv,
+        id: generateId(),
+        invoiceNo,
+        createdAt: Date.now() + index
+      };
+    });
+
+    const updated = [...newInvoices, ...invoices];
+    setInvoices(updated);
+    saveLocalData('invoices', updated);
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('invoices').insert(newInvoices);
+        if (error) throw error;
+      } catch (err) {
+        console.error('Failed to create invoices batch in Supabase:', err);
+      }
+    }
+  };
+
   const updateInvoiceStatus = async (id: string, status: 'paid' | 'unpaid' | 'partially_paid', details?: { paidAt?: string; paymentMethod?: 'Transfer' | 'Tunai'; amountPaid?: number; installments?: Installment[] }) => {
     const updated = invoices.map(inv => inv.id === id ? { ...inv, status, ...details } : inv);
     setInvoices(updated);
@@ -1653,6 +1681,7 @@ export function useMathFinggersDb() {
     addTeacherNotesBatch,
     deleteTeacherNote,
     createInvoice,
+    createInvoicesBatch,
     updateInvoiceStatus,
     deleteInvoice,
     addGrade,

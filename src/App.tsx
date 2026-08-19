@@ -242,6 +242,7 @@ export default function App() {
     addTeacherNotesBatch,
     deleteTeacherNote,
     createInvoice,
+    createInvoicesBatch,
     updateInvoiceStatus,
     deleteInvoice,
     addGrade,
@@ -445,6 +446,16 @@ export default function App() {
       ...invoiceData,
       branch: branchToSet
     });
+  };
+
+  const handleCreateInvoicesBatch = async (invoicesData: any[]) => {
+    const defaultBranchName = branches[0]?.name || 'Pusat';
+    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
+    const updatedInvoices = invoicesData.map(inv => ({
+      ...inv,
+      branch: inv.branch || branchToSet
+    }));
+    await createInvoicesBatch(updatedInvoices);
   };
 
   const handleAddGrade = async (gradeData: any) => {
@@ -678,6 +689,7 @@ export default function App() {
             invoices={filteredInvoices} 
             settings={currentBranchSettings}
             onCreateInvoice={handleCreateInvoice} 
+            onCreateInvoicesBatch={handleCreateInvoicesBatch}
             onUpdateInvoiceStatus={updateInvoiceStatus} 
             onDeleteInvoice={deleteInvoice} 
             theme={theme}

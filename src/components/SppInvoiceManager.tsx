@@ -29,7 +29,12 @@ import {
   RotateCcw,
   Eye,
   Phone,
-  X
+  X,
+  CheckSquare,
+  Square,
+  Users,
+  Filter,
+  CheckCheck
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { CustomDropdown } from './CustomDropdown';
@@ -121,6 +126,7 @@ interface SppInvoiceManagerProps {
   invoices: Invoice[];
   settings: AppSettings;
   onCreateInvoice: (data: Omit<Invoice, 'id' | 'invoiceNo' | 'createdAt'>) => Promise<void>;
+  onCreateInvoicesBatch?: (data: Omit<Invoice, 'id' | 'invoiceNo' | 'createdAt'>[]) => Promise<void>;
   onUpdateInvoiceStatus: (
     id: string, 
     status: 'paid' | 'unpaid' | 'partially_paid', 
@@ -140,6 +146,7 @@ export function SppInvoiceManager({
   invoices, 
   settings,
   onCreateInvoice, 
+  onCreateInvoicesBatch,
   onUpdateInvoiceStatus, 
   onDeleteInvoice,
   theme = 'dark'
@@ -164,11 +171,15 @@ export function SppInvoiceManager({
   const [installmentAmount, setInstallmentAmount] = useState<number>(0);
   const [installmentNote, setInstallmentNote] = useState<string>('');
 
-  // Invoice creator form states
-  const [selectedStudentId, setSelectedStudentId] = useState('');
+  // Invoice creator form states (Multi-student selection support)
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [formStudentSearch, setFormStudentSearch] = useState('');
+  const [formClassFilter, setFormClassFilter] = useState('ALL');
+  const [isSubmittingInvoice, setIsSubmittingInvoice] = useState(false);
   const [amount, setAmount] = useState(settings.defaultSppAmount); // default SPP
   const [month, setMonth] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [invoiceToast, setInvoiceToast] = useState<{ show: boolean; message: string; type: 'success' | 'info' } | null>(null);
 
   // Reminder Modal & Custom Template States
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
@@ -242,8 +253,52 @@ export function SppInvoiceManager({
     }
   };
 
+  // Distinct classes for filtering in form modal
+  const availableFormClasses = Array.from(
+    new Set(activeStudents.map(s => s.kelas).filter(Boolean))
+  ) as string[];
+
+  // Filtered active students in the modal
+  const filteredFormStudents = activeStudents.filter(s => {
+    const q = formStudentSearch.toLowerCase().trim();
+    const matchesSearch = !q || 
+      s.name.toLowerCase().includes(q) ||
+      (s.level && s.level.toLowerCase().includes(q)) ||
+      (s.kelas && s.kelas.toLowerCase().includes(q)) ||
+      (s.parentName && s.parentName.toLowerCase().includes(q));
+    const matchesClass = formClassFilter === 'ALL' || s.kelas === formClassFilter;
+    return matchesSearch && matchesClass;
+  });
+
+  const handleToggleSelectStudent = (studentId: string) => {
+    setSelectedStudentIds(prev => 
+      prev.includes(studentId)
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const handleSelectAllFilteredStudents = () => {
+    const filteredIds = filteredFormStudents.map(s => s.id);
+    setSelectedStudentIds(prev => {
+      const combined = new Set([...prev, ...filteredIds]);
+      return Array.from(combined);
+    });
+  };
+
+  const handleDeselectFilteredStudents = () => {
+    const filteredIdsSet = new Set(filteredFormStudents.map(s => s.id));
+    setSelectedStudentIds(prev => prev.filter(id => !filteredIdsSet.has(id)));
+  };
+
+  const handleClearAllSelectedStudents = () => {
+    setSelectedStudentIds([]);
+  };
+
   const handleOpenForm = () => {
-    setSelectedStudentId(activeStudents[0]?.id || '');
+    setSelectedStudentIds(activeStudents.length > 0 ? [activeStudents[0].id] : []);
+    setFormStudentSearch('');
+    setFormClassFilter('ALL');
     setInvoiceCategory(activeCategory);
     
     if (activeCategory === 'spp') {
@@ -268,25 +323,54 @@ export function SppInvoiceManager({
 
   const handleSubmitInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedStudentId || !month || !dueDate) {
-      alert('Mohon lengkapi semua data!');
+    if (selectedStudentIds.length === 0) {
+      alert('Mohon pilih setidaknya satu siswa!');
       return;
     }
 
-    const studentObj = students.find(s => s.id === selectedStudentId);
-    if (!studentObj) return;
+    if (!month || !dueDate) {
+      alert('Mohon lengkapi periode dan tanggal jatuh tempo!');
+      return;
+    }
 
-    await onCreateInvoice({
-      studentId: selectedStudentId,
-      studentName: studentObj.name,
-      amount,
-      month,
-      dueDate,
-      status: 'unpaid',
-      category: invoiceCategory
-    });
+    setIsSubmittingInvoice(true);
 
-    setIsFormOpen(false);
+    try {
+      const recordsToCreate = selectedStudentIds.map(studentId => {
+        const studentObj = students.find(s => s.id === studentId);
+        return {
+          studentId,
+          studentName: studentObj?.name || 'Siswa',
+          amount,
+          month,
+          dueDate,
+          status: 'unpaid' as const,
+          category: invoiceCategory,
+          branch: studentObj?.branch
+        };
+      });
+
+      if (onCreateInvoicesBatch) {
+        await onCreateInvoicesBatch(recordsToCreate);
+      } else {
+        for (const record of recordsToCreate) {
+          await onCreateInvoice(record);
+        }
+      }
+
+      setIsFormOpen(false);
+      setInvoiceToast({
+        show: true,
+        message: `Berhasil menerbitkan ${recordsToCreate.length} tagihan ${invoiceCategory === 'spp' ? 'SPP' : invoiceCategory === 'pendaftaran' ? 'Pendaftaran' : 'Buku'}! 🎉`,
+        type: 'success'
+      });
+      setTimeout(() => setInvoiceToast(null), 4500);
+    } catch (err) {
+      console.error('Error creating invoices:', err);
+      alert('Terjadi kesalahan saat menerbitkan tagihan.');
+    } finally {
+      setIsSubmittingInvoice(false);
+    }
   };
 
   const handleOpenPaymentModal = (invoice: Invoice) => {
@@ -914,94 +998,306 @@ function angkaKeTerbilang(nominal: number): string {
         </div>
       </div>
 
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {invoiceToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="fixed top-5 right-5 z-50 max-w-md p-4 rounded-2xl bg-emerald-600 text-white shadow-2xl flex items-center gap-3 border border-emerald-400"
+          >
+            <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+              <CheckCircle size={20} className="text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-black uppercase tracking-wider text-emerald-100">Notifikasi Tagihan</p>
+              <p className="text-sm font-bold text-white">{invoiceToast.message}</p>
+            </div>
+            <button 
+              onClick={() => setInvoiceToast(null)}
+              className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10"
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* SPP Invoice Creator Dialog */}
       {isFormOpen && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className={`rounded-2xl w-full max-w-lg shadow-2xl border ${
-            isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#020617] border-slate-800'
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className={`rounded-3xl w-full max-w-2xl shadow-2xl border my-auto overflow-hidden animate-page-fade-in ${
+            isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#020617] border-slate-850 text-white'
           }`}>
-            <div className={`p-6 border-b flex items-center justify-between ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-              <h3 className={`text-lg font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>
-                Buat Tagihan {invoiceCategory === 'pendaftaran' ? 'Pendaftaran' : invoiceCategory === 'spp' ? 'SPP' : 'Buku'} Baru
-              </h3>
-              <button onClick={() => setIsFormOpen(false)} className="text-slate-400 hover:text-white font-medium text-lg">✕</button>
+            <div className={`p-5 sm:p-6 border-b flex items-center justify-between ${isLight ? 'border-slate-200 bg-slate-50/50' : 'border-slate-850 bg-slate-900/40'}`}>
+              <div>
+                <h3 className={`text-lg sm:text-xl font-extrabold flex items-center gap-2 ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                  <Receipt className="text-emerald-500" size={22} />
+                  <span>Buat Tagihan {invoiceCategory === 'pendaftaran' ? 'Pendaftaran' : invoiceCategory === 'spp' ? 'SPP' : 'Buku'} Baru</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Bisa memilih satu atau banyak siswa sekaligus untuk menerbitkan tagihan massal
+                </p>
+              </div>
+              <button 
+                onClick={() => setIsFormOpen(false)} 
+                className={`p-2 rounded-xl transition ${isLight ? 'hover:bg-slate-200 text-slate-500' : 'hover:bg-slate-800 text-slate-400'}`}
+              >
+                ✕
+              </button>
             </div>
 
-            <form onSubmit={handleSubmitInvoice} className="p-6 space-y-4">
-              <OfflineIndicator theme={theme} className="mb-2" />
+            <form onSubmit={handleSubmitInvoice} className="p-5 sm:p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+              <OfflineIndicator theme={theme} className="mb-1" />
+              
+              {/* Category Selector */}
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Pilih Kategori Pembayaran *</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Pilih Kategori Tagihan *</label>
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
                     onClick={() => handleInvoiceCategoryChange('pendaftaran')}
-                    className={`px-3 py-2 text-xs font-bold rounded-xl border transition ${
+                    className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition flex items-center justify-center gap-1.5 cursor-pointer ${
                       invoiceCategory === 'pendaftaran'
-                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-500 font-extrabold'
+                        ? 'border-emerald-500 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-extrabold shadow-xs'
                         : isLight ? 'border-slate-200 text-slate-600 hover:bg-slate-50' : 'border-slate-800 text-slate-400 hover:bg-slate-900'
                     }`}
                   >
-                    Pendaftaran
+                    <UserPlus size={15} />
+                    <span>Pendaftaran</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => handleInvoiceCategoryChange('spp')}
-                    className={`px-3 py-2 text-xs font-bold rounded-xl border transition ${
+                    className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition flex items-center justify-center gap-1.5 cursor-pointer ${
                       invoiceCategory === 'spp'
-                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-500 font-extrabold'
+                        ? 'border-emerald-500 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-extrabold shadow-xs'
                         : isLight ? 'border-slate-200 text-slate-600 hover:bg-slate-50' : 'border-slate-800 text-slate-400 hover:bg-slate-900'
                     }`}
                   >
-                    SPP
+                    <Receipt size={15} />
+                    <span>SPP Bulanan</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => handleInvoiceCategoryChange('buku')}
-                    className={`px-3 py-2 text-xs font-bold rounded-xl border transition ${
+                    className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition flex items-center justify-center gap-1.5 cursor-pointer ${
                       invoiceCategory === 'buku'
-                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-500 font-extrabold'
+                        ? 'border-emerald-500 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-extrabold shadow-xs'
                         : isLight ? 'border-slate-200 text-slate-600 hover:bg-slate-50' : 'border-slate-800 text-slate-400 hover:bg-slate-900'
                     }`}
                   >
-                    Buku
+                    <BookOpen size={15} />
+                    <span>Buku</span>
                   </button>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Pilih Siswa *</label>
+              {/* Multi-Student Selection Section */}
+              <div className={`p-4 rounded-2xl border ${
+                isLight ? 'bg-slate-50/70 border-slate-200' : 'bg-slate-950/40 border-slate-850'
+              }`}>
+                {/* Header & Quick Action Buttons */}
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
+                      Pilih Siswa (Multi-Select) *
+                    </label>
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold ${
+                      selectedStudentIds.length > 0
+                        ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                        : 'bg-rose-500/15 text-rose-500 border border-rose-500/25'
+                    }`}>
+                      {selectedStudentIds.length > 0 ? `${selectedStudentIds.length} Siswa Dipilih` : 'Belum Ada Dipilih'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <button
+                      type="button"
+                      onClick={handleSelectAllFilteredStudents}
+                      disabled={filteredFormStudents.length === 0}
+                      className="px-2.5 py-1 rounded-lg bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20 transition cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                    >
+                      <CheckCheck size={13} />
+                      <span>Pilih Semua ({filteredFormStudents.length})</span>
+                    </button>
+                    {selectedStudentIds.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleClearAllSelectedStudents}
+                        className="px-2.5 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-rose-500/20 hover:text-rose-500 text-slate-600 dark:text-slate-400 font-bold transition cursor-pointer"
+                      >
+                        Batal Semua
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Filter and search inside modal */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-2.5 text-slate-400" size={14} />
+                    <input
+                      type="text"
+                      placeholder="Cari nama / kelas..."
+                      value={formStudentSearch}
+                      onChange={(e) => setFormStudentSearch(e.target.value)}
+                      className={`w-full pl-8 pr-7 py-1.5 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                        isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+                      }`}
+                    />
+                    {formStudentSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setFormStudentSearch('')}
+                        className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {availableFormClasses.length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <Filter size={13} className="text-slate-400 shrink-0 hidden sm:block" />
+                      <select
+                        value={formClassFilter}
+                        onChange={(e) => setFormClassFilter(e.target.value)}
+                        className={`w-full px-2.5 py-1.5 border rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer ${
+                          isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+                        }`}
+                      >
+                        <option value="ALL">Semua Kelas ({activeStudents.length})</option>
+                        {availableFormClasses.map(cls => (
+                          <option key={cls} value={cls}>
+                            {cls} ({activeStudents.filter(s => s.kelas === cls).length})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                {/* Scrollable Student Checkbox List */}
                 {activeStudents.length === 0 ? (
-                   <p className="text-sm text-amber-500 flex items-center gap-1"><AlertCircle size={15} /> Tidak ada siswa aktif. Daftarkan siswa terlebih dahulu.</p>
+                  <p className="text-sm text-amber-500 flex items-center gap-1 py-3">
+                    <AlertCircle size={15} /> Tidak ada siswa aktif. Daftarkan siswa terlebih dahulu.
+                  </p>
+                ) : filteredFormStudents.length === 0 ? (
+                  <div className="text-center py-6 text-xs text-slate-400">
+                    Tidak ada siswa yang cocok dengan kata kunci pencarian.
+                  </div>
                 ) : (
-                  <CustomDropdown
-                    value={selectedStudentId}
-                    onChange={(val) => setSelectedStudentId(val)}
-                    options={activeStudents.map(s => ({ value: s.id, label: `${s.name} (${s.level})` }))}
-                    theme={theme}
-                    className="w-full"
-                  />
+                  <div className={`max-h-52 overflow-y-auto space-y-1.5 p-1.5 rounded-xl border ${
+                    isLight ? 'bg-white border-slate-200' : 'bg-slate-900/60 border-slate-800'
+                  }`}>
+                    {filteredFormStudents.map(student => {
+                      const isSelected = selectedStudentIds.includes(student.id);
+                      return (
+                        <div
+                          key={student.id}
+                          onClick={() => handleToggleSelectStudent(student.id)}
+                          className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer select-none ${
+                            isSelected
+                              ? isLight 
+                                ? 'bg-emerald-500/10 border-emerald-500/50 shadow-xs' 
+                                : 'bg-emerald-500/15 border-emerald-500/60 shadow-xs'
+                              : isLight
+                                ? 'bg-slate-50 hover:bg-slate-100/80 border-slate-200/80'
+                                : 'bg-slate-950/40 hover:bg-slate-850/60 border-slate-850/80'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="shrink-0">
+                              {isSelected ? (
+                                <CheckSquare size={18} className="text-emerald-500 fill-emerald-500/20" />
+                              ) : (
+                                <Square size={18} className="text-slate-400 hover:text-slate-500" />
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className={`font-bold text-xs sm:text-sm truncate ${
+                                isSelected ? (isLight ? 'text-emerald-950 font-extrabold' : 'text-emerald-300 font-extrabold') : (isLight ? 'text-slate-800' : 'text-slate-200')
+                              }`}>
+                                {student.name}
+                              </div>
+                              <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5 truncate">
+                                <span>{student.level ? student.level.split(':')[0] : 'Dasar'}</span>
+                                <span>•</span>
+                                <span className="truncate">{student.kelas || 'Tanpa Kelas'}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            {student.jenisPaket && (
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+                                {student.jenisPaket}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
 
+              {/* Nominal Amount Input */}
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                  {invoiceCategory === 'pendaftaran' ? 'Jumlah Biaya Pendaftaran (IDR) *' : invoiceCategory === 'spp' ? 'Jumlah SPP Bulanan (IDR) *' : 'Jumlah Biaya Buku (IDR) *'}
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    {invoiceCategory === 'pendaftaran' ? 'Jumlah Biaya Pendaftaran (Per Siswa) *' : invoiceCategory === 'spp' ? 'Jumlah SPP Bulanan (Per Siswa) *' : 'Jumlah Biaya Buku (Per Siswa) *'}
+                  </label>
+                  <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    {formatRupiah(amount)}
+                  </span>
+                </div>
                 <input
                   type="number"
                   required
+                  min={0}
+                  step={1000}
                   placeholder="Misal: 250000"
                   value={amount}
                   onChange={(e) => setAmount(Number(e.target.value))}
-                  className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 font-mono font-semibold ${getAccentBorderClass()} ${
-                    isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+                  className={`w-full px-3.5 py-2.5 border rounded-xl focus:outline-none focus:ring-1 font-mono font-bold text-sm ${getAccentBorderClass()} ${
+                    isLight ? 'bg-slate-100 border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                   }`}
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Total Calculation Preview */}
+              {selectedStudentIds.length > 0 && (
+                <div className={`p-3.5 rounded-2xl border flex items-center justify-between ${
+                  isLight ? 'bg-emerald-50 border-emerald-200 text-emerald-950' : 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={16} className="text-emerald-500 shrink-0" />
+                    <div>
+                      <div className="text-xs font-extrabold">
+                        {selectedStudentIds.length} Siswa Terpilih ({selectedStudentIds.length} Tagihan)
+                      </div>
+                      <div className="text-[11px] opacity-80 mt-0.5">
+                        {selectedStudentIds.length} × {formatRupiah(amount)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] font-bold uppercase opacity-75">Total Nilai Tagihan</div>
+                    <div className="text-base font-black font-mono text-emerald-600 dark:text-emerald-400">
+                      {formatRupiah(amount * selectedStudentIds.length)}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Month & Due Date */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                     {invoiceCategory === 'pendaftaran' ? 'Keterangan Pendaftaran *' : invoiceCategory === 'spp' ? 'Periode Bulan SPP *' : 'Keterangan Buku *'}
                   </label>
                   <input
@@ -1010,39 +1306,54 @@ function angkaKeTerbilang(nominal: number): string {
                     placeholder={invoiceCategory === 'pendaftaran' ? 'Misal: Pendaftaran Siswa Baru' : invoiceCategory === 'spp' ? 'Misal: Juni 2026' : 'Misal: Buku Level 1'}
                     value={month}
                     onChange={(e) => setMonth(e.target.value)}
-                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 ${getAccentBorderClass()} ${
+                    className={`w-full px-3.5 py-2.5 border rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 ${getAccentBorderClass()} ${
                       isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
                     }`}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Tanggal Jatuh Tempo *</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Tanggal Jatuh Tempo *</label>
                   <input
                     type="date"
                     required
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
-                    className={`w-full px-3 py-2.5 border rounded-xl focus:outline-none focus:ring-1 ${getAccentBorderClass()} ${
+                    className={`w-full px-3.5 py-2.5 border rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 ${getAccentBorderClass()} ${
                       isLight ? 'bg-slate-100 border-slate-200 text-slate-800 font-medium' : 'bg-slate-900 border-slate-800 text-white'
                     }`}
                   />
                 </div>
               </div>
 
-              <div className={`pt-4 border-t flex gap-3 justify-end ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
+              {/* Action Buttons */}
+              <div className={`pt-4 border-t flex items-center justify-between gap-3 ${isLight ? 'border-slate-200' : 'border-slate-850'}`}>
                 <button
                   type="button"
                   onClick={() => setIsFormOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-850 rounded-xl transition"
+                  disabled={isSubmittingInvoice}
+                  className="px-4 py-2.5 text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  disabled={activeStudents.length === 0}
-                  className={`${getAccentBgClass()} text-white font-medium px-5 py-2 rounded-xl transition shadow-sm disabled:bg-slate-300 disabled:text-slate-500 dark:disabled:bg-slate-800 dark:disabled:text-slate-600`}
+                  disabled={selectedStudentIds.length === 0 || isSubmittingInvoice}
+                  className={`px-5 py-2.5 rounded-xl font-extrabold text-xs text-white shadow-md transition flex items-center gap-2 cursor-pointer ${
+                    getAccentBgClass()
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  Terbitkan Invoice
+                  {isSubmittingInvoice ? (
+                    <span>Menerbitkan...</span>
+                  ) : (
+                    <>
+                      <Receipt size={16} />
+                      <span>
+                        {selectedStudentIds.length > 1
+                          ? `Terbitkan ${selectedStudentIds.length} Invoice Sekaligus`
+                          : 'Terbitkan Invoice'}
+                      </span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

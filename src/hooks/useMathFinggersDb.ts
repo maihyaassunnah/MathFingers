@@ -235,64 +235,38 @@ export function useMathFinggersDb() {
       const loadedInvoices = invoicesData || [];
       const loadedGrades = (gradesData || []).sort((a, b) => b.date.localeCompare(a.date));
 
-      const realBranchDefaults: Branch[] = [
-        { id: 'br-singkut', name: 'Singkut', address: 'Cabang Singkut, Sarolangun', phone: '08123456788', createdAt: 1719600000 },
-        { id: 'br-bangko', name: 'Bangko', address: 'Cabang Bangko, Merangin', phone: '08123456787', createdAt: 1719600000 }
-      ];
-
-      // Sanitize branches to ensure only real branches (Singkut, Bangko) or user-created branches exist, filtering out legacy 'Bandung' and 'Pusat'
-      const rawBranches = branchesData && branchesData.length > 0 ? branchesData : getLocalData<Branch[]>('branches', realBranchDefaults);
-      const loadedBranches: Branch[] = rawBranches
-        .filter(b => b.name && b.name.toLowerCase() !== 'bandung' && b.name.toLowerCase() !== 'pusat')
-        .map(b => {
-          if (b.name.toLowerCase() === 'bangko') return { ...b, name: 'Bangko' };
-          if (b.name.toLowerCase() === 'singkut') return { ...b, name: 'Singkut' };
-          return b;
-        });
-
-      // Ensure both real branches (Singkut, Bangko) are present
-      realBranchDefaults.forEach(def => {
-        if (!loadedBranches.some(b => b.name.toLowerCase() === def.name.toLowerCase())) {
-          loadedBranches.push(def);
-        }
-      });
-
+      const loadedBranches = branchesData || getLocalData<Branch[]>('branches', [
+        { id: 'br-1', name: 'Pusat', address: 'Kantor Pusat Math Fingers', phone: '08123456789', createdAt: 1719600000 },
+        { id: 'br-2', name: 'Bandung', address: 'Cabang Kota Bandung', phone: '08123456780', createdAt: 1719600000 }
+      ]);
       setBranches(loadedBranches);
       saveLocalData('branches', loadedBranches);
 
-      const defaultAdminUsers: AdminUser[] = [
-        { username: 'wahyudin', name: 'Wahyudin Hafiz, S.Pd', role: 'super_admin', branch: 'Semua', avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200' },
+      const rawAdminUsers = adminUsersData || getLocalData<AdminUser[]>('admin_users', [
+        { username: 'wahyudin', name: 'Wahyudin Hafiz, S.Pd', role: 'super_admin', branch: 'Pusat', avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200' },
         { username: 'febrianti', name: 'Febrianti Dewi, S.Pd', role: 'branch_admin', branch: 'Singkut', avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200' },
-        { username: 'dewi', name: 'Dewi Safitri, S.H', role: 'branch_admin', branch: 'Bangko', avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200' }
-      ];
-
-      const rawAdminUsers = adminUsersData || getLocalData<AdminUser[]>('admin_users', defaultAdminUsers);
-      const loadedAdminUsers = rawAdminUsers
-        .filter(u => u.username !== 'les_bandung' && u.branch?.toLowerCase() !== 'bandung')
-        .map(u => {
-          if (u.role === 'super_admin') return { ...u, branch: 'Semua' };
-          if (u.branch?.toLowerCase() === 'pusat') return { ...u, branch: 'Singkut' };
-          return u;
-        });
-      defaultAdminUsers.forEach(def => {
-        if (!loadedAdminUsers.some(u => u.username === def.username)) {
-          loadedAdminUsers.push(def);
+        { username: 'dewi', name: 'Dewi Safitri, S.H', role: 'branch_admin', branch: 'Bangko', avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200' },
+        { username: 'les_bandung', name: 'Les Privat Bandung', role: 'branch_admin', branch: 'Bandung', avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200' }
+      ]);
+      const uniqueAdminsMap = new Map<string, AdminUser>();
+      rawAdminUsers.forEach((u: AdminUser) => {
+        if (u && u.username) {
+          const key = u.username.toLowerCase().trim();
+          if (!uniqueAdminsMap.has(key)) {
+            uniqueAdminsMap.set(key, u);
+          }
         }
       });
+      const loadedAdminUsers = Array.from(uniqueAdminsMap.values());
       setAdminUsers(loadedAdminUsers);
       saveLocalData('admin_users', loadedAdminUsers);
 
       const defaultClassesList: ClassGroup[] = [
-        { id: 'cls-1', name: 'Kelas Reguler A (Senin & Rabu)', scheduleDays: 'Senin & Rabu', scheduleTime: '14:00 - 15:30', teacherName: 'Febrianti Dewi', quota: 12, room: 'Ruang A1', level: 'Level 1 : Penjumlahan & Pengurangan Angka Satuan', branch: 'Singkut', createdAt: 1719600000 },
-        { id: 'cls-2', name: 'Kelas Reguler B (Selasa & Kamis)', scheduleDays: 'Selasa & Kamis', scheduleTime: '15:30 - 17:00', teacherName: 'Dewi Safitri', quota: 10, room: 'Ruang A2', level: 'Level 2 : Penjumlahan & Pengurangan Angka Puluhan', branch: 'Bangko', createdAt: 1719600000 },
-        { id: 'cls-3', name: 'Kelas Intensif Singkut', scheduleDays: 'Sabtu & Ahad', scheduleTime: '09:00 - 10:30', teacherName: 'Febrianti Dewi', quota: 15, room: 'Ruang Utama', level: 'Level 1 : Penjumlahan & Pengurangan Angka Satuan', branch: 'Singkut', createdAt: 1719600000 }
+        { id: 'cls-1', name: 'Kelas Reguler A (Senin & Rabu)', scheduleDays: 'Senin & Rabu', scheduleTime: '14:00 - 15:30', teacherName: 'Febrianti Dewi', quota: 12, room: 'Ruang A1', level: 'Level 1 : Penjumlahan & Pengurangan Angka Satuan', branch: 'Pusat', createdAt: 1719600000 },
+        { id: 'cls-2', name: 'Kelas Reguler B (Selasa & Kamis)', scheduleDays: 'Selasa & Kamis', scheduleTime: '15:30 - 17:00', teacherName: 'Dewi Safitri', quota: 10, room: 'Ruang A2', level: 'Level 2 : Penjumlahan & Pengurangan Angka Puluhan', branch: 'Pusat', createdAt: 1719600000 },
+        { id: 'cls-3', name: 'Kelas Weekend Bandung', scheduleDays: 'Sabtu & Ahad', scheduleTime: '09:00 - 10:30', teacherName: 'Les Privat Bandung', quota: 15, room: 'Ruang Utama', level: 'Level 1 : Penjumlahan & Pengurangan Angka Satuan', branch: 'Bandung', createdAt: 1719600000 }
       ];
-      const rawClasses = classesData || getLocalData<ClassGroup[]>('classes', defaultClassesList);
-      const loadedClasses = rawClasses.map(c => {
-        const bLower = c.branch?.toLowerCase();
-        if (bLower === 'bandung' || bLower === 'pusat') return { ...c, branch: 'Singkut' };
-        return c;
-      });
+      const loadedClasses = classesData || getLocalData<ClassGroup[]>('classes', defaultClassesList);
       setClasses(loadedClasses);
       saveLocalData('classes', loadedClasses);
 
@@ -418,60 +392,25 @@ export function useMathFinggersDb() {
   };
 
   const loadAllFromLocalStorage = () => {
-    const realBranchDefaults: Branch[] = [
-      { id: 'br-singkut', name: 'Singkut', address: 'Cabang Singkut, Sarolangun', phone: '08123456788', createdAt: 1719600000 },
-      { id: 'br-bangko', name: 'Bangko', address: 'Cabang Bangko, Merangin', phone: '08123456787', createdAt: 1719600000 }
+    const defaultBranches = [
+      { id: 'br-1', name: 'Pusat', address: 'Kantor Pusat Math Fingers', phone: '08123456789', createdAt: 1719600000 },
+      { id: 'br-2', name: 'Bandung', address: 'Cabang Kota Bandung', phone: '08123456780', createdAt: 1719600000 }
     ];
-    const rawLocalBranches = getLocalData<Branch[]>('branches', realBranchDefaults);
-    const localBranches = rawLocalBranches
-      .filter(b => b.name && b.name.toLowerCase() !== 'bandung' && b.name.toLowerCase() !== 'pusat')
-      .map(b => {
-        if (b.name.toLowerCase() === 'bangko') return { ...b, name: 'Bangko' };
-        if (b.name.toLowerCase() === 'singkut') return { ...b, name: 'Singkut' };
-        return b;
-      });
-    realBranchDefaults.forEach(def => {
-      if (!localBranches.some(b => b.name.toLowerCase() === def.name.toLowerCase())) {
-        localBranches.push(def);
-      }
-    });
-    setBranches(localBranches);
-    saveLocalData('branches', localBranches);
+    setBranches(getLocalData<Branch[]>('branches', defaultBranches));
 
     const defaultAdminUsers: AdminUser[] = [
-      { username: 'wahyudin', name: 'Wahyudin Hafiz, S.Pd', role: 'super_admin', branch: 'Semua', avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200' },
-      { username: 'febrianti', name: 'Febrianti Dewi, S.Pd', role: 'branch_admin', branch: 'Singkut', avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200' },
-      { username: 'dewi', name: 'Dewi Safitri, S.H', role: 'branch_admin', branch: 'Bangko', avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200' }
+      { username: 'febrianti', name: 'Febrianti Dewi', role: 'super_admin', branch: 'Pusat', avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200' },
+      { username: 'dewi', name: 'Dewi Safitri', role: 'branch_admin', branch: 'Pusat', avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200' },
+      { username: 'les_bandung', name: 'Les Privat Bandung', role: 'branch_admin', branch: 'Bandung', avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200' }
     ];
-    const rawLocalAdmins = getLocalData<AdminUser[]>('admin_users', defaultAdminUsers);
-    const localAdmins = rawLocalAdmins
-      .filter(u => u.username !== 'les_bandung' && u.branch?.toLowerCase() !== 'bandung')
-      .map(u => {
-        if (u.role === 'super_admin') return { ...u, branch: 'Semua' };
-        if (u.branch?.toLowerCase() === 'pusat') return { ...u, branch: 'Singkut' };
-        return u;
-      });
-    defaultAdminUsers.forEach(def => {
-      if (!localAdmins.some(u => u.username === def.username)) {
-        localAdmins.push(def);
-      }
-    });
-    setAdminUsers(localAdmins);
-    saveLocalData('admin_users', localAdmins);
+    setAdminUsers(getLocalData<AdminUser[]>('admin_users', defaultAdminUsers));
 
     const defaultClassesList: ClassGroup[] = [
-      { id: 'cls-1', name: 'Kelas Reguler A (Senin & Rabu)', scheduleDays: 'Senin & Rabu', scheduleTime: '14:00 - 15:30', teacherName: 'Febrianti Dewi', quota: 12, room: 'Ruang A1', level: 'Level 1 : Penjumlahan & Pengurangan Angka Satuan', branch: 'Singkut', createdAt: 1719600000 },
-      { id: 'cls-2', name: 'Kelas Reguler B (Selasa & Kamis)', scheduleDays: 'Selasa & Kamis', scheduleTime: '15:30 - 17:00', teacherName: 'Dewi Safitri', quota: 10, room: 'Ruang A2', level: 'Level 2 : Penjumlahan & Pengurangan Angka Puluhan', branch: 'Bangko', createdAt: 1719600000 },
-      { id: 'cls-3', name: 'Kelas Intensif Singkut', scheduleDays: 'Sabtu & Ahad', scheduleTime: '09:00 - 10:30', teacherName: 'Febrianti Dewi', quota: 15, room: 'Ruang Utama', level: 'Level 1 : Penjumlahan & Pengurangan Angka Satuan', branch: 'Singkut', createdAt: 1719600000 }
+      { id: 'cls-1', name: 'Kelas Reguler A (Senin & Rabu)', scheduleDays: 'Senin & Rabu', scheduleTime: '14:00 - 15:30', teacherName: 'Febrianti Dewi', quota: 12, room: 'Ruang A1', level: 'Level 1 : Penjumlahan & Pengurangan Angka Satuan', branch: 'Pusat', createdAt: 1719600000 },
+      { id: 'cls-2', name: 'Kelas Reguler B (Selasa & Kamis)', scheduleDays: 'Selasa & Kamis', scheduleTime: '15:30 - 17:00', teacherName: 'Dewi Safitri', quota: 10, room: 'Ruang A2', level: 'Level 2 : Penjumlahan & Pengurangan Angka Puluhan', branch: 'Pusat', createdAt: 1719600000 },
+      { id: 'cls-3', name: 'Kelas Weekend Bandung', scheduleDays: 'Sabtu & Ahad', scheduleTime: '09:00 - 10:30', teacherName: 'Les Privat Bandung', quota: 15, room: 'Ruang Utama', level: 'Level 1 : Penjumlahan & Pengurangan Angka Satuan', branch: 'Bandung', createdAt: 1719600000 }
     ];
-    const rawLocalClasses = getLocalData<ClassGroup[]>('classes', defaultClassesList);
-    const localClasses = rawLocalClasses.map(c => {
-      const bLower = c.branch?.toLowerCase();
-      if (bLower === 'bandung' || bLower === 'pusat') return { ...c, branch: 'Singkut' };
-      return c;
-    });
-    setClasses(localClasses);
-    saveLocalData('classes', localClasses);
+    setClasses(getLocalData<ClassGroup[]>('classes', defaultClassesList));
 
     const localStudents = getLocalData<Student[]>('students', []);
     if (localStudents.length === 0) {
@@ -485,13 +424,13 @@ export function useMathFinggersDb() {
           level: 'Level 1 : Penjumlahan & Pengurangan Angka Satuan',
           status: 'active',
           keterangan: 'Anak sangat antusias belajar menggunakan jari.',
-          tempatLahir: 'Singkut',
+          tempatLahir: 'Jakarta',
           tanggalLahir: '2018-05-12',
           jenisPaket: '4P',
           jenisKelamin: 'Laki-laki',
-          alamat: 'Jl. Pasar Singkut No. 12, Sarolangun',
+          alamat: 'Jl. Merdeka No. 12, Jakarta Pusat',
           createdAt: Date.now() - 90 * 24 * 3600 * 1000,
-          branch: 'Singkut'
+          branch: 'Pusat'
         },
         {
           id: 'std-2',
@@ -502,13 +441,13 @@ export function useMathFinggersDb() {
           level: 'Level 2 : Penjumlahan & Pengurangan Angka Puluhan',
           status: 'active',
           keterangan: 'Sudah menguasai simbol jari 1-10.',
-          tempatLahir: 'Singkut',
+          tempatLahir: 'Jakarta',
           tanggalLahir: '2017-09-20',
           jenisPaket: '8P',
           jenisKelamin: 'Perempuan',
-          alamat: 'Jl. Lintas Singkut Blok C No. 5',
+          alamat: 'Komp. Harapan Indah Blok C3/5',
           createdAt: Date.now() - 45 * 24 * 3600 * 1000,
-          branch: 'Singkut'
+          branch: 'Pusat'
         },
         {
           id: 'std-3',
@@ -519,13 +458,13 @@ export function useMathFinggersDb() {
           level: 'Level 3 : Penjumlahan & Pengurangan Angka Ratusan',
           status: 'active',
           keterangan: 'Sangat cepat dalam kuis perkalian dasar.',
-          tempatLahir: 'Bangko',
+          tempatLahir: 'Bandung',
           tanggalLahir: '2016-01-15',
           jenisPaket: '4P',
           jenisKelamin: 'Laki-laki',
-          alamat: 'Jl. Merangin Raya No. 8, Bangko',
+          alamat: 'Dago Elok Blok B2 No. 8, Bandung',
           createdAt: Date.now() - 30 * 24 * 3600 * 1000,
-          branch: 'Bangko'
+          branch: 'Bandung'
         },
         {
           id: 'std-4',
@@ -536,13 +475,13 @@ export function useMathFinggersDb() {
           level: 'Level 7 : Perkalian Angka Puluhan & Puluhan',
           status: 'alumni',
           keterangan: 'Lulus dengan predikat Sangat Baik.',
-          tempatLahir: 'Bangko',
+          tempatLahir: 'Jakarta',
           tanggalLahir: '2015-11-12',
           jenisPaket: '8P',
           jenisKelamin: 'Perempuan',
-          alamat: 'Jl. Sudirman Bangko No. 42',
+          alamat: 'Jl. Kemang Raya No. 42',
           createdAt: Date.now() - 500 * 24 * 3600 * 1000,
-          branch: 'Bangko'
+          branch: 'Pusat'
         },
         {
           id: 'std-5',
@@ -553,13 +492,13 @@ export function useMathFinggersDb() {
           level: 'Level Dasar: Pengenalan Simbol Jari',
           status: 'active',
           keterangan: 'Baru mendaftar les privat.',
-          tempatLahir: 'Singkut',
+          tempatLahir: 'Bandung',
           tanggalLahir: '2019-12-05',
           jenisPaket: '4P',
           jenisKelamin: 'Laki-laki',
-          alamat: 'Pasar Singkut Blok B No. 10B',
+          alamat: 'Pasteur Residence No. 10B, Bandung',
           createdAt: Date.now() - 10 * 24 * 3600 * 1000,
-          branch: 'Singkut'
+          branch: 'Bandung'
         }
       ];
       saveLocalData('students', seedStudents);
@@ -567,44 +506,44 @@ export function useMathFinggersDb() {
 
       const todayStr = new Date().toISOString().slice(0, 10);
       const seedAttendance: Attendance[] = [
-        { id: 'att-1', studentId: 'std-1', studentName: 'Budi Santoso', date: todayStr, status: 'present', notes: 'Hadir belajar penjumlahan 1 digit', branch: 'Singkut' },
-        { id: 'att-2', studentId: 'std-2', studentName: 'Siti Aminah', date: todayStr, status: 'present', notes: 'Hadir sangat tepat waktu', branch: 'Singkut' },
-        { id: 'att-3', studentId: 'std-3', studentName: 'Robert Chen', date: todayStr, status: 'permission', notes: 'Izin karena acara keluarga', branch: 'Bangko' }
+        { id: 'att-1', studentId: 'std-1', studentName: 'Budi Santoso', date: todayStr, status: 'present', notes: 'Hadir belajar penjumlahan 1 digit', branch: 'Pusat' },
+        { id: 'att-2', studentId: 'std-2', studentName: 'Siti Aminah', date: todayStr, status: 'present', notes: 'Hadir sangat tepat waktu', branch: 'Pusat' },
+        { id: 'att-3', studentId: 'std-3', studentName: 'Robert Chen', date: todayStr, status: 'permission', notes: 'Izin karena acara keluarga', branch: 'Bandung' }
       ];
       saveLocalData('attendance', seedAttendance);
       setAttendance(seedAttendance);
 
       const seedNotes: TeacherNote[] = [
-        { id: 'note-1', studentId: 'std-1', studentName: 'Budi Santoso', date: todayStr, topic: 'Penjumlahan Jari', content: 'Budi sudah mampu menjumlahkan angka satuan 1-9 dengan kalkulasi jari cepat.', teacherName: 'Febrianti Dewi', branch: 'Singkut' },
-        { id: 'note-2', studentId: 'std-2', studentName: 'Siti Aminah', date: todayStr, topic: 'Angka Puluhan', content: 'Siti belajar kalkulasi puluhan menggunakan dua tangan lengkap.', teacherName: 'Febrianti Dewi', branch: 'Singkut' }
+        { id: 'note-1', studentId: 'std-1', studentName: 'Budi Santoso', date: todayStr, topic: 'Penjumlahan Jari', content: 'Budi sudah mampu menjumlahkan angka satuan 1-9 dengan kalkulasi jari cepat.', teacherName: 'Febrianti Dewi', branch: 'Pusat' },
+        { id: 'note-2', studentId: 'std-2', studentName: 'Siti Aminah', date: todayStr, topic: 'Angka Puluhan', content: 'Siti belajar kalkulasi puluhan menggunakan dua tangan lengkap.', teacherName: 'Dewi Safitri', branch: 'Pusat' }
       ];
       saveLocalData('notes', seedNotes);
       setNotes(seedNotes);
 
       const seedInvoices: Invoice[] = [
-        { id: 'inv-1', invoiceNo: 'INV/MF/202607/001', studentId: 'std-1', studentName: 'Budi Santoso', amount: 250000, month: 'Juli 2026', dueDate: todayStr, status: 'paid', paidAt: todayStr, paymentMethod: 'Transfer', createdAt: Date.now() - 5 * 24 * 3600 * 1000, amountPaid: 250000, installments: [], category: 'spp', branch: 'Singkut' },
-        { id: 'inv-2', invoiceNo: 'INV/MF/202607/002', studentId: 'std-2', studentName: 'Siti Aminah', amount: 250000, month: 'Juli 2026', dueDate: todayStr, status: 'unpaid', createdAt: Date.now() - 5 * 24 * 3600 * 1000, amountPaid: 0, installments: [], category: 'spp', branch: 'Singkut' },
-        { id: 'inv-3', invoiceNo: 'INV/MF/202607/003', studentId: 'std-3', studentName: 'Robert Chen', amount: 300000, month: 'Juli 2026', dueDate: todayStr, status: 'unpaid', createdAt: Date.now() - 5 * 24 * 3600 * 1000, amountPaid: 0, installments: [], category: 'spp', branch: 'Bangko' }
+        { id: 'inv-1', invoiceNo: 'INV/MF/202607/001', studentId: 'std-1', studentName: 'Budi Santoso', amount: 250000, month: 'Juli 2026', dueDate: todayStr, status: 'paid', paidAt: todayStr, paymentMethod: 'Transfer', createdAt: Date.now() - 5 * 24 * 3600 * 1000, amountPaid: 250000, installments: [], category: 'spp', branch: 'Pusat' },
+        { id: 'inv-2', invoiceNo: 'INV/MF/202607/002', studentId: 'std-2', studentName: 'Siti Aminah', amount: 250000, month: 'Juli 2026', dueDate: todayStr, status: 'unpaid', createdAt: Date.now() - 5 * 24 * 3600 * 1000, amountPaid: 0, installments: [], category: 'spp', branch: 'Pusat' },
+        { id: 'inv-3', invoiceNo: 'INV/MF/202607/003', studentId: 'std-3', studentName: 'Robert Chen', amount: 300000, month: 'Juli 2026', dueDate: todayStr, status: 'unpaid', createdAt: Date.now() - 5 * 24 * 3600 * 1000, amountPaid: 0, installments: [], category: 'spp', branch: 'Bandung' }
       ];
       saveLocalData('invoices', seedInvoices);
       setInvoices(seedInvoices);
 
       const seedGrades: Grade[] = [
-        { id: 'grd-1', studentId: 'std-1', studentName: 'Budi Santoso', date: todayStr, topic: 'Kuis Satuan Cepat', score: 95, speedSeconds: 12, notes: 'Sangat akurat dan sigap!', branch: 'Singkut' },
-        { id: 'grd-2', studentId: 'std-2', studentName: 'Siti Aminah', date: todayStr, topic: 'Kuis Puluhan Dasar', score: 88, speedSeconds: 18, notes: 'Fokus perlu ditingkatkan sedikit lagi.', branch: 'Singkut' },
-        { id: 'grd-3', studentId: 'std-3', studentName: 'Robert Chen', date: todayStr, topic: 'Kuis Kelulusan Level 2', score: 92, speedSeconds: 14, notes: 'Lulus dengan predikat istimewa.', branch: 'Bangko' }
+        { id: 'grd-1', studentId: 'std-1', studentName: 'Budi Santoso', date: todayStr, topic: 'Kuis Satuan Cepat', score: 95, speedSeconds: 12, notes: 'Sangat akurat dan sigap!', branch: 'Pusat' },
+        { id: 'grd-2', studentId: 'std-2', studentName: 'Siti Aminah', date: todayStr, topic: 'Kuis Puluhan Dasar', score: 88, speedSeconds: 18, notes: 'Fokus perlu ditingkatkan sedikit lagi.', branch: 'Pusat' },
+        { id: 'grd-3', studentId: 'std-3', studentName: 'Robert Chen', date: todayStr, topic: 'Kuis Kelulusan Level 2', score: 92, speedSeconds: 14, notes: 'Lulus dengan predikat istimewa.', branch: 'Bandung' }
       ];
       saveLocalData('grades', seedGrades);
       setGrades(seedGrades);
 
       const seedIncomes: FinanceIncome[] = [
-        { id: 'inc-1', date: '2026-08-01', category: 'Lainnya', amount: 500000, source: 'Kas Awal', notes: 'Saldo awal kas bimbingan belajar', createdAt: Date.now() - 2 * 24 * 3600 * 1000, branch: 'Singkut' }
+        { id: 'inc-1', date: '2026-08-01', category: 'Lainnya', amount: 500000, source: 'Kas Awal', notes: 'Saldo awal kas bimbingan belajar', createdAt: Date.now() - 2 * 24 * 3600 * 1000, branch: 'Pusat' }
       ];
       saveLocalData('finance_incomes', seedIncomes);
       setManualIncomes(seedIncomes);
 
       const seedExpenses: FinanceExpense[] = [
-        { id: 'exp-1', date: '2026-08-02', category: 'Cetak buku', amount: 50000, paidTo: 'Percetakan Agung', paymentMethod: 'Tunai', notes: 'Cetak modul matematika level 1', createdAt: Date.now() - 24 * 3600 * 1000, branch: 'Singkut' }
+        { id: 'exp-1', date: '2026-08-02', category: 'Cetak buku', amount: 50000, paidTo: 'Percetakan Agung', paymentMethod: 'Tunai', notes: 'Cetak modul matematika level 1', createdAt: Date.now() - 24 * 3600 * 1000, branch: 'Pusat' }
       ];
       saveLocalData('finance_expenses', seedExpenses);
       setExpenses(seedExpenses);

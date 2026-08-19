@@ -104,37 +104,18 @@ export function MobileBranchAppView({
   // Super Admin branch switching capability check
   const canSwitchBranch = isSuperAdmin || currentUser?.role === 'super_admin' || currentUser?.username === 'wahyudin' || !currentUser;
 
-  // 2 Cabang Real Resmi Math Fingers: Singkut & Bangko (Pusat sudah diwakili oleh akun Super Admin Semua Cabang)
-  const realBranchesOrder = ['Singkut', 'Bangko'];
-
-  // Derive unique real branch names (Singkut, Bangko) + any real database branches excluding legacy 'Pusat' & 'Bandung'
+  // Derive all unique branch names across database branches, students, classes, and default fallback
   const allBranchNames = Array.from(
     new Set([
       'Singkut',
-      'Bangko',
-      ...branches.map(b => b.name)
+      'bangko',
+      'Pusat',
+      'Bandung',
+      ...branches.map(b => b.name),
+      ...students.map(s => s.branch).filter((b): b is string => Boolean(b && b.trim())),
+      ...classes.map(c => c.branch).filter((b): b is string => Boolean(b && b.trim()))
     ])
-  )
-    .filter((name): name is string => {
-      if (!name || !name.trim()) return false;
-      const lower = name.toLowerCase().trim();
-      return lower !== 'all' && lower !== 'semua' && lower !== 'bandung' && lower !== 'pusat';
-    })
-    .map(name => {
-      const lower = name.toLowerCase().trim();
-      if (lower === 'singkut') return 'Singkut';
-      if (lower === 'bangko') return 'Bangko';
-      return name;
-    })
-    .filter((name, idx, arr) => arr.indexOf(name) === idx)
-    .sort((a, b) => {
-      const idxA = realBranchesOrder.indexOf(a);
-      const idxB = realBranchesOrder.indexOf(b);
-      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-      if (idxA !== -1) return -1;
-      if (idxB !== -1) return 1;
-      return a.localeCompare(b);
-    });
+  ).filter((name): name is string => Boolean(name && name.trim() && name.toLowerCase() !== 'all' && name.toLowerCase() !== 'semua'));
 
   const handleSelectBranchOption = (selectedName: string) => {
     if (onSelectBranch) {

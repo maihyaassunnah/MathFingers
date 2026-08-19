@@ -34,13 +34,10 @@ export default defineConfig(() => {
               if (id.includes('@supabase')) {
                 return 'vendor-supabase';
               }
-              if (id.includes('lucide-react')) {
-                return 'vendor-lucide';
+              if (id.includes('react') || id.includes('react-dom') || id.includes('motion') || id.includes('framer-motion') || id.includes('lucide-react') || id.includes('recharts') || id.includes('use-sync-external-store')) {
+                return 'vendor-react';
               }
-              if (id.includes('motion') || id.includes('framer-motion')) {
-                return 'vendor-motion';
-              }
-              return 'vendor-core';
+              return 'vendor-libs';
             }
           }
         }

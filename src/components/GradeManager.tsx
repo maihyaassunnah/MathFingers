@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Student, Grade } from '../types';
 import { getWhatsAppLink } from '../utils';
 import { Award, Search, Calendar, Zap, Trash2, Send, AlertCircle, Edit2, X, ChevronDown, FileSpreadsheet, Printer, Download, CheckSquare, Square, Layers } from 'lucide-react';
@@ -113,7 +113,7 @@ export function GradeManager({
   };
 
   // Initialize/sync studentGradesData whenever activeStudents changes, with default score & speedSeconds of 0
-  React.useEffect(() => {
+  useEffect(() => {
     setStudentGradesData(prev => {
       const newData: Record<string, { included: boolean; score: number; speedSeconds: number; notes: string }> = {};
       activeStudents.forEach(s => {

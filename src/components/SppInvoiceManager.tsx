@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Student, Invoice, AppSettings, Installment } from '../types';
 import { formatRupiah, getWhatsAppLink } from '../utils';
@@ -39,6 +39,7 @@ import {
 import { jsPDF } from 'jspdf';
 import { CustomDropdown } from './CustomDropdown';
 import { OfflineIndicator } from './OfflineIndicator';
+import { CombinedSppBukuReminder } from './CombinedSppBukuReminder';
 
 export const DEFAULT_REMINDER_TEMPLATE = `Assalamu'alaikum Wr. Wb. Ibu/Bapak *{parentName}*,
 
@@ -155,7 +156,7 @@ export function SppInvoiceManager({
   const [statusFilter, setStatusFilter] = useState('All');
   const [isFormOpen, setIsFormOpen] = useState(false);
   
-  const [activeCategory, setActiveCategory] = useState<'spp' | 'pendaftaran' | 'buku'>('spp');
+  const [activeCategory, setActiveCategory] = useState<'spp' | 'pendaftaran' | 'buku' | 'gabungan'>('spp');
   const [invoiceCategory, setInvoiceCategory] = useState<'spp' | 'pendaftaran' | 'buku'>('spp');
 
   // Payment confirmation states
@@ -200,6 +201,16 @@ export function SppInvoiceManager({
   const currentYear = new Date().getFullYear();
 
   const activeStudents = students.filter(s => s.status === 'active');
+
+  // Count active students who have unpaid SPP or unpaid Buku
+  const combinedUnpaidCount = useMemo(() => {
+    return activeStudents.filter(student => {
+      const studentInvoices = invoices.filter(inv => inv.studentId === student.id && inv.status !== 'paid');
+      const hasUnpaidSpp = studentInvoices.some(inv => (inv.category || 'spp') === 'spp');
+      const hasUnpaidBuku = studentInvoices.some(inv => inv.category === 'buku');
+      return hasUnpaidSpp || hasUnpaidBuku;
+    }).length;
+  }, [activeStudents, invoices]);
 
   // Filter H-2 and Overdue unpaid/partially_paid invoices
   const h2AndOverdueInvoices = invoices.filter(inv => {
@@ -848,8 +859,37 @@ function angkaKeTerbilang(nominal: number): string {
           <BookOpen size={16} />
           <span>Buku</span>
         </button>
+        <button
+          type="button"
+          onClick={() => setActiveCategory('gabungan')}
+          className={`px-5 py-3 text-sm font-bold border-b-2 transition duration-150 flex items-center gap-2 cursor-pointer ${
+            activeCategory === 'gabungan'
+              ? 'border-emerald-500 text-emerald-500 font-extrabold'
+              : isLight ? 'border-transparent text-slate-700 hover:text-slate-900 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-350'
+          }`}
+        >
+          <MessageSquare size={16} className={combinedUnpaidCount > 0 ? "text-emerald-500" : ""} />
+          <span>Pengingat SPP & Buku (WA)</span>
+          {combinedUnpaidCount > 0 && (
+            <span className="px-2 py-0.5 text-[11px] font-black rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+              {combinedUnpaidCount}
+            </span>
+          )}
+        </button>
       </div>
 
+      {activeCategory === 'gabungan' ? (
+        <CombinedSppBukuReminder
+          students={students}
+          invoices={invoices}
+          settings={settings}
+          theme={theme}
+          onCreateInvoice={onCreateInvoice}
+          onCreateInvoicesBatch={onCreateInvoicesBatch}
+          onUpdateInvoiceStatus={onUpdateInvoiceStatus}
+        />
+      ) : (
+        <>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -2222,6 +2262,8 @@ function angkaKeTerbilang(nominal: number): string {
           </div>
         )}
       </AnimatePresence>
+      </>
+      )}
     </div>
   );
 }

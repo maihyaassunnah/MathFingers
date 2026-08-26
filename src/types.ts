@@ -176,6 +176,9 @@ export interface AdminUser {
   branch: string; // nama cabang (misal "Pusat", "Bandung")
   password?: string;
   avatarUrl?: string;
+  email?: string;
+  googleUid?: string;
+  authProvider?: 'google' | 'password';
 }
 
 export interface ClassGroup {

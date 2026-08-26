@@ -30,6 +30,7 @@ import { Sidebar } from './components/Sidebar';
 import { HeaderSyncIndicator } from './components/HeaderSyncIndicator';
 import { AdminUser, Branch } from './types';
 import { getAdminAvatar, updateDynamicPwaIcon, getStudentUniqueCode } from './utils';
+import { auth, firebaseSignOut } from './firebase';
 
 import { 
   Home, 
@@ -987,6 +988,7 @@ export default function App() {
           isUpdateAvailable={installedVersion !== LATEST_APP_VERSION}
           onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
           onLogout={() => {
+            firebaseSignOut(auth).catch(() => {});
             setCurrentUser(null);
             localStorage.removeItem('math_finggers_current_user_obj');
             localStorage.removeItem('math_finggers_current_user');
@@ -1006,6 +1008,7 @@ export default function App() {
           onSelectTab={(tabId) => setActiveTab(tabId)}
           currentUser={currentUser}
           onLogout={() => {
+            firebaseSignOut(auth).catch(() => {});
             setCurrentUser(null);
             localStorage.removeItem('math_finggers_current_user_obj');
             localStorage.removeItem('math_finggers_current_user');

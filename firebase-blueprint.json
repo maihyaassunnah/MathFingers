@@ -1,0 +1,40 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Authenticated user profile and roles",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Google authenticated email"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of user"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["super_admin", "branch_admin", "teacher"],
+          "description": "User access role"
+        },
+        "branch": {
+          "type": "string",
+          "description": "Branch assignment"
+        },
+        "photoUrl": {
+          "type": "string",
+          "description": "Profile picture URL"
+        }
+      },
+      "required": ["email", "name", "role"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile records indexed by auth UID"
+    }
+  }
+}

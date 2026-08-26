@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Branch, AdminUser } from '../types';
 import { CustomDropdown } from './CustomDropdown';
 import { OfflineIndicator } from './OfflineIndicator';
-import { Building, UserPlus, Users, Trash2, Edit2, ShieldAlert, Plus, Shield, Check, Lock, MapPin, Phone, RefreshCw, Upload, Link as LinkIcon, Camera, X, Image as ImageIcon } from 'lucide-react';
+import { Building, UserPlus, Users, Trash2, Edit2, ShieldAlert, Plus, Shield, Check, Lock, MapPin, Phone, RefreshCw, Upload, Link as LinkIcon, Camera, X, Image as ImageIcon, Mail } from 'lucide-react';
 import { getAdminAvatar, compressImageFile } from '../utils';
 
 interface BranchesManagerProps {
@@ -41,6 +41,7 @@ export function BranchesManager({
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [adminUsername, setAdminUsername] = useState('');
   const [adminName, setAdminName] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
   const [adminRole, setAdminRole] = useState<'super_admin' | 'branch_admin'>('branch_admin');
   const [adminBranch, setAdminBranch] = useState('Pusat');
   const [adminPassword, setAdminPassword] = useState('');
@@ -104,7 +105,8 @@ export function BranchesManager({
         role: adminRole,
         branch: adminBranch,
         password: adminPassword.trim(),
-        avatarUrl: adminAvatarUrl.trim() || undefined
+        avatarUrl: adminAvatarUrl.trim() || undefined,
+        email: adminEmail.trim().toLowerCase() || undefined
       };
 
       if (editingAdminUsername) {
@@ -116,6 +118,7 @@ export function BranchesManager({
       // Reset form
       setAdminUsername('');
       setAdminName('');
+      setAdminEmail('');
       setAdminRole('branch_admin');
       setAdminPassword('');
       setAdminAvatarUrl('');
@@ -138,6 +141,7 @@ export function BranchesManager({
     setEditingAdminUsername(admin.username);
     setAdminUsername(admin.username);
     setAdminName(admin.name);
+    setAdminEmail(admin.email || '');
     setAdminRole(admin.role);
     setAdminBranch(admin.branch);
     setAdminPassword(admin.password || '');
@@ -289,6 +293,7 @@ export function BranchesManager({
               <tr className={isLight ? 'bg-slate-100 border-b border-slate-200 text-slate-800' : 'bg-slate-950 border-b border-slate-800 text-slate-400'}>
                 <th className="p-4 font-bold uppercase tracking-wider">Nama Admin</th>
                 <th className="p-4 font-bold uppercase tracking-wider">Username</th>
+                <th className="p-4 font-bold uppercase tracking-wider">Email Google Login</th>
                 <th className="p-4 font-bold uppercase tracking-wider">Cabang Tugas</th>
                 <th className="p-4 font-bold uppercase tracking-wider">Peran (Role)</th>
                 <th className="p-4 font-bold uppercase tracking-wider">Sandi Demo</th>
@@ -317,6 +322,21 @@ export function BranchesManager({
                       </div>
                     </td>
                     <td className="p-4 font-mono">{admin.username}</td>
+                    <td className="p-4">
+                      {admin.email ? (
+                        <span className={`inline-flex items-center gap-1.5 font-bold px-2.5 py-1 rounded-lg text-[11px] ${
+                          isLight ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-emerald-950/40 text-emerald-300 border border-emerald-800'
+                        }`}>
+                          <Mail size={12} className="text-emerald-500 shrink-0" />
+                          <span className="font-mono">{admin.email}</span>
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-amber-500 dark:text-amber-400 font-semibold italic flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                          Belum ditautkan
+                        </span>
+                      )}
+                    </td>
                     <td className="p-4">
                       <span className={`font-semibold px-2 py-1 rounded-md ${isLight ? 'text-slate-800 bg-slate-200/80' : 'text-slate-400 bg-slate-800'}`}>
                         {admin.branch}
@@ -480,6 +500,36 @@ export function BranchesManager({
                     isLight ? 'bg-slate-50 border-slate-200 text-slate-850' : 'bg-slate-950/50 border-slate-800 text-white'
                   }`}
                 />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5 inline-block" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                    </svg>
+                    <span>Email Google (Autentikasi Login)</span>
+                  </label>
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Wajib untuk Google Login</span>
+                </div>
+                <div className="relative">
+                  <Mail size={14} className="absolute left-3.5 top-3.5 text-slate-400" />
+                  <input
+                    type="email"
+                    value={adminEmail}
+                    onChange={(e) => setAdminEmail(e.target.value)}
+                    placeholder="Contoh: febridewi@gmail.com"
+                    className={`w-full pl-9.5 pr-4.5 py-3 rounded-xl border text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${
+                      isLight ? 'bg-slate-50 border-slate-200 text-slate-850' : 'bg-slate-950/50 border-slate-800 text-white'
+                    }`}
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+                  Akun Google ini wajib digunakan oleh admin cabang saat menekan tombol login Google.
+                </p>
               </div>
 
               <div>

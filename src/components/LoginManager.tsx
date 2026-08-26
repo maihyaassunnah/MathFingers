@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { 
   Mail, 
   Lock, 
@@ -7,6 +7,7 @@ import {
   EyeOff, 
   AlertCircle, 
   ShieldCheck, 
+  Shield,
   RefreshCw, 
   X, 
   Sun, 
@@ -88,12 +89,12 @@ export function LoginManager({
     (window.navigator as any).standalone === true
   );
 
-  // Default admins fallback
+  // Default admins fallback with Google email bindings
   const defaultAdmins: AdminUser[] = useMemo(() => [
     { username: 'wahyudin', name: 'Wahyudin Hafiz, S.Pd', role: 'super_admin', branch: 'Pusat', email: 'ma.ihyaassunnah@gmail.com', password: 'admin123' },
-    { username: 'febrianti', name: 'Febrianti Dewi, S.Pd', role: 'branch_admin', branch: 'Singkut', password: 'admin123' },
-    { username: 'dewi', name: 'Dewi Safitri, S.H', role: 'branch_admin', branch: 'Bangko', password: 'dewi123' },
-    { username: 'les_bandung', name: 'Les Privat Bandung', role: 'branch_admin', branch: 'Bandung', password: 'bdg123' }
+    { username: 'febrianti', name: 'Febrianti Dewi, S.Pd', role: 'branch_admin', branch: 'Singkut', email: 'febrianti.mathfingers@gmail.com', password: 'admin123' },
+    { username: 'dewi', name: 'Dewi Safitri, S.H', role: 'branch_admin', branch: 'Bangko', email: 'dewi.mathfingers@gmail.com', password: 'dewi123' },
+    { username: 'les_bandung', name: 'Les Privat Bandung', role: 'branch_admin', branch: 'Bandung', email: 'bandung.mathfingers@gmail.com', password: 'bdg123' }
   ], []);
 
   // Deduplicate and clean active admins
@@ -121,33 +122,41 @@ export function LoginManager({
     return Array.from(uniqueMap.values());
   }, [adminUsers, defaultAdmins]);
 
+  // Helper to match authenticated Google email to registered branch admin
+  const findMatchingAdmin = useCallback((email?: string | null): AdminUser | null => {
+    if (!email) return null;
+    const cleanEmail = email.trim().toLowerCase();
+    const emailPrefix = cleanEmail.split('@')[0];
+
+    // 1. Direct match by registered Google email
+    const byEmail = activeAdmins.find(a => a.email && a.email.trim().toLowerCase() === cleanEmail);
+    if (byEmail) return byEmail;
+
+    // 2. Super admin predefined email match
+    if (cleanEmail === 'ma.ihyaassunnah@gmail.com' || cleanEmail.includes('wahyudin')) {
+      return activeAdmins.find(a => a.role === 'super_admin') || defaultAdmins[0];
+    }
+
+    // 3. Match username with email handle
+    const byUsername = activeAdmins.find(a => a.username.trim().toLowerCase() === emailPrefix);
+    if (byUsername) return byUsername;
+
+    return null;
+  }, [activeAdmins, defaultAdmins]);
+
   // Listen to Firebase Auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setGoogleUser(user);
-        // Find if user email matches any known admin
-        const match = activeAdmins.find(
-          a => (a.email && a.email.toLowerCase() === user.email?.toLowerCase()) ||
-               (user.email && user.email.toLowerCase().includes(a.username.toLowerCase()))
-        );
+        const match = findMatchingAdmin(user.email);
         if (match) {
           setSelectedRoleUser(match);
           setSelectedBranch(match.branch || 'Pusat');
+          setGoogleAuthError(null);
         } else {
-          // Default to Super Admin for default Google user or create Admin profile
-          const isSuper = user.email?.toLowerCase() === 'ma.ihyaassunnah@gmail.com' || user.email?.toLowerCase().includes('wahyudin');
-          setSelectedRoleUser({
-            username: user.email?.split('@')[0] || 'google_user',
-            name: user.displayName || user.email?.split('@')[0] || 'Pengguna Google',
-            role: isSuper ? 'super_admin' : 'branch_admin',
-            branch: isSuper ? 'Semua' : 'Pusat',
-            email: user.email || undefined,
-            avatarUrl: user.photoURL || undefined,
-            googleUid: user.uid,
-            authProvider: 'google'
-          });
-          setSelectedBranch(isSuper ? 'Semua' : 'Pusat');
+          setSelectedRoleUser(null);
+          setGoogleAuthError(`Akses Ditolak: Email Google "${user.email}" belum terdaftar pada cabang manapun di Math Fingers. Pastikan Anda masuk menggunakan akun Google resmi cabang yang telah didaftarkan.`);
         }
       } else {
         setGoogleUser(null);
@@ -155,7 +164,7 @@ export function LoginManager({
     });
 
     return () => unsubscribe();
-  }, [activeAdmins]);
+  }, [findMatchingAdmin]);
 
   // Initial user resolution from localStorage
   useEffect(() => {
@@ -167,7 +176,7 @@ export function LoginManager({
       if (found) {
         setSelectedRoleUser(found);
         setSelectedBranch(found.branch || 'Pusat');
-        setEmailInput(`${found.username}@mathfingers.id`);
+        setEmailInput(found.email || `${found.username}@mathfingers.id`);
         setPasswordInput(found.password || 'admin123');
       }
     } else if (!selectedRoleUser && activeAdmins.length > 0) {
@@ -213,7 +222,7 @@ export function LoginManager({
     }
   };
 
-  // Google Login Popup Trigger
+  // Google Login Popup Trigger with strict branch email validation
   const handleSignInWithGoogle = async () => {
     setIsGoogleLoading(true);
     setGoogleAuthError(null);
@@ -223,17 +232,22 @@ export function LoginManager({
       const user = result.user;
       setGoogleUser(user);
 
-      const isSuper = user.email?.toLowerCase() === 'ma.ihyaassunnah@gmail.com' || user.email?.toLowerCase().includes('wahyudin');
-      
+      const matchedAdmin = findMatchingAdmin(user.email);
+      if (!matchedAdmin) {
+        setGoogleAuthError(`Akses Ditolak: Email Google "${user.email}" belum terdaftar pada cabang manapun di Math Fingers. Pastikan Anda masuk menggunakan akun Google resmi cabang yang telah didaftarkan.`);
+        setIsGoogleLoading(false);
+        return;
+      }
+
+      const isSuper = matchedAdmin.role === 'super_admin';
       const adminToLogin: AdminUser = {
-        username: user.email?.split('@')[0] || 'google_user',
-        name: user.displayName || user.email?.split('@')[0] || 'Pengguna Google',
-        role: isSuper ? 'super_admin' : (selectedRoleUser?.role || 'branch_admin'),
-        branch: isSuper ? 'Semua' : (selectedBranch || selectedRoleUser?.branch || 'Pusat'),
-        email: user.email || undefined,
-        avatarUrl: user.photoURL || undefined,
+        ...matchedAdmin,
+        name: user.displayName || matchedAdmin.name,
+        email: user.email || matchedAdmin.email,
+        avatarUrl: user.photoURL || matchedAdmin.avatarUrl,
         googleUid: user.uid,
-        authProvider: 'google'
+        authProvider: 'google',
+        branch: isSuper ? 'Semua' : (matchedAdmin.branch || 'Pusat')
       };
 
       setIsSuccess(true);
@@ -247,9 +261,9 @@ export function LoginManager({
       }, 500);
     } catch (err: any) {
       console.warn('Firebase signInWithPopup:', err);
-      // If popup is blocked by iframe sandbox, offer direct fast-login with Google identity
+      // If popup is blocked by iframe sandbox, offer direct fast-login with registered Google identity
       if (err?.code === 'auth/popup-blocked' || err?.code === 'auth/popup-closed-by-user' || err?.message?.includes('popup')) {
-        setGoogleAuthError('Popup Google terhalang oleh pengaturan browser. Anda dapat menggunakan tombol verifikasi instan Google di bawah.');
+        setGoogleAuthError('Popup Google terhalang oleh pengaturan browser. Silakan pilih akun cabang terdaftar di daftar Akses Cepat di bawah.');
       } else {
         setGoogleAuthError(err?.message || 'Gagal login dengan akun Google. Silakan coba kembali.');
       }
@@ -258,21 +272,17 @@ export function LoginManager({
     }
   };
 
-  // Fast direct Google Auth for Preview / Sandbox Environment
-  const handleFastGoogleAuth = (email: string = 'ma.ihyaassunnah@gmail.com', name: string = 'Wahyudin Hafiz, S.Pd') => {
+  // Fast direct Google Auth for registered branch admin accounts
+  const handleFastGoogleAuth = (admin: AdminUser) => {
     setIsGoogleLoading(true);
     setGoogleAuthError(null);
 
     setTimeout(() => {
-      const isSuper = email.toLowerCase().includes('wahyudin') || email.toLowerCase() === 'ma.ihyaassunnah@gmail.com';
+      const isSuper = admin.role === 'super_admin';
       const targetAdmin: AdminUser = {
-        username: email.split('@')[0] || 'wahyudin',
-        name: name,
-        role: isSuper ? 'super_admin' : 'branch_admin',
-        branch: isSuper ? 'Semua' : (selectedBranch || 'Pusat'),
-        email: email,
-        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-        authProvider: 'google'
+        ...admin,
+        authProvider: 'google',
+        branch: isSuper ? 'Semua' : (admin.branch || 'Pusat')
       };
 
       setIsSuccess(true);
@@ -286,24 +296,28 @@ export function LoginManager({
       setTimeout(() => {
         onLogin(targetAdmin);
       }, 400);
-    }, 600);
+    }, 400);
   };
 
   // Complete Google Login once authenticated
   const handleProceedWithGoogleUser = () => {
     if (!googleUser) return;
     
-    const isSuper = googleUser.email?.toLowerCase() === 'ma.ihyaassunnah@gmail.com' || googleUser.email?.toLowerCase().includes('wahyudin');
-    
+    const matchedAdmin = findMatchingAdmin(googleUser.email);
+    if (!matchedAdmin) {
+      setGoogleAuthError(`Akses Ditolak: Email Google "${googleUser.email}" belum terdaftar pada cabang manapun.`);
+      return;
+    }
+
+    const isSuper = matchedAdmin.role === 'super_admin';
     const adminToLogin: AdminUser = {
-      username: googleUser.email?.split('@')[0] || 'google_user',
-      name: googleUser.displayName || selectedRoleUser?.name || 'Pengguna Google',
-      role: selectedRoleUser?.role || (isSuper ? 'super_admin' : 'branch_admin'),
-      branch: selectedRoleUser?.branch || selectedBranch || (isSuper ? 'Semua' : 'Pusat'),
-      email: googleUser.email || undefined,
-      avatarUrl: googleUser.photoURL || undefined,
+      ...matchedAdmin,
+      name: googleUser.displayName || matchedAdmin.name,
+      email: googleUser.email || matchedAdmin.email,
+      avatarUrl: googleUser.photoURL || matchedAdmin.avatarUrl,
       googleUid: googleUser.uid,
-      authProvider: 'google'
+      authProvider: 'google',
+      branch: isSuper ? 'Semua' : (selectedBranch || matchedAdmin.branch || 'Pusat')
     };
 
     setIsSuccess(true);
@@ -321,6 +335,7 @@ export function LoginManager({
     try {
       await firebaseSignOut(auth);
       setGoogleUser(null);
+      setGoogleAuthError(null);
     } catch (e) {
       console.error(e);
     }
@@ -474,105 +489,139 @@ export function LoginManager({
               
               {/* If Google User is Signed In via Firebase */}
               {googleUser ? (
-                <div className="p-4 rounded-3xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-extrabold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
-                      <CheckCircle2 size={14} className="text-emerald-600" />
-                      Akun Google Terverifikasi
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleSignOutGoogle}
-                      className="text-[11px] font-bold text-slate-400 hover:text-rose-500 flex items-center gap-1 transition cursor-pointer"
-                      title="Ganti Akun Google"
-                    >
-                      <LogOut size={12} />
-                      <span>Ganti</span>
-                    </button>
-                  </div>
+                (() => {
+                  const matched = findMatchingAdmin(googleUser.email);
+                  if (matched) {
+                    const isSuper = matched.role === 'super_admin';
+                    return (
+                      <div className="p-4 rounded-3xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 space-y-3 animate-fadeIn">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-extrabold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
+                            <CheckCircle2 size={14} className="text-emerald-600" />
+                            Akun Cabang Terdaftar & Terverifikasi
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleSignOutGoogle}
+                            className="text-[11px] font-bold text-slate-400 hover:text-rose-500 flex items-center gap-1 transition cursor-pointer"
+                            title="Ganti Akun Google"
+                          >
+                            <LogOut size={12} />
+                            <span>Ganti Akun</span>
+                          </button>
+                        </div>
 
-                  {/* Google Profile Card */}
-                  <div className="flex items-center gap-3.5 p-3 bg-white dark:bg-slate-900 rounded-2xl border border-emerald-100 dark:border-slate-800 shadow-sm">
-                    {googleUser.photoURL ? (
-                      <img
-                        src={googleUser.photoURL}
-                        alt={googleUser.displayName || 'Google Avatar'}
-                        referrerPolicy="no-referrer"
-                        className="w-12 h-12 rounded-2xl object-cover border-2 border-emerald-500 shadow-xs"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white font-black text-base flex items-center justify-center shadow-xs">
-                        {googleUser.displayName?.charAt(0) || googleUser.email?.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <div className="font-extrabold text-sm text-slate-900 dark:text-white truncate">
-                        {googleUser.displayName || 'Pengguna Google'}
-                      </div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">
-                        {googleUser.email}
-                      </div>
-                      <div className="mt-1 flex items-center gap-1.5">
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold text-[10px]">
-                          {selectedRoleUser?.role === 'super_admin' ? '⭐ Super Admin' : '🏫 Admin Cabang'}
-                        </span>
-                        <span className="text-[10px] text-slate-400">
-                          ({selectedRoleUser?.branch || selectedBranch})
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                        {/* Google Profile Card */}
+                        <div className="flex items-center gap-3.5 p-3 bg-white dark:bg-slate-900 rounded-2xl border border-emerald-100 dark:border-slate-800 shadow-sm">
+                          {googleUser.photoURL || matched.avatarUrl ? (
+                            <img
+                              src={googleUser.photoURL || matched.avatarUrl}
+                              alt={matched.name}
+                              referrerPolicy="no-referrer"
+                              className="w-12 h-12 rounded-2xl object-cover border-2 border-emerald-500 shadow-xs"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white font-black text-base flex items-center justify-center shadow-xs">
+                              {matched.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="font-extrabold text-sm text-slate-900 dark:text-white truncate">
+                              {matched.name}
+                            </div>
+                            <div className="text-xs text-emerald-600 dark:text-emerald-400 font-mono truncate font-semibold">
+                              {googleUser.email}
+                            </div>
+                            <div className="mt-1 flex items-center gap-1.5">
+                              <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold text-[10px]">
+                                {isSuper ? '⭐ Super Admin' : '🏫 Admin Cabang'}
+                              </span>
+                              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
+                                Cabang: {matched.branch}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
 
-                  {/* Branch Assignment Selector for Google User */}
-                  <div className="space-y-1 pt-1">
-                    <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
-                      <Building size={12} className="text-emerald-500" />
-                      <span>Pilih Akses Cabang:</span>
-                    </label>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {[
-                        { id: 'Pusat', name: 'Pusat' },
-                        { id: 'Singkut', name: 'Singkut' },
-                        { id: 'Bangko', name: 'Bangko' },
-                        { id: 'Bandung', name: 'Bandung' },
-                        { id: 'Semua', name: 'Semua Cabang' }
-                      ].map((b) => (
+                        {/* If Super Admin, allow branch selection */}
+                        {isSuper && (
+                          <div className="space-y-1 pt-1">
+                            <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                              <Building size={12} className="text-emerald-500" />
+                              <span>Pilih Cakupan Cabang Super Admin:</span>
+                            </label>
+                            <div className="grid grid-cols-3 gap-1.5">
+                              {[
+                                { id: 'Pusat', name: 'Pusat' },
+                                { id: 'Singkut', name: 'Singkut' },
+                                { id: 'Bangko', name: 'Bangko' },
+                                { id: 'Bandung', name: 'Bandung' },
+                                { id: 'Semua', name: 'Semua Cabang' }
+                              ].map((b) => (
+                                <button
+                                  key={b.id}
+                                  type="button"
+                                  onClick={() => setSelectedBranch(b.id)}
+                                  className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition cursor-pointer text-center ${
+                                    selectedBranch === b.id
+                                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-emerald-400'
+                                  }`}
+                                >
+                                  {b.name}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Proceed to Dashboard Button */}
                         <button
-                          key={b.id}
                           type="button"
-                          onClick={() => setSelectedBranch(b.id)}
-                          className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition cursor-pointer text-center ${
-                            selectedBranch === b.id
-                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-emerald-400'
-                          }`}
+                          onClick={handleProceedWithGoogleUser}
+                          disabled={isSuccess}
+                          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm shadow-xl shadow-emerald-600/30 transition flex items-center justify-center gap-2 cursor-pointer mt-2 active:scale-[0.99]"
                         >
-                          {b.name}
+                          {isSuccess ? (
+                            <>
+                              <CheckCircle2 size={18} className="animate-bounce" />
+                              <span>Membuka Dashboard Math Fingers...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Buka Dashboard ({isSuper ? selectedBranch : matched.branch})</span>
+                              <ChevronRight size={18} />
+                            </>
+                          )}
                         </button>
-                      ))}
-                    </div>
-                  </div>
+                      </div>
+                    );
+                  }
 
-                  {/* Proceed to Dashboard Button */}
-                  <button
-                    type="button"
-                    onClick={handleProceedWithGoogleUser}
-                    disabled={isSuccess}
-                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm shadow-xl shadow-emerald-600/30 transition flex items-center justify-center gap-2 cursor-pointer mt-2 active:scale-[0.99]"
-                  >
-                    {isSuccess ? (
-                      <>
-                        <CheckCircle2 size={18} className="animate-bounce" />
-                        <span>Membuka Dashboard Math Fingers...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Masuk sebagai {googleUser.displayName?.split(' ')[0] || 'Admin'}</span>
-                        <ChevronRight size={18} />
-                      </>
-                    )}
-                  </button>
-                </div>
+                  // UNAUTHORIZED GOOGLE ACCOUNT
+                  return (
+                    <div className="p-4 rounded-3xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 space-y-3 animate-fadeIn">
+                      <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-black text-xs uppercase tracking-wider">
+                        <AlertCircle size={16} />
+                        <span>Akses Ditolak: Akun Belum Terdaftar</span>
+                      </div>
+                      <p className="text-xs text-rose-800 dark:text-rose-200 leading-relaxed">
+                        Akun Google <strong className="font-mono">{googleUser.email}</strong> belum terdaftar pada cabang manapun di Math Fingers.
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Hanya akun Google yang telah didaftarkan oleh Super Admin di menu <strong>Manajemen Cabang & Akun Admin</strong> yang memiliki izin login.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleSignOutGoogle}
+                        className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md shadow-rose-600/20 transition flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <LogOut size={14} />
+                        <span>Keluar & Gunakan Akun Google Lain</span>
+                      </button>
+                    </div>
+                  );
+                })()
               ) : (
                 /* Primary Google Sign-In Call-To-Action */
                 <div className="space-y-4">
@@ -609,57 +658,70 @@ export function LoginManager({
                     <span>{isGoogleLoading ? 'Menghubungkan ke Google...' : 'Login dengan Akun Google'}</span>
                   </button>
 
+                  <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-[11px] font-medium flex items-center gap-2">
+                    <Shield size={14} className="text-emerald-600 shrink-0" />
+                    <span>Hanya akun Google cabang yang terdaftar yang dapat masuk ke aplikasi.</span>
+                  </div>
+
                   {/* Fast One-Click Google Auth for Sandbox / Quick Admin Access */}
                   <div className="p-3.5 rounded-2xl bg-slate-100/90 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-2.5">
                     <div className="flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-300">
                       <span className="flex items-center gap-1.5">
                         <Sparkles size={14} className="text-emerald-500" />
-                        Akses Cepat Akun Google Terdaftar:
+                        Akun Google Cabang Terdaftar:
                       </span>
                     </div>
 
                     <div className="space-y-1.5">
                       {/* Super Admin Google Account */}
-                      <button
-                        type="button"
-                        onClick={() => handleFastGoogleAuth('ma.ihyaassunnah@gmail.com', 'Wahyudin Hafiz, S.Pd')}
-                        disabled={isGoogleLoading || isSuccess}
-                        className="w-full p-2.5 rounded-xl border border-emerald-500/30 hover:border-emerald-500 bg-white dark:bg-slate-900 flex items-center justify-between gap-2.5 text-left transition cursor-pointer shadow-xs group"
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-8 h-8 rounded-full bg-emerald-600 text-white font-black text-xs flex items-center justify-center shrink-0">
-                            WH
-                          </div>
-                          <div className="min-w-0">
-                            <div className="font-extrabold text-xs text-slate-800 dark:text-white group-hover:text-emerald-500 transition truncate">
-                              Wahyudin Hafiz (Super Admin)
+                      {activeAdmins.filter(a => a.role === 'super_admin').map((adm) => (
+                        <button
+                          key={adm.username}
+                          type="button"
+                          onClick={() => handleFastGoogleAuth(adm)}
+                          disabled={isGoogleLoading || isSuccess}
+                          className="w-full p-2.5 rounded-xl border border-emerald-500/30 hover:border-emerald-500 bg-white dark:bg-slate-900 flex items-center justify-between gap-2.5 text-left transition cursor-pointer shadow-xs group"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-8 h-8 rounded-full bg-emerald-600 text-white font-black text-xs flex items-center justify-center shrink-0">
+                              WH
                             </div>
-                            <div className="text-[10px] text-slate-400 font-mono truncate">
-                              ma.ihyaassunnah@gmail.com
+                            <div className="min-w-0">
+                              <div className="font-extrabold text-xs text-slate-800 dark:text-white group-hover:text-emerald-500 transition truncate">
+                                {adm.name} (Super Admin)
+                              </div>
+                              <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold truncate">
+                                {adm.email || 'ma.ihyaassunnah@gmail.com'}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold text-[10px] shrink-0">
-                          Semua Cabang
-                        </span>
-                      </button>
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold text-[10px] shrink-0">
+                            Semua Cabang
+                          </span>
+                        </button>
+                      ))}
 
                       {/* Branch Admins */}
-                      <div className="grid grid-cols-2 gap-1.5 pt-1">
-                        {activeAdmins.filter(a => a.username !== 'wahyudin').slice(0, 4).map((adm) => (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                        {activeAdmins.filter(a => a.role !== 'super_admin').map((adm) => (
                           <button
                             key={adm.username}
                             type="button"
-                            onClick={() => handleFastGoogleAuth(`${adm.username}@mathfingers.id`, adm.name)}
+                            onClick={() => handleFastGoogleAuth(adm)}
                             disabled={isGoogleLoading || isSuccess}
-                            className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-left transition hover:border-emerald-500 cursor-pointer flex items-center gap-2 shadow-xs"
+                            className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-left transition hover:border-emerald-500 cursor-pointer flex items-center gap-2 shadow-xs group"
                           >
-                            <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 border border-emerald-500/30">
+                            <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 border border-emerald-500/30">
                               <img src={getAdminAvatar(adm)} alt={adm.name} className="w-full h-full object-cover" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <span className="block truncate font-bold text-[11px]">{adm.name.split(',')[0]}</span>
-                              <span className="block text-[9px] text-slate-400 capitalize">{adm.branch}</span>
+                              <div className="font-bold text-[11px] text-slate-800 dark:text-white group-hover:text-emerald-500 truncate">
+                                {adm.name.split(',')[0]}
+                              </div>
+                              <div className="text-[9px] text-emerald-600 dark:text-emerald-400 font-mono truncate">
+                                {adm.email || `${adm.username}@mathfingers.id`}
+                              </div>
+                              <span className="inline-block text-[9px] text-slate-400 capitalize">Cabang {adm.branch}</span>
                             </div>
                           </button>
                         ))}
@@ -668,8 +730,8 @@ export function LoginManager({
                   </div>
 
                   {googleAuthError && (
-                    <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-300 text-xs font-medium flex items-start gap-2 animate-fadeIn">
-                      <AlertCircle size={16} className="shrink-0 mt-0.5 text-amber-600" />
+                    <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-900 dark:text-rose-300 text-xs font-medium flex items-start gap-2 animate-fadeIn">
+                      <AlertCircle size={16} className="shrink-0 mt-0.5 text-rose-600" />
                       <span>{googleAuthError}</span>
                     </div>
                   )}

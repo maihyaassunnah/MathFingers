@@ -34,10 +34,11 @@ export function SupabaseSqlEditor({
   ]).map(b => `  ('${b.id}', '${b.name.replace(/'/g, "''")}', '${(b.address || '').replace(/'/g, "''")}', '${(b.phone || '').replace(/'/g, "''")}', ${b.createdAt || 1719600000})`).join(',\n');
 
   const adminUsersSqlValues = (adminUsers && adminUsers.length > 0 ? adminUsers : [
-    { username: 'febrianti', name: 'Febrianti Dewi', role: 'super_admin' as const, branch: 'Pusat', password: 'admin123', avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200' },
-    { username: 'dewi', name: 'Dewi Safitri', role: 'branch_admin' as const, branch: 'Pusat', password: 'dewi123', avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200' },
-    { username: 'les_bandung', name: 'Les Privat Bandung', role: 'branch_admin' as const, branch: 'Bandung', password: 'bdg123', avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200' }
-  ]).map(u => `  ('${u.username}', '${u.name.replace(/'/g, "''")}', '${u.role}', '${u.branch.replace(/'/g, "''")}', '${(u.password || '123456').replace(/'/g, "''")}', ${u.avatarUrl ? `'${u.avatarUrl.replace(/'/g, "''")}'` : 'NULL'})`).join(',\n');
+    { username: 'wahyudin', name: 'Wahyudin Hafiz, S.Pd', role: 'super_admin' as const, branch: 'Pusat', email: 'ma.ihyaassunnah@gmail.com', password: 'admin123', avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200' },
+    { username: 'febrianti', name: 'Febrianti Dewi', role: 'branch_admin' as const, branch: 'Singkut', email: 'febrianti.mathfingers@gmail.com', password: 'admin123', avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200' },
+    { username: 'dewi', name: 'Dewi Safitri', role: 'branch_admin' as const, branch: 'Bangko', email: 'dewi.mathfingers@gmail.com', password: 'dewi123', avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200' },
+    { username: 'les_bandung', name: 'Les Privat Bandung', role: 'branch_admin' as const, branch: 'Bandung', email: 'bandung.mathfingers@gmail.com', password: 'bdg123', avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200' }
+  ]).map(u => `  ('${u.username}', '${u.name.replace(/'/g, "''")}', '${u.role}', '${u.branch.replace(/'/g, "''")}', '${(u.password || '123456').replace(/'/g, "''")}', ${u.avatarUrl ? `'${u.avatarUrl.replace(/'/g, "''")}'` : 'NULL'}, ${u.email ? `'${u.email.replace(/'/g, "''")}'` : 'NULL'})`).join(',\n');
 
   
   // Connection Test State
@@ -298,6 +299,7 @@ CREATE TABLE IF NOT EXISTS admin_users (
   name TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('super_admin', 'branch_admin')),
   branch TEXT NOT NULL,
+  email TEXT,
   password TEXT,
   "avatarUrl" TEXT,
   "createdAt" BIGINT DEFAULT 1719600000
@@ -307,8 +309,9 @@ ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read-write for demo" ON admin_users;
 CREATE POLICY "Allow public read-write for demo" ON admin_users FOR ALL USING (true) WITH CHECK (true);
 
--- Pastikan kolom avatarUrl ada jika tabel admin_users sudah ada sebelumnya
+-- Pastikan kolom avatarUrl dan email ada jika tabel admin_users sudah ada sebelumnya
 ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS "avatarUrl" TEXT;
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS email TEXT;
 
 
 -- 9. TABEL HARI_LES (Daftar Hari Les / Jadwal Bimbingan)
@@ -699,6 +702,7 @@ CREATE TABLE IF NOT EXISTS admin_users (
   name TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('super_admin', 'branch_admin')),
   branch TEXT NOT NULL,
+  email TEXT,
   password TEXT,
   "avatarUrl" TEXT,
   "createdAt" BIGINT DEFAULT 1719600000
@@ -707,8 +711,9 @@ ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read-write for demo" ON admin_users;
 CREATE POLICY "Allow public read-write for demo" ON admin_users FOR ALL USING (true) WITH CHECK (true);
 
--- Pastikan kolom avatarUrl ada jika tabel admin_users sudah ada sebelumnya
+-- Pastikan kolom avatarUrl dan email ada jika tabel admin_users sudah ada sebelumnya
 ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS "avatarUrl" TEXT;
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS email TEXT;
 
 -- 4. Isi seed data awal untuk Cabang & Admin (jika belum ada)
 INSERT INTO branches (id, name, address, phone, "createdAt")

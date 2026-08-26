@@ -48,7 +48,7 @@ export function SupabaseSqlEditor({
     tables: { name: string; status: 'ok' | 'error' | 'unchecked'; errorMsg?: string }[];
   } | null>(null);
 
-  const tables = ['students', 'classes', 'attendance', 'notes', 'invoices', 'grades', 'materials', 'branches', 'admin_users', 'hari_les', 'app_settings', 'finance_incomes', 'finance_expenses'];
+  const tables = ['students', 'classes', 'attendance', 'notes', 'invoices', 'grades', 'behavior_assessments', 'materials', 'branches', 'admin_users', 'hari_les', 'app_settings', 'finance_incomes', 'finance_expenses'];
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -254,7 +254,31 @@ DROP POLICY IF EXISTS "Allow public read-write for demo" ON grades;
 CREATE POLICY "Allow public read-write for demo" ON grades FOR ALL USING (true) WITH CHECK (true);
 
 
--- 7. TABEL BRANCHES (Daftar Cabang-cabang Les Privat)
+-- 7. TABEL BEHAVIOR_ASSESSMENTS (Penilaian Sikap, Fokus, Partisipasi & Keaktifan Siswa)
+CREATE TABLE IF NOT EXISTS behavior_assessments (
+  id TEXT PRIMARY KEY,
+  "studentId" TEXT REFERENCES students(id) ON DELETE CASCADE,
+  "studentName" TEXT NOT NULL,
+  date TEXT NOT NULL,
+  topic TEXT,
+  fokus TEXT NOT NULL DEFAULT 'A',
+  partisipasi TEXT NOT NULL DEFAULT 'A',
+  "sikapKeaktifan" TEXT NOT NULL DEFAULT 'A',
+  notes TEXT,
+  "teacherName" TEXT,
+  branch TEXT DEFAULT 'Pusat',
+  "createdAt" BIGINT NOT NULL
+);
+
+ALTER TABLE behavior_assessments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for behavior_assessments" ON behavior_assessments;
+CREATE POLICY "Allow public read-write for behavior_assessments" ON behavior_assessments FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_behavior_student_id ON behavior_assessments("studentId");
+CREATE INDEX IF NOT EXISTS idx_behavior_date ON behavior_assessments(date);
+
+
+-- 8. TABEL BRANCHES (Daftar Cabang-cabang Les Privat)
 CREATE TABLE IF NOT EXISTS branches (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
@@ -504,6 +528,28 @@ CREATE POLICY "Allow public read-write for demo" ON classes FOR ALL USING (true)
   notes TEXT,
   branch TEXT DEFAULT 'Pusat'
 );`,
+
+    behavior_assessments: `CREATE TABLE IF NOT EXISTS behavior_assessments (
+  id TEXT PRIMARY KEY,
+  "studentId" TEXT REFERENCES students(id) ON DELETE CASCADE,
+  "studentName" TEXT NOT NULL,
+  date TEXT NOT NULL,
+  topic TEXT,
+  fokus TEXT NOT NULL DEFAULT 'A',
+  partisipasi TEXT NOT NULL DEFAULT 'A',
+  "sikapKeaktifan" TEXT NOT NULL DEFAULT 'A',
+  notes TEXT,
+  "teacherName" TEXT,
+  branch TEXT DEFAULT 'Pusat',
+  "createdAt" BIGINT NOT NULL
+);
+
+ALTER TABLE behavior_assessments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for behavior_assessments" ON behavior_assessments;
+CREATE POLICY "Allow public read-write for behavior_assessments" ON behavior_assessments FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_behavior_student_id ON behavior_assessments("studentId");
+CREATE INDEX IF NOT EXISTS idx_behavior_date ON behavior_assessments(date);`,
 
     materials: `CREATE TABLE IF NOT EXISTS materials (
   id TEXT PRIMARY KEY,
@@ -1016,7 +1062,30 @@ CREATE TABLE IF NOT EXISTS finance_expenses (
 
 ALTER TABLE finance_expenses ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read-write for demo" ON finance_expenses;
-CREATE POLICY "Allow public read-write for demo" ON finance_expenses FOR ALL USING (true) WITH CHECK (true);`
+CREATE POLICY "Allow public read-write for demo" ON finance_expenses FOR ALL USING (true) WITH CHECK (true);`,
+
+    behavior_assessments: `-- Pembuatan Tabel Penilaian Sikap & Keaktifan Siswa (Migrasi Mandiri)
+CREATE TABLE IF NOT EXISTS behavior_assessments (
+  id TEXT PRIMARY KEY,
+  "studentId" TEXT REFERENCES students(id) ON DELETE CASCADE,
+  "studentName" TEXT NOT NULL,
+  date TEXT NOT NULL,
+  topic TEXT,
+  fokus TEXT NOT NULL DEFAULT 'A',
+  partisipasi TEXT NOT NULL DEFAULT 'A',
+  "sikapKeaktifan" TEXT NOT NULL DEFAULT 'A',
+  notes TEXT,
+  "teacherName" TEXT,
+  branch TEXT DEFAULT 'Pusat',
+  "createdAt" BIGINT NOT NULL
+);
+
+ALTER TABLE behavior_assessments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-write for behavior_assessments" ON behavior_assessments;
+CREATE POLICY "Allow public read-write for behavior_assessments" ON behavior_assessments FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_behavior_student_id ON behavior_assessments("studentId");
+CREATE INDEX IF NOT EXISTS idx_behavior_date ON behavior_assessments(date);`
   };
 
   return (
@@ -1344,6 +1413,16 @@ CREATE POLICY "Allow public read-write for demo" ON finance_expenses FOR ALL USI
                   }`}
                 >
                   Tabel Keuangan (Pemasukan & Pengeluaran)
+                </button>
+                <button
+                  onClick={() => setSelectedTable('behavior_assessments')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                    selectedTable === 'behavior_assessments'
+                      ? 'bg-slate-800 text-emerald-400 border border-emerald-500/20'
+                      : 'bg-slate-950/40 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Tabel Penilaian Sikap & Keaktifan
                 </button>
               </div>
 

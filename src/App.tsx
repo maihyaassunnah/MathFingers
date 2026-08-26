@@ -27,6 +27,7 @@ import { AppUpdateModal, LATEST_APP_VERSION } from './components/AppUpdateModal'
 import { MobileBottomNavigation } from './components/MobileBottomNavigation';
 import { MobileDrawer } from './components/MobileDrawer';
 import { Sidebar } from './components/Sidebar';
+import { HeaderSyncIndicator } from './components/HeaderSyncIndicator';
 import { AdminUser, Branch } from './types';
 import { getAdminAvatar, updateDynamicPwaIcon, getStudentUniqueCode } from './utils';
 
@@ -219,6 +220,7 @@ export default function App() {
     notes,
     invoices,
     grades,
+    behaviorAssessments,
     materials,
     branches,
     adminUsers,
@@ -231,6 +233,9 @@ export default function App() {
     dashboardTasks,
     loading,
     isOfflineFallback,
+    isSyncing,
+    lastSyncedAt,
+    syncData,
     addStudent,
     updateStudent,
     deleteStudent,
@@ -248,6 +253,10 @@ export default function App() {
     addGrade,
     deleteGrade,
     updateGrade,
+    addBehaviorAssessment,
+    addBehaviorAssessmentsBatch,
+    updateBehaviorAssessment,
+    deleteBehaviorAssessment,
     addMaterial,
     updateMaterial,
     deleteMaterial,
@@ -320,6 +329,7 @@ export default function App() {
   const filteredNotes = notes.filter(n => isBranchMatched(n.branch));
   const filteredInvoices = invoices.filter(i => isBranchMatched(i.branch));
   const filteredGrades = grades.filter(g => isBranchMatched(g.branch));
+  const filteredBehaviorAssessments = behaviorAssessments.filter(ba => isBranchMatched(ba.branch));
   const filteredClasses = classes.filter(c => isBranchMatched(c.branch));
   const filteredManualIncomes = manualIncomes.filter(mi => isBranchMatched(mi.branch));
   const filteredExpenses = expenses.filter(e => isBranchMatched(e.branch));
@@ -465,6 +475,25 @@ export default function App() {
       ...gradeData,
       branch: branchToSet
     });
+  };
+
+  const handleAddBehaviorAssessment = async (assessmentData: any) => {
+    const defaultBranchName = branches[0]?.name || 'Pusat';
+    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
+    await addBehaviorAssessment({
+      ...assessmentData,
+      branch: assessmentData.branch || branchToSet
+    });
+  };
+
+  const handleAddBatchBehaviorAssessments = async (items: any[]) => {
+    const defaultBranchName = branches[0]?.name || 'Pusat';
+    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
+    const updatedItems = items.map(it => ({
+      ...it,
+      branch: it.branch || branchToSet
+    }));
+    await addBehaviorAssessmentsBatch(updatedItems);
   };
 
   const isSuperAdmin = currentUser?.role === 'super_admin';
@@ -726,10 +755,17 @@ export default function App() {
           <GradeManager 
             students={filteredStudents} 
             grades={filteredGrades} 
+            behaviorAssessments={filteredBehaviorAssessments}
             classes={filteredClasses}
             onAddGrade={handleAddGrade} 
             onDeleteGrade={deleteGrade} 
             onUpdateGrade={updateGrade}
+            onAddBehaviorAssessment={handleAddBehaviorAssessment}
+            onAddBatchBehaviorAssessments={handleAddBatchBehaviorAssessments}
+            onDeleteBehaviorAssessment={deleteBehaviorAssessment}
+            onUpdateBehaviorAssessment={updateBehaviorAssessment}
+            activeBranch={activeBranch}
+            defaultTeacherName={currentBranchSettings?.defaultTeacherName || 'Tutor Math Fingers'}
             theme={theme}
           />
         );
@@ -751,6 +787,7 @@ export default function App() {
             attendance={filteredAttendance} 
             notes={filteredNotes} 
             grades={filteredGrades} 
+            behaviorAssessments={filteredBehaviorAssessments}
             classes={filteredClasses}
             currentUser={currentUser}
             theme={theme}
@@ -919,30 +956,15 @@ export default function App() {
           <MathFingerLogo size={36} textSize="sm" theme={theme} />
 
           <div className="flex items-center gap-2">
-            {/* Mobile Offline Status indicator with real-time ping latency and rating */}
-            {isOfflineFallback || pingLatency === null ? (
-              <span className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 text-amber-500 dark:text-amber-400 border border-amber-500/20 rounded-xl text-xs shadow-xs" title="Koneksi Terputus - Mode Penyimpanan Lokal Aktif">
-                <CloudLightning size={14} className="animate-pulse text-amber-500" />
-                <span className="font-extrabold text-[10px] tracking-wider uppercase">Lokal Safe</span>
-              </span>
-            ) : (
-              (() => {
-                const rating = pingLatency < 100 ? { label: 'Sangat Baik', colorClass: 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/20', pingColor: 'bg-emerald-400' } :
-                               pingLatency < 250 ? { label: 'Cukup', colorClass: 'bg-amber-500/10 text-amber-500 dark:text-amber-400 border-amber-500/20', pingColor: 'bg-amber-400' } :
-                               { label: 'Lambat', colorClass: 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/20', pingColor: 'bg-rose-400' };
-                return (
-                  <span className={`flex items-center gap-1.5 px-2.5 py-1 border rounded-xl text-xs transition-all shadow-xs ${rating.colorClass}`} title={`Supabase Terhubung - Latensi: ${pingLatency}ms (${rating.label})`}>
-                    <span className="relative flex h-2 w-2">
-                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${rating.pingColor}`}></span>
-                      <span className={`relative inline-flex rounded-full h-2 w-2 ${rating.pingColor.replace('400', '500')}`}></span>
-                    </span>
-                    <Wifi size={14} />
-                    <span className="font-extrabold text-[10px]">{pingLatency} ms</span>
-                    <span className="text-[8px] opacity-75 font-bold uppercase tracking-wider hidden xs:inline">({rating.label})</span>
-                  </span>
-                );
-              })()
-            )}
+            <HeaderSyncIndicator
+              isSyncing={isSyncing}
+              isOfflineFallback={isOfflineFallback}
+              pingLatency={pingLatency}
+              lastSyncedAt={lastSyncedAt}
+              onManualSync={syncData}
+              theme={theme}
+              compact={true}
+            />
           </div>
         </header>
       )}
@@ -995,6 +1017,36 @@ export default function App() {
 
       {/* 4. MAIN WORKSPACE CONTENT WINDOW */}
       <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-24 md:pb-8 overflow-y-auto max-w-7xl mx-auto w-full">
+        {/* Desktop Workspace Header with Title, Branch Badge, and Background Sync Indicator */}
+        {isDesktop && (
+          <div className="flex items-center justify-between pb-4 mb-6 border-b border-slate-200/80 dark:border-slate-800/80">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-extrabold tracking-tight text-slate-800 dark:text-white">
+                  {navigationItems.find(n => n.id === activeTab)?.name || 'Dashboard'}
+                </h1>
+                {isSuperAdmin && activeBranch !== 'all' && (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    Cabang: {activeBranch}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <HeaderSyncIndicator
+                isSyncing={isSyncing}
+                isOfflineFallback={isOfflineFallback}
+                pingLatency={pingLatency}
+                lastSyncedAt={lastSyncedAt}
+                onManualSync={syncData}
+                theme={theme}
+                compact={false}
+              />
+            </div>
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
           <motion.div 
             key={activeTab} 

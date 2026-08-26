@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Student, Attendance, TeacherNote, Grade, ClassGroup, AdminUser } from '../types';
+import { Student, Attendance, TeacherNote, Grade, ClassGroup, AdminUser, StudentBehaviorAssessment } from '../types';
 import { getWhatsAppLink } from '../utils';
 import { generateStudentPDFReport, getTeacherSignatureName } from '../utils/pdfGenerator';
 import { 
@@ -15,10 +15,12 @@ import {
   Printer,
   X,
   FileText,
-  Users,
-  CheckCircle2,
+  Filter,
+  RotateCcw,
+  CalendarDays,
   Sparkles,
-  UserCheck
+  UserCheck,
+  CheckCircle2
 } from 'lucide-react';
 import { CustomDropdown } from './CustomDropdown';
 
@@ -27,16 +29,20 @@ interface StudentProgressReportProps {
   attendance: Attendance[];
   notes: TeacherNote[];
   grades: Grade[];
+  behaviorAssessments?: StudentBehaviorAssessment[];
   classes?: ClassGroup[];
   currentUser?: AdminUser | null;
   theme?: string;
 }
+
+type DatePreset = 'all' | 'this_month' | 'last_month' | 'last_3_months' | 'this_year' | 'custom';
 
 export function StudentProgressReport({ 
   students, 
   attendance, 
   notes, 
   grades, 
+  behaviorAssessments = [],
   classes = [], 
   currentUser,
   theme = 'dark' 
@@ -46,6 +52,11 @@ export function StudentProgressReport({
   // Class Filter state
   const [classFilter, setClassFilter] = useState<string>('All');
   const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(false);
+
+  // Date Filter states
+  const [datePreset, setDatePreset] = useState<DatePreset>('all');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
 
   // Available unique classes list
   const availableClasses = useMemo(() => {
@@ -93,12 +104,85 @@ export function StudentProgressReport({
 
   const currentStudent = students.find(s => s.id === currentStudentId);
 
-  // Filter attendance, notes and grades for current student
-  const studentAttendance = attendance.filter(a => a.studentId === currentStudentId);
-  const studentNotes = notes.filter(n => n.studentId === currentStudentId);
-  const studentGrades = grades.filter(g => g.studentId === currentStudentId);
+  // Apply Date Preset helper
+  const applyPreset = (preset: DatePreset) => {
+    setDatePreset(preset);
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-indexed
 
-  // Calculations
+    if (preset === 'all') {
+      setStartDate('');
+      setEndDate('');
+    } else if (preset === 'this_month') {
+      const firstDay = new Date(currentYear, currentMonth, 1);
+      const lastDay = new Date(currentYear, currentMonth + 1, 0);
+      setStartDate(firstDay.toISOString().slice(0, 10));
+      setEndDate(lastDay.toISOString().slice(0, 10));
+    } else if (preset === 'last_month') {
+      const firstDay = new Date(currentYear, currentMonth - 1, 1);
+      const lastDay = new Date(currentYear, currentMonth, 0);
+      setStartDate(firstDay.toISOString().slice(0, 10));
+      setEndDate(lastDay.toISOString().slice(0, 10));
+    } else if (preset === 'last_3_months') {
+      const threeMonthsAgo = new Date(now);
+      threeMonthsAgo.setDate(now.getDate() - 90);
+      setStartDate(threeMonthsAgo.toISOString().slice(0, 10));
+      setEndDate(now.toISOString().slice(0, 10));
+    } else if (preset === 'this_year') {
+      const firstDay = new Date(currentYear, 0, 1);
+      const lastDay = new Date(currentYear, 11, 31);
+      setStartDate(firstDay.toISOString().slice(0, 10));
+      setEndDate(lastDay.toISOString().slice(0, 10));
+    }
+  };
+
+  // Helper date checker
+  const isDateInRange = (dateStr: string) => {
+    if (!dateStr) return true;
+    if (!startDate && !endDate) return true;
+    
+    // Normalise comparison string YYYY-MM-DD
+    const itemDate = dateStr.slice(0, 10);
+    if (startDate && itemDate < startDate) return false;
+    if (endDate && itemDate > endDate) return false;
+    return true;
+  };
+
+  // Raw items for current student
+  const rawStudentAttendance = useMemo(() => attendance.filter(a => a.studentId === currentStudentId), [attendance, currentStudentId]);
+  const rawStudentNotes = useMemo(() => notes.filter(n => n.studentId === currentStudentId), [notes, currentStudentId]);
+  const rawStudentGrades = useMemo(() => grades.filter(g => g.studentId === currentStudentId), [grades, currentStudentId]);
+  const rawStudentBehavior = useMemo(() => behaviorAssessments.filter(b => b.studentId === currentStudentId), [behaviorAssessments, currentStudentId]);
+
+  // Date-filtered records for current student
+  const studentAttendance = useMemo(() => rawStudentAttendance.filter(a => isDateInRange(a.date)), [rawStudentAttendance, startDate, endDate]);
+  const studentNotes = useMemo(() => rawStudentNotes.filter(n => isDateInRange(n.date)), [rawStudentNotes, startDate, endDate]);
+  const studentGrades = useMemo(() => rawStudentGrades.filter(g => isDateInRange(g.date)), [rawStudentGrades, startDate, endDate]);
+  const studentBehavior = useMemo(() => rawStudentBehavior.filter(b => isDateInRange(b.date)), [rawStudentBehavior, startDate, endDate]);
+
+  // Formatted date range label
+  const dateRangeLabel = useMemo(() => {
+    if (!startDate && !endDate) return 'Semua Periode';
+    
+    const formatDate = (ds: string) => {
+      try {
+        return new Date(ds).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+      } catch {
+        return ds;
+      }
+    };
+
+    if (startDate && endDate) {
+      if (startDate === endDate) return formatDate(startDate);
+      return `${formatDate(startDate)} — ${formatDate(endDate)}`;
+    }
+    if (startDate) return `Sejak ${formatDate(startDate)}`;
+    if (endDate) return `Hingga ${formatDate(endDate)}`;
+    return 'Semua Periode';
+  }, [startDate, endDate]);
+
+  // Calculations based on filtered records
   const totalAttendance = studentAttendance.length;
   const presentCount = studentAttendance.filter(a => a.status === 'present').length;
   const attendanceRate = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0;
@@ -119,7 +203,9 @@ export function StudentProgressReport({
       ? studentGrades.slice(0, 3).map(g => `• ${g.topic}: Skor ${g.score}/100`).join('\n')
       : 'Belum ada rekaman tes keterampilan.';
 
-    const message = `*LAPORAN PERKEMBANGAN BELAJAR - MATH FINGERS* 📊🌸\n\nHalo Ayah/Bunda dari ananda *${currentStudent.name}*,\nBerikut adalah perkembangan ananda di bimbingan Jaritmatika harian:\n\n📅 *Ringkasan Sesi Presensi:*\n- Kehadiran: *${attendanceRate}%* (${presentCount} dari ${totalAttendance} sesi)\n\n⚡ *Rata-Rata Keterampilan Jari:*\n- Akurasi Berhitung: *${averageScore ? `${averageScore}/100` : 'Belum Ada Tes'}*\n\n📈 *Riwayat Ujian Terakhir:*\n${gradesSummary}\n\n📝 *Catatan Pengajar & Saran Pendampingan:*\n${notesSummary}\n\n_Mari terus latih jari ananda di rumah minimal 10 menit setiap hari ya Ayah/Bunda agar refleks jari semakin lincah dan kilat! Terima kasih_ 🌸✨`;
+    const periodText = (startDate || endDate) ? `\n📆 *Periode Laporan:* ${dateRangeLabel}` : '';
+
+    const message = `*LAPORAN PERKEMBANGAN BELAJAR - MATH FINGERS* 📊🌸\n\nHalo Ayah/Bunda dari ananda *${currentStudent.name}*,\nBerikut adalah rekap perkembangan ananda di bimbingan Jaritmatika:${periodText}\n\n📅 *Ringkasan Sesi Presensi:*\n- Kehadiran: *${attendanceRate}%* (${presentCount} dari ${totalAttendance} sesi)\n\n⚡ *Rata-Rata Keterampilan Jari:*\n- Akurasi Berhitung: *${averageScore ? `${averageScore}/100` : 'Belum Ada Tes'}*\n\n📈 *Riwayat Ujian & Tes Terakhir:*\n${gradesSummary}\n\n📝 *Catatan Pengajar & Saran Pendampingan:*\n${notesSummary}\n\n_Mari terus latih jari ananda di rumah minimal 10 menit setiap hari ya Ayah/Bunda agar refleks jari semakin lincah dan kilat! Terima kasih_ 🌸✨`;
 
     window.open(getWhatsAppLink(currentStudent.parentPhone, message), '_blank');
   };
@@ -127,10 +213,10 @@ export function StudentProgressReport({
   // Teacher signature resolution based on branch
   const teacherSignature = getTeacherSignatureName(currentStudent, currentUser, studentNotes);
 
-  // jsPDF report generation function
+  // jsPDF report generation function with date range label
   const downloadPDFReport = () => {
     if (!currentStudent) return;
-    generateStudentPDFReport(currentStudent, attendance, notes, grades, currentUser);
+    generateStudentPDFReport(currentStudent, studentAttendance, studentNotes, studentGrades, currentUser, dateRangeLabel);
   };
 
   const handlePrint = () => {
@@ -138,6 +224,7 @@ export function StudentProgressReport({
   };
 
   const isLight = theme === 'light';
+  const hasDateFilterActive = Boolean(startDate || endDate || datePreset !== 'all');
 
   return (
     <div id="progress-report-section" className="space-y-6">
@@ -145,7 +232,7 @@ export function StudentProgressReport({
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h2 className={`text-2xl font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Laporan Perkembangan Siswa</h2>
-          <p className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-sm`}>Rapor digital harian untuk memantau nilai, kehadiran, dan ulasan guru.</p>
+          <p className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-sm`}>Rapor digital harian untuk memantau nilai, kehadiran, dan ulasan guru dengan filter tanggal fleksibel.</p>
         </div>
 
         {activeStudents.length > 0 && (
@@ -188,6 +275,132 @@ export function StudentProgressReport({
         )}
       </div>
 
+      {/* FILTER TANGGAL & RENTANG WAKTU (BARU & LENGKAP) */}
+      <div className={`p-4 sm:p-5 rounded-2xl border shadow-sm transition ${
+        isLight ? 'bg-white border-slate-200' : 'bg-slate-900/90 border-slate-800'
+      }`}>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          
+          {/* Preset Buttons */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <CalendarDays size={16} className="text-emerald-500" />
+              <span className={`text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                Filter Rentang Tanggal Rapor:
+              </span>
+              {hasDateFilterActive && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  {dateRangeLabel}
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[
+                { id: 'all', label: 'Semua Waktu' },
+                { id: 'this_month', label: 'Bulan Ini' },
+                { id: 'last_month', label: 'Bulan Lalu' },
+                { id: 'last_3_months', label: '3 Bulan Terakhir' },
+                { id: 'this_year', label: 'Tahun Ini' },
+              ].map((p) => {
+                const isActive = datePreset === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => applyPreset(p.id as DatePreset)}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm shadow-emerald-500/20'
+                        : isLight
+                          ? 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                          : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Manual Date Range Picker Inputs */}
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <span className={`text-xs font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Dari:</span>
+              <input
+                id="report-start-date"
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  setDatePreset('custom');
+                }}
+                className={`text-xs rounded-xl px-2.5 py-1.5 border font-mono outline-none transition focus:ring-2 focus:ring-emerald-500 ${
+                  isLight 
+                    ? 'bg-slate-50 border-slate-300 text-slate-800' 
+                    : 'bg-slate-950 border-slate-700 text-white'
+                }`}
+              />
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span className={`text-xs font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Sampai:</span>
+              <input
+                id="report-end-date"
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setDatePreset('custom');
+                }}
+                className={`text-xs rounded-xl px-2.5 py-1.5 border font-mono outline-none transition focus:ring-2 focus:ring-emerald-500 ${
+                  isLight 
+                    ? 'bg-slate-50 border-slate-300 text-slate-800' 
+                    : 'bg-slate-950 border-slate-700 text-white'
+                }`}
+              />
+            </div>
+
+            {hasDateFilterActive && (
+              <button
+                type="button"
+                onClick={() => applyPreset('all')}
+                title="Reset Rentang Tanggal"
+                className={`p-2 rounded-xl border text-xs font-bold transition flex items-center gap-1 cursor-pointer shrink-0 ${
+                  isLight 
+                    ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100' 
+                    : 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20'
+                }`}
+              >
+                <RotateCcw size={14} />
+                <span className="hidden sm:inline">Reset</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Data summary status bar based on date range */}
+        {currentStudent && (
+          <div className={`mt-3 pt-3 border-t flex flex-wrap items-center justify-between text-xs gap-2 ${
+            isLight ? 'border-slate-100 text-slate-500' : 'border-slate-800/80 text-slate-400'
+          }`}>
+            <div className="flex items-center gap-2">
+              <Filter size={13} className="text-emerald-500" />
+              <span>
+                Hasil filter periode: <strong className={isLight ? 'text-slate-800' : 'text-white'}>{studentAttendance.length} Presensi</strong>, <strong className={isLight ? 'text-slate-800' : 'text-white'}>{studentGrades.length} Nilai Uji</strong>, <strong className={isLight ? 'text-slate-800' : 'text-white'}>{studentNotes.length} Catatan Guru</strong>{studentBehavior.length > 0 && <>, <strong className={isLight ? 'text-slate-800' : 'text-white'}>{studentBehavior.length} Penilaian Sikap</strong></>}
+              </span>
+            </div>
+
+            {hasDateFilterActive && (rawStudentAttendance.length !== studentAttendance.length || rawStudentGrades.length !== studentGrades.length) && (
+              <span className="text-[11px] text-amber-500 font-medium">
+                * Menampilkan data tersaring ({rawStudentAttendance.length} total sesi seluruh waktu)
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
       {!currentStudent ? (
         <div className={`p-12 rounded-2xl border text-center shadow-sm ${
           isLight ? 'bg-white border-slate-200 text-slate-500' : 'bg-slate-900 border-slate-800 text-slate-500'
@@ -219,7 +432,9 @@ export function StudentProgressReport({
                 <CheckSquare size={20} />
               </div>
               <div>
-                <span className="text-slate-500 text-xs font-semibold block tracking-wider">PRESENSI</span>
+                <span className="text-slate-500 text-xs font-semibold block tracking-wider">
+                  PRESENSI {hasDateFilterActive ? '(PERIODE TERPILIH)' : ''}
+                </span>
                 <span className={`text-2xl font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>{attendanceRate}%</span>
                 <span className="text-xs text-slate-400 block mt-0.5">{presentCount} dari {totalAttendance} Sesi</span>
               </div>
@@ -233,7 +448,9 @@ export function StudentProgressReport({
                 <Award size={20} />
               </div>
               <div>
-                <span className="text-slate-500 text-xs font-semibold block tracking-wider">SKOR RATA-RATA</span>
+                <span className="text-slate-500 text-xs font-semibold block tracking-wider">
+                  SKOR RATA-RATA {hasDateFilterActive ? '(PERIODE TERPILIH)' : ''}
+                </span>
                 <span className={`text-2xl font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>{averageScore ? `${averageScore}/100` : 'N/A'}</span>
                 <span className="text-xs text-slate-400 block mt-0.5">{studentGrades.length} Sesi Latihan</span>
               </div>
@@ -248,13 +465,18 @@ export function StudentProgressReport({
               isLight ? 'bg-slate-50/80 border-slate-200' : 'bg-slate-950/40 border-slate-800'
             }`}>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-md">
                     RAPOR DIGITAL
                   </span>
                   {currentStudent.kelas && (
                     <span className="text-[10px] font-bold text-blue-500 bg-blue-500/10 px-2.5 py-1 rounded-md">
                       🏫 {currentStudent.kelas}
+                    </span>
+                  )}
+                  {hasDateFilterActive && (
+                    <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-md">
+                      📅 {dateRangeLabel}
                     </span>
                   )}
                 </div>
@@ -309,15 +531,29 @@ export function StudentProgressReport({
             <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left Column: Grade history list & speed visualization */}
               <div className="space-y-4">
-                <div className="flex items-center gap-1.5">
-                  <TrendingUp className="text-slate-500" size={16} />
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Perkembangan Akurasi & Nilai</h4>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <TrendingUp className="text-slate-500" size={16} />
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Perkembangan Nilai & Akurasi</h4>
+                  </div>
+                  <span className="text-[11px] font-mono font-bold text-emerald-500">{studentGrades.length} Data</span>
                 </div>
 
                 {studentGrades.length === 0 ? (
-                  <p className={`text-sm italic p-4 rounded-xl border ${
+                  <div className={`p-4 rounded-xl border text-center space-y-1 ${
                     isLight ? 'bg-slate-50 border-slate-100 text-slate-500' : 'bg-slate-950/40 border-slate-800 text-slate-400'
-                  }`}>Belum ada riwayat tes keterampilan berhitung harian.</p>
+                  }`}>
+                    <p className="text-xs italic">Tidak ada catatan nilai pada rentang tanggal ini.</p>
+                    {hasDateFilterActive && (
+                      <button
+                        type="button"
+                        onClick={() => applyPreset('all')}
+                        className="text-[11px] text-emerald-500 hover:underline font-bold"
+                      >
+                        Reset Filter Tanggal
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <div className="space-y-3">
                     {studentGrades.map((g) => (
@@ -347,15 +583,29 @@ export function StudentProgressReport({
 
               {/* Middle Column: Attendance History list */}
               <div className="space-y-4">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="text-slate-500" size={16} />
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Daftar Riwayat Presensi</h4>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="text-slate-500" size={16} />
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Daftar Riwayat Presensi</h4>
+                  </div>
+                  <span className="text-[11px] font-mono font-bold text-emerald-500">{studentAttendance.length} Sesi</span>
                 </div>
 
                 {studentAttendance.length === 0 ? (
-                  <p className={`text-sm italic p-4 rounded-xl border ${
+                  <div className={`p-4 rounded-xl border text-center space-y-1 ${
                     isLight ? 'bg-slate-50 border-slate-100 text-slate-500' : 'bg-slate-950/40 border-slate-800 text-slate-400'
-                  }`}>Belum ada riwayat absensi harian di database.</p>
+                  }`}>
+                    <p className="text-xs italic">Tidak ada catatan presensi pada rentang tanggal ini.</p>
+                    {hasDateFilterActive && (
+                      <button
+                        type="button"
+                        onClick={() => applyPreset('all')}
+                        className="text-[11px] text-emerald-500 hover:underline font-bold"
+                      >
+                        Reset Filter Tanggal
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
                     {studentAttendance.map((a) => (
@@ -393,19 +643,33 @@ export function StudentProgressReport({
                 )}
               </div>
 
-              {/* Right Column: Teacher Notes logs */}
+              {/* Right Column: Teacher Notes & Behavior Logs */}
               <div className="space-y-4">
-                <div className="flex items-center gap-1.5">
-                  <MessageSquare className="text-slate-500" size={16} />
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Catatan & Saran Pengajar</h4>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <MessageSquare className="text-slate-500" size={16} />
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Catatan & Saran Pengajar</h4>
+                  </div>
+                  <span className="text-[11px] font-mono font-bold text-emerald-500">{studentNotes.length} Catatan</span>
                 </div>
 
                 {studentNotes.length === 0 ? (
-                  <p className={`text-sm italic p-4 rounded-xl border ${
+                  <div className={`p-4 rounded-xl border text-center space-y-1 ${
                     isLight ? 'bg-slate-50 border-slate-100 text-slate-500' : 'bg-slate-950/40 border-slate-800 text-slate-400'
-                  }`}>Belum ada evaluasi atau catatan belajar tertulis.</p>
+                  }`}>
+                    <p className="text-xs italic">Tidak ada catatan pengajar pada rentang tanggal ini.</p>
+                    {hasDateFilterActive && (
+                      <button
+                        type="button"
+                        onClick={() => applyPreset('all')}
+                        className="text-[11px] text-emerald-500 hover:underline font-bold"
+                      >
+                        Reset Filter Tanggal
+                      </button>
+                    )}
+                  </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
                     {studentNotes.map((n) => (
                       <div key={n.id} className={`p-4 rounded-xl border space-y-2 ${
                         isLight ? 'bg-amber-500/5 border-amber-500/10' : 'bg-amber-500/5 border-amber-500/10'
@@ -424,6 +688,37 @@ export function StudentProgressReport({
                     ))}
                   </div>
                 )}
+
+                {/* Also show Behavior Assessments if any exist in the period */}
+                {studentBehavior.length > 0 && (
+                  <div className="pt-2 space-y-2">
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles className="text-emerald-500" size={14} />
+                      <h5 className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">Penilaian Sikap & Keaktifan ({studentBehavior.length})</h5>
+                    </div>
+                    <div className="space-y-2">
+                      {studentBehavior.slice(0, 3).map((b) => (
+                        <div key={b.id} className={`p-3 rounded-xl border text-xs space-y-1.5 ${
+                          isLight ? 'bg-emerald-50/50 border-emerald-200' : 'bg-emerald-950/20 border-emerald-800/40'
+                        }`}>
+                          <div className="flex justify-between items-center text-[10px] font-mono text-slate-400">
+                            <span className="font-bold text-emerald-600">{b.topic || 'Sesi Belajar'}</span>
+                            <span>{b.date}</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-1 text-center font-bold text-[10px]">
+                            <div className="bg-slate-800/40 p-1 rounded">Fokus: <span className="text-emerald-400">{b.fokus}</span></div>
+                            <div className="bg-slate-800/40 p-1 rounded">Partisipasi: <span className="text-blue-400">{b.partisipasi}</span></div>
+                            <div className="bg-slate-800/40 p-1 rounded">Sikap: <span className="text-purple-400">{b.sikapKeaktifan}</span></div>
+                          </div>
+                          {b.notes && (
+                            <p className="text-[11px] italic text-slate-400">"{b.notes}"</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
               </div>
             </div>
           </div>
@@ -446,7 +741,9 @@ export function StudentProgressReport({
                     <span>Preview Rapor Digital Siswa</span>
                     <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 text-xs font-mono font-semibold">Dokumen Resmi A4</span>
                   </h3>
-                  <p className="text-xs text-slate-400">Tampilan penuh rapor {currentStudent.name} sebelum dicetak atau diunduh PDF.</p>
+                  <p className="text-xs text-slate-400">
+                    Tampilan penuh rapor {currentStudent.name} &bull; <span className="text-emerald-400 font-semibold">{dateRangeLabel}</span>
+                  </p>
                 </div>
               </div>
 
@@ -503,7 +800,9 @@ export function StudentProgressReport({
                       <span>MATH FINGERS</span>
                     </h1>
                     <p className="text-emerald-100 text-xs sm:text-sm font-medium mt-1">Berhitung Cepat & Akurat Tanpa Alat</p>
-                    <p className="text-emerald-200/80 text-xs">Sistem Rapor Keterampilan Berhitung Jari Digital</p>
+                    <p className="text-amber-200 text-xs font-semibold mt-0.5">
+                      Periode: {dateRangeLabel}
+                    </p>
                   </div>
                   <div className="text-right sm:border-l sm:border-emerald-500/50 sm:pl-6">
                     <span className="text-xs font-extrabold uppercase bg-emerald-800/60 text-emerald-100 px-3.5 py-1.5 rounded-lg tracking-wider border border-emerald-400/30">
@@ -571,13 +870,17 @@ export function StudentProgressReport({
                 {/* Stat Summary Boxes */}
                 <div className="grid grid-cols-2 gap-5">
                   <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-5 text-center">
-                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 block">PERSENTASE PRESENSI</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 block">
+                      PERSENTASE PRESENSI {hasDateFilterActive ? '(PERIODE)' : ''}
+                    </span>
                     <span className="text-3xl sm:text-4xl font-black text-emerald-600 my-1 block">{attendanceRate}%</span>
                     <span className="text-xs text-emerald-700 font-medium">{presentCount} dari {totalAttendance} Sesi Hadir</span>
                   </div>
 
                   <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 text-center">
-                    <span className="text-xs font-bold uppercase tracking-wider text-amber-800 block">SKOR RATA-RATA UJI</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-amber-800 block">
+                      SKOR RATA-RATA UJI {hasDateFilterActive ? '(PERIODE)' : ''}
+                    </span>
                     <span className="text-3xl sm:text-4xl font-black text-amber-600 my-1 block">{averageScore ? `${averageScore}/100` : 'N/A'}</span>
                     <span className="text-xs text-amber-700 font-medium">{studentGrades.length} Sesi Evaluasi</span>
                   </div>
@@ -592,7 +895,7 @@ export function StudentProgressReport({
 
                   {studentGrades.length === 0 ? (
                     <p className="text-xs italic text-slate-400 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                      Belum ada riwayat uji keterampilan berhitung.
+                      Belum ada riwayat uji keterampilan berhitung pada periode ini.
                     </p>
                   ) : (
                     <table className="w-full text-xs sm:text-sm text-left border-collapse">
@@ -604,7 +907,7 @@ export function StudentProgressReport({
                         </tr>
                       </thead>
                       <tbody>
-                        {studentGrades.slice(0, 8).map((g, idx) => (
+                        {studentGrades.slice(0, 10).map((g, idx) => (
                           <tr key={g.id || idx} className="border-b border-slate-100 hover:bg-slate-50/60">
                             <td className="py-2.5 px-3 font-mono text-slate-500">{g.date}</td>
                             <td className="py-2.5 px-3 font-semibold text-slate-800">{g.topic}</td>
@@ -620,17 +923,18 @@ export function StudentProgressReport({
 
                 {/* Section: Teacher Notes */}
                 <div className="space-y-3">
-                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-2">
-                    CATATAN & EVALUASI BELAJAR GURU
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-2 flex items-center justify-between">
+                    <span>CATATAN & EVALUASI BELAJAR GURU</span>
+                    <span className="text-xs text-slate-500 font-normal">{studentNotes.length} Record</span>
                   </h4>
 
                   {studentNotes.length === 0 ? (
                     <p className="text-xs italic text-slate-400 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                      Belum ada catatan evaluasi tertulis dari pengajar.
+                      Belum ada catatan evaluasi tertulis dari pengajar pada periode ini.
                     </p>
                   ) : (
                     <div className="space-y-3">
-                      {studentNotes.slice(0, 3).map((n) => (
+                      {studentNotes.slice(0, 5).map((n) => (
                         <div key={n.id} className="p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl space-y-1.5 text-xs sm:text-sm">
                           <div className="flex justify-between text-amber-900 font-bold">
                             <span>Materi: {n.topic}</span>
@@ -643,6 +947,40 @@ export function StudentProgressReport({
                     </div>
                   )}
                 </div>
+
+                {/* Section: Behavior Assessment Summary if available */}
+                {studentBehavior.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-2 flex items-center justify-between">
+                      <span>PENILAIAN SIKAP & KEAKTIFAN SISWA</span>
+                      <span className="text-xs text-slate-500 font-normal">{studentBehavior.length} Record</span>
+                    </h4>
+                    <table className="w-full text-xs text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+                          <th className="py-2 px-3">Tanggal</th>
+                          <th className="py-2 px-3">Materi / Sesi</th>
+                          <th className="py-2 px-3 text-center">Fokus</th>
+                          <th className="py-2 px-3 text-center">Partisipasi</th>
+                          <th className="py-2 px-3 text-center">Sikap</th>
+                          <th className="py-2 px-3">Catatan</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {studentBehavior.slice(0, 5).map((b, idx) => (
+                          <tr key={b.id || idx} className="border-b border-slate-100">
+                            <td className="py-2 px-3 font-mono text-slate-500">{b.date}</td>
+                            <td className="py-2 px-3 font-semibold text-slate-800">{b.topic || '-'}</td>
+                            <td className="py-2 px-3 text-center font-bold text-emerald-600">{b.fokus}</td>
+                            <td className="py-2 px-3 text-center font-bold text-blue-600">{b.partisipasi}</td>
+                            <td className="py-2 px-3 text-center font-bold text-purple-600">{b.sikapKeaktifan}</td>
+                            <td className="py-2 px-3 italic text-slate-500">{b.notes || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
                 {/* Signatures & Footer (Tanda Tangan Orang Tua & Pengajar) */}
                 <div className="pt-10 border-t border-slate-200 text-xs sm:text-sm">

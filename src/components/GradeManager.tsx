@@ -1,33 +1,48 @@
 import React, { useState, useEffect } from 'react';
-import { Student, Grade } from '../types';
+import { Student, Grade, StudentBehaviorAssessment } from '../types';
 import { getWhatsAppLink } from '../utils';
-import { Award, Search, Calendar, Zap, Trash2, Send, AlertCircle, Edit2, X, ChevronDown, FileSpreadsheet, Printer, Download, CheckSquare, Square, Layers } from 'lucide-react';
+import { Award, Search, Calendar, Zap, Trash2, Send, AlertCircle, Edit2, X, ChevronDown, FileSpreadsheet, Printer, Download, CheckSquare, Square, Layers, Sparkles } from 'lucide-react';
 import { CustomDropdown } from './CustomDropdown';
 import { OfflineIndicator } from './OfflineIndicator';
+import { StudentBehaviorAssessmentManager } from './StudentBehaviorAssessmentManager';
 
 interface GradeManagerProps {
   students: Student[];
   grades: Grade[];
+  behaviorAssessments?: StudentBehaviorAssessment[];
   classes?: { id: string; name: string }[];
   onAddGrade: (data: Omit<Grade, 'id'>) => Promise<void>;
   onDeleteGrade: (id: string) => Promise<void>;
   onUpdateGrade: (grade: Grade) => Promise<void>;
+  onAddBehaviorAssessment?: (data: Omit<StudentBehaviorAssessment, 'id' | 'createdAt'>) => Promise<void>;
+  onAddBatchBehaviorAssessments?: (items: Array<Omit<StudentBehaviorAssessment, 'id' | 'createdAt'>>) => Promise<void>;
+  onDeleteBehaviorAssessment?: (id: string) => Promise<void>;
+  onUpdateBehaviorAssessment?: (assessment: StudentBehaviorAssessment) => Promise<void>;
+  activeBranch?: string;
+  defaultTeacherName?: string;
   theme?: string;
 }
 
 export function GradeManager({ 
   students, 
   grades, 
+  behaviorAssessments = [],
   classes = [],
   onAddGrade, 
   onDeleteGrade,
   onUpdateGrade,
+  onAddBehaviorAssessment,
+  onAddBatchBehaviorAssessments,
+  onDeleteBehaviorAssessment,
+  onUpdateBehaviorAssessment,
+  activeBranch = 'Pusat',
+  defaultTeacherName = 'Tutor Math Fingers',
   theme = 'dark'
 }: GradeManagerProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [studentFilter, setStudentFilter] = useState('All');
   const [topicFilter, setTopicFilter] = useState('All');
-  const [viewMode, setViewMode] = useState<'input' | 'leger'>('input');
+  const [viewMode, setViewMode] = useState<'input' | 'leger' | 'behavior'>('input');
   const [legerSearchQuery, setLegerSearchQuery] = useState('');
   const [legerClassFilter, setLegerClassFilter] = useState<string>('All');
 
@@ -361,6 +376,18 @@ export function GradeManager({
         </button>
         <button
           type="button"
+          onClick={() => setViewMode('behavior')}
+          className={`px-5 py-3 text-sm font-bold border-b-2 transition duration-150 flex items-center gap-2 ${
+            viewMode === 'behavior'
+              ? 'border-emerald-500 text-emerald-500'
+              : isLight ? 'border-transparent text-slate-700 hover:text-slate-900 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-350'
+          }`}
+        >
+          <Sparkles size={16} />
+          <span>Penilaian & Keaktifan Siswa</span>
+        </button>
+        <button
+          type="button"
           onClick={() => setViewMode('leger')}
           className={`px-5 py-3 text-sm font-bold border-b-2 transition duration-150 flex items-center gap-2 ${
             viewMode === 'leger'
@@ -373,7 +400,20 @@ export function GradeManager({
         </button>
       </div>
 
-      {viewMode === 'input' ? (
+      {viewMode === 'behavior' ? (
+        <StudentBehaviorAssessmentManager
+          students={students}
+          assessments={behaviorAssessments}
+          classes={classes}
+          onAddAssessment={onAddBehaviorAssessment || (async () => {})}
+          onAddBatchAssessments={onAddBatchBehaviorAssessments || (async () => {})}
+          onDeleteAssessment={onDeleteBehaviorAssessment || (async () => {})}
+          onUpdateAssessment={onUpdateBehaviorAssessment || (async () => {})}
+          activeBranch={activeBranch}
+          defaultTeacherName={defaultTeacherName}
+          theme={theme}
+        />
+      ) : viewMode === 'input' ? (
         <>
           {/* Direct Inline Grade Input Form */}
           <div className={`rounded-2xl border shadow-sm overflow-hidden ${

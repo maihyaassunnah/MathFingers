@@ -80,6 +80,23 @@ export interface Grade {
   branch?: string;
 }
 
+export type AssessmentGrade = 'A+' | 'A' | 'B+' | 'B' | 'C';
+
+export interface StudentBehaviorAssessment {
+  id: string;
+  studentId: string;
+  studentName: string;
+  date: string; // YYYY-MM-DD
+  topic?: string; // e.g. "Pertemuan 12: Kombinasi 5 (+4, +3)"
+  fokus: AssessmentGrade; // Fokus (Mampu memperhatikan materi/penjelasan guru)
+  partisipasi: AssessmentGrade; // Partisipasi (Aktif mengikuti latihan, mencoba menjawab & bertanya)
+  sikapKeaktifan: AssessmentGrade; // Sikap dan Keaktifan (Menunjukkan sikap tertib, antusias, & sopan)
+  notes?: string; // Catatan guru / karakter
+  teacherName?: string;
+  branch?: string;
+  createdAt: number;
+}
+
 export interface LearningMaterial {
   id: string;
   level: string; // Level

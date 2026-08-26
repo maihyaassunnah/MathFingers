@@ -576,7 +576,8 @@ export function generateStudentPDFReport(
   attendance: Attendance[],
   notes: TeacherNote[],
   grades: Grade[],
-  currentUser?: { name?: string; branch?: string } | null
+  currentUser?: { name?: string; branch?: string } | null,
+  dateRangeLabel?: string
 ) {
   const doc = new jsPDF();
   
@@ -610,9 +611,17 @@ export function generateStudentPDFReport(
   doc.setFont("Helvetica", "normal");
   doc.setFontSize(9);
   doc.text("Berhitung Cepat & Akurat Tanpa Alat", 15, 22);
-  doc.text("Sistem Rapor Keterampilan Berhitung Jari Digital", 15, 27);
+  
+  if (dateRangeLabel && dateRangeLabel !== 'Semua Periode' && dateRangeLabel !== 'Semua Waktu') {
+    doc.setFont("Helvetica", "bold");
+    doc.setTextColor(254, 240, 138); // Yellow accent #fef08a
+    doc.text(`Periode: ${dateRangeLabel}`, 15, 27);
+  } else {
+    doc.text("Sistem Rapor Keterampilan Berhitung Jari Digital", 15, 27);
+  }
   
   // Header Badge (Right side)
+  doc.setTextColor(255, 255, 255);
   doc.setFontSize(13);
   doc.setFont("Helvetica", "bold");
   doc.text("RAPOR DIGITAL", 148, 18);

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '../supabase';
-import { Student, Attendance, TeacherNote, Invoice, Installment, Grade, LearningMaterial, AppSettings, DashboardTask, Branch, AdminUser, ClassGroup, FinanceIncome, FinanceExpense } from '../types';
+import { Student, Attendance, TeacherNote, Invoice, Installment, Grade, LearningMaterial, AppSettings, DashboardTask, Branch, AdminUser, ClassGroup, FinanceIncome, FinanceExpense, StudentBehaviorAssessment } from '../types';
 import { SEED_MATERIALS, generateInvoiceNo, updateDynamicPwaIcon } from '../utils';
 
 // Helper to load localStorage fallbacks
@@ -64,6 +64,9 @@ export function useMathFinggersDb() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [classes, setClasses] = useState<ClassGroup[]>([]);
+  const [behaviorAssessments, setBehaviorAssessments] = useState<StudentBehaviorAssessment[]>(() => {
+    return getLocalData<StudentBehaviorAssessment[]>('behavior_assessments', []);
+  });
   const [manualIncomes, setManualIncomes] = useState<FinanceIncome[]>([]);
   const [expenses, setExpenses] = useState<FinanceExpense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,6 +94,28 @@ export function useMathFinggersDb() {
     return getLocalData<DashboardTask[]>('dashboard_tasks', []);
   });
 
+  // Background Sync States & Tracker
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(() => new Date());
+  const syncCounterRef = useRef<number>(0);
+
+  const startSync = useCallback(() => {
+    syncCounterRef.current += 1;
+    setIsSyncing(true);
+  }, []);
+
+  const endSync = useCallback((success: boolean = true) => {
+    syncCounterRef.current = Math.max(0, syncCounterRef.current - 1);
+    if (syncCounterRef.current === 0) {
+      setTimeout(() => {
+        setIsSyncing(false);
+        if (success) {
+          setLastSyncedAt(new Date());
+        }
+      }, 500);
+    }
+  }, []);
+
   // Helper to generate a unique client-side ID for offline/optimistic records
   const generateId = () => {
     return typeof crypto !== 'undefined' && crypto.randomUUID 
@@ -99,12 +124,14 @@ export function useMathFinggersDb() {
   };
 
   // Fetch all data from Supabase or fallback to local
-  const loadData = async () => {
+  const loadData = async (isBackground: boolean = false) => {
+    startSync();
     if (!supabase) {
       console.log('Supabase client not initialized. Using local storage fallback.');
       setIsOfflineFallback(true);
       loadAllFromLocalStorage();
-      setLoading(false);
+      if (!isBackground) setLoading(false);
+      endSync(false);
       return;
     }
 
@@ -196,6 +223,15 @@ export function useMathFinggersDb() {
         if (!error) expensesData = data;
       } catch (e) {
         console.warn('Failed to fetch finance_expenses from Supabase:', e);
+      }
+
+      // Fetch Behavior Assessments (Penilaian Sikap & Keaktifan)
+      let behaviorData = null;
+      try {
+        const { data, error } = await supabase.from('behavior_assessments').select('*').order('createdAt', { ascending: false });
+        if (!error) behaviorData = data;
+      } catch (e) {
+        console.warn('Failed to fetch behavior_assessments from Supabase:', e);
       }
 
       // Fetch App Settings (All branch settings)
@@ -347,6 +383,10 @@ export function useMathFinggersDb() {
       setExpenses(loadedExpenses);
       saveLocalData('finance_expenses', loadedExpenses);
 
+      const loadedAssessments = behaviorData || getLocalData<StudentBehaviorAssessment[]>('behavior_assessments', []);
+      setBehaviorAssessments(loadedAssessments);
+      saveLocalData('behavior_assessments', loadedAssessments);
+
       // Detect if the materials table actually has the new column "capaianPembelajaran"
       const tableHasNewSchema = materialsData && materialsData.length > 0 && ("capaianPembelajaran" in materialsData[0]);
 
@@ -382,12 +422,16 @@ export function useMathFinggersDb() {
       }
 
       setIsOfflineFallback(false);
+      endSync(true);
     } catch (err) {
       console.warn('Supabase query failed, falling back to local storage:', err);
       setIsOfflineFallback(true);
       loadAllFromLocalStorage();
+      endSync(false);
     } finally {
-      setLoading(false);
+      if (!isBackground) {
+        setLoading(false);
+      }
     }
   };
 
@@ -559,6 +603,7 @@ export function useMathFinggersDb() {
       setNotes(getLocalData<TeacherNote[]>('notes', []));
       setInvoices(getLocalData<Invoice[]>('invoices', []));
       setGrades(getLocalData<Grade[]>('grades', []));
+      setBehaviorAssessments(getLocalData<StudentBehaviorAssessment[]>('behavior_assessments', []));
       setManualIncomes(getLocalData<FinanceIncome[]>('finance_incomes', []));
       setExpenses(getLocalData<FinanceExpense[]>('finance_expenses', []));
     }
@@ -616,7 +661,44 @@ export function useMathFinggersDb() {
   };
 
   useEffect(() => {
+    // Initial Load
     loadData();
+
+    // Re-sync automatically when network reconnects
+    const handleOnline = () => {
+      console.log('Online status detected: Triggering Supabase background sync...');
+      loadData(true);
+    };
+
+    // Optional background sync on window focus (debounced)
+    let lastFocusTime = Date.now();
+    const handleFocus = () => {
+      if (Date.now() - lastFocusTime > 60000 && navigator.onLine) {
+        lastFocusTime = Date.now();
+        loadData(true);
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('focus', handleFocus);
+
+    // Periodic background sync every 60s when online
+    const interval = setInterval(() => {
+      if (typeof navigator !== 'undefined' && navigator.onLine && supabase) {
+        loadData(true);
+      }
+    }, 60000);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Explicit manual trigger for Background Sync
+  const syncData = useCallback(async () => {
+    await loadData(true);
   }, []);
 
   // --- STUDENT WRITERS ---
@@ -1015,6 +1097,79 @@ export function useMathFinggersDb() {
         if (error) throw error;
       } catch (err) {
         console.error('Failed to update grade in Supabase:', err);
+      }
+    }
+  };
+
+  // --- BEHAVIOR ASSESSMENTS (PENILAIAN SIKAP & KEAKTIFAN) WRITERS ---
+  const addBehaviorAssessment = async (data: Omit<StudentBehaviorAssessment, 'id' | 'createdAt'>) => {
+    const newAssessment: StudentBehaviorAssessment = {
+      ...data,
+      id: generateId(),
+      createdAt: Date.now()
+    };
+
+    const updated = [newAssessment, ...behaviorAssessments];
+    setBehaviorAssessments(updated);
+    saveLocalData('behavior_assessments', updated);
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('behavior_assessments').insert([newAssessment]);
+        if (error) throw error;
+      } catch (err) {
+        console.error('Failed to save behavior assessment to Supabase:', err);
+      }
+    }
+  };
+
+  const addBehaviorAssessmentsBatch = async (items: Array<Omit<StudentBehaviorAssessment, 'id' | 'createdAt'>>) => {
+    const newItems: StudentBehaviorAssessment[] = items.map((item, idx) => ({
+      ...item,
+      id: `${generateId()}_${idx}`,
+      createdAt: Date.now() + idx
+    }));
+
+    const updated = [...newItems, ...behaviorAssessments];
+    setBehaviorAssessments(updated);
+    saveLocalData('behavior_assessments', updated);
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('behavior_assessments').insert(newItems);
+        if (error) throw error;
+      } catch (err) {
+        console.error('Failed to save batch behavior assessments to Supabase:', err);
+      }
+    }
+  };
+
+  const updateBehaviorAssessment = async (assessment: StudentBehaviorAssessment) => {
+    const updated = behaviorAssessments.map(b => b.id === assessment.id ? assessment : b);
+    setBehaviorAssessments(updated);
+    saveLocalData('behavior_assessments', updated);
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('behavior_assessments').update(assessment).eq('id', assessment.id);
+        if (error) throw error;
+      } catch (err) {
+        console.error('Failed to update behavior assessment in Supabase:', err);
+      }
+    }
+  };
+
+  const deleteBehaviorAssessment = async (id: string) => {
+    const updated = behaviorAssessments.filter(b => b.id !== id);
+    setBehaviorAssessments(updated);
+    saveLocalData('behavior_assessments', updated);
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('behavior_assessments').delete().eq('id', id);
+        if (error) throw error;
+      } catch (err) {
+        console.error('Failed to delete behavior assessment from Supabase:', err);
       }
     }
   };
@@ -1658,6 +1813,7 @@ export function useMathFinggersDb() {
     notes,
     invoices,
     grades,
+    behaviorAssessments,
     materials,
     branches,
     adminUsers,
@@ -1670,6 +1826,9 @@ export function useMathFinggersDb() {
     dashboardTasks,
     loading,
     isOfflineFallback,
+    isSyncing,
+    lastSyncedAt,
+    syncData,
     addStudent,
     updateStudent,
     deleteStudent,
@@ -1687,6 +1846,10 @@ export function useMathFinggersDb() {
     addGrade,
     deleteGrade,
     updateGrade,
+    addBehaviorAssessment,
+    addBehaviorAssessmentsBatch,
+    updateBehaviorAssessment,
+    deleteBehaviorAssessment,
     addMaterial,
     updateMaterial,
     deleteMaterial,

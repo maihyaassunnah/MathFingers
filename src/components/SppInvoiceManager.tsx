@@ -310,7 +310,7 @@ export function SppInvoiceManager({
     setSelectedStudentIds(activeStudents.length > 0 ? [activeStudents[0].id] : []);
     setFormStudentSearch('');
     setFormClassFilter('ALL');
-    setInvoiceCategory(activeCategory);
+    setInvoiceCategory(activeCategory === 'gabungan' ? 'spp' : activeCategory);
     
     if (activeCategory === 'spp') {
       setAmount(settings.defaultSppAmount);

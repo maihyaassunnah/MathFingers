@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { Student, Attendance, TeacherNote, Grade } from '../types';
+import { Student, Attendance, TeacherNote, Grade, StudentBehaviorAssessment } from '../types';
 import { getStudentUniqueCode } from '../utils';
 
 // Helper to convert QR URL or Image into a canvas DataURL for crisp embedding into jsPDF
@@ -577,7 +577,8 @@ export function generateStudentPDFReport(
   notes: TeacherNote[],
   grades: Grade[],
   currentUser?: { name?: string; branch?: string } | null,
-  dateRangeLabel?: string
+  dateRangeLabel?: string,
+  behaviorAssessments?: StudentBehaviorAssessment[]
 ) {
   const doc = new jsPDF();
   
@@ -585,6 +586,7 @@ export function generateStudentPDFReport(
   const studentAttendance = attendance.filter(a => a.studentId === currentStudent.id);
   const studentNotes = notes.filter(n => n.studentId === currentStudent.id);
   const studentGrades = grades.filter(g => g.studentId === currentStudent.id);
+  const studentBehavior = (behaviorAssessments || []).filter(b => b.studentId === currentStudent.id);
 
   // Auto-resolve teacher signature name based on branch
   const teacherSignature = getTeacherSignatureName(currentStudent, currentUser, studentNotes);
@@ -600,71 +602,71 @@ export function generateStudentPDFReport(
 
   // Header Banner (Emerald Green)
   doc.setFillColor(16, 185, 129); // Emerald Green #10b981
-  doc.rect(0, 0, 210, 38, 'F');
+  doc.rect(0, 0, 210, 36, 'F');
   
   // Logo & Title
   doc.setTextColor(255, 255, 255);
   doc.setFont("Helvetica", "bold");
-  doc.setFontSize(20);
-  doc.text("MATH FINGERS", 15, 16);
+  doc.setFontSize(19);
+  doc.text("MATH FINGERS", 15, 15);
   
   doc.setFont("Helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text("Berhitung Cepat & Akurat Tanpa Alat", 15, 22);
+  doc.setFontSize(8.5);
+  doc.text("Berhitung Cepat & Akurat Tanpa Alat", 15, 21);
   
   if (dateRangeLabel && dateRangeLabel !== 'Semua Periode' && dateRangeLabel !== 'Semua Waktu') {
     doc.setFont("Helvetica", "bold");
     doc.setTextColor(254, 240, 138); // Yellow accent #fef08a
-    doc.text(`Periode: ${dateRangeLabel}`, 15, 27);
+    doc.text(`Periode: ${dateRangeLabel}`, 15, 26);
   } else {
-    doc.text("Sistem Rapor Keterampilan Berhitung Jari Digital", 15, 27);
+    doc.text("Sistem Rapor Keterampilan Berhitung Jari Digital", 15, 26);
   }
   
   // Header Badge (Right side)
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(13);
+  doc.setFontSize(12);
   doc.setFont("Helvetica", "bold");
-  doc.text("RAPOR DIGITAL", 148, 18);
+  doc.text("RAPOR DIGITAL", 148, 17);
   
   doc.setFont("Helvetica", "normal");
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   const printDateStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-  doc.text(printDateStr, 148, 25);
+  doc.text(printDateStr, 148, 24);
   
   // Student Information Card
   doc.setDrawColor(226, 232, 240);
   doc.setFillColor(248, 250, 252);
-  doc.rect(15, 44, 180, 46, 'F');
-  doc.rect(15, 44, 180, 46, 'S');
+  doc.rect(15, 41, 180, 44, 'F');
+  doc.rect(15, 41, 180, 44, 'S');
   
   doc.setTextColor(15, 23, 42); // slate-900
-  doc.setFontSize(10);
+  doc.setFontSize(9.5);
   doc.setFont("Helvetica", "bold");
-  doc.text("INFORMASI SISWA", 20, 52);
+  doc.text("INFORMASI SISWA", 20, 48);
   doc.setDrawColor(203, 213, 225);
-  doc.line(20, 54, 190, 54);
+  doc.line(20, 50, 190, 50);
   
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setFont("Helvetica", "normal");
   doc.setTextColor(51, 65, 85);
 
   // Left Column Info
-  doc.text(`Nama Lengkap     : ${currentStudent.name}`, 20, 61);
-  doc.text(`Wali / Orang Tua  : ${currentStudent.parentName}`, 20, 68);
-  doc.text(`Nomor Kontak     : ${currentStudent.parentPhone}`, 20, 75);
-  doc.text(`Status Keaktifan : ${currentStudent.status === 'active' ? 'Aktif' : 'Nonaktif'}`, 20, 82);
+  doc.text(`Nama Lengkap     : ${currentStudent.name}`, 20, 57);
+  doc.text(`Wali / Orang Tua  : ${currentStudent.parentName}`, 20, 64);
+  doc.text(`Nomor Kontak     : ${currentStudent.parentPhone}`, 20, 71);
+  doc.text(`Status Keaktifan : ${currentStudent.status === 'active' ? 'Aktif' : 'Nonaktif'}`, 20, 78);
   
   // Right Column Info
-  doc.text(`Kelas Bimbingan  : ${currentStudent.kelas || '-'}`, 104, 61);
-  doc.text(`Level Bimbingan  : ${currentStudent.level}`, 104, 68);
-  doc.text(`Mulai Bergabung  : ${currentStudent.joinDate}`, 104, 75);
+  doc.text(`Kelas Bimbingan  : ${currentStudent.kelas || '-'}`, 104, 57);
+  doc.text(`Level Bimbingan  : ${currentStudent.level}`, 104, 64);
+  doc.text(`Mulai Bergabung  : ${currentStudent.joinDate}`, 104, 71);
 
   // Photo in Report if available
   if (currentStudent.photoUrl) {
     try {
-      const photoSize = 24;
+      const photoSize = 22;
       const photoX = 168;
-      const photoY = 58;
+      const photoY = 54;
       doc.setFillColor(255, 255, 255);
       doc.setDrawColor(16, 185, 129);
       doc.roundedRect(photoX, photoY, photoSize, photoSize, 2, 2, 'FD');
@@ -678,70 +680,74 @@ export function generateStudentPDFReport(
   // Block 1: Presensi
   doc.setFillColor(236, 253, 245); // emerald-50
   doc.setDrawColor(167, 243, 208); // emerald-200
-  doc.rect(15, 96, 86, 22, 'FD');
+  doc.rect(15, 90, 86, 20, 'FD');
   
   doc.setFont("Helvetica", "bold");
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setTextColor(6, 95, 70); // emerald-800
-  doc.text("PERSENTASE PRESENSI", 18, 102);
-  doc.setFontSize(13);
+  doc.text("PERSENTASE PRESENSI", 18, 96);
+  doc.setFontSize(12);
   doc.setTextColor(5, 150, 105); // emerald-600
-  doc.text(`${attendanceRate}%`, 18, 110);
-  doc.setFontSize(8);
+  doc.text(`${attendanceRate}%`, 18, 104);
+  doc.setFontSize(7.5);
   doc.setFont("Helvetica", "normal");
   doc.setTextColor(4, 120, 87);
-  doc.text(`${presentCount} dari ${totalAttendance} Sesi Hadir`, 45, 110);
+  doc.text(`${presentCount} dari ${totalAttendance} Sesi Hadir`, 45, 104);
 
   // Block 2: Skor Rata-rata
   doc.setFillColor(254, 243, 199); // amber-50
   doc.setDrawColor(253, 230, 138); // amber-200
-  doc.rect(109, 96, 86, 22, 'FD');
+  doc.rect(109, 90, 86, 20, 'FD');
   
   doc.setFont("Helvetica", "bold");
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setTextColor(146, 64, 14); // amber-800
-  doc.text("SKOR RATA-RATA UJI", 112, 102);
-  doc.setFontSize(13);
+  doc.text("SKOR RATA-RATA UJI", 112, 96);
+  doc.setFontSize(12);
   doc.setTextColor(217, 119, 6); // amber-600
-  doc.text(averageScore ? `${averageScore}/100` : 'N/A', 112, 110);
-  doc.setFontSize(8);
+  doc.text(averageScore ? `${averageScore}/100` : 'N/A', 112, 104);
+  doc.setFontSize(7.5);
   doc.setFont("Helvetica", "normal");
   doc.setTextColor(180, 83, 9);
-  doc.text(`${studentGrades.length} Sesi Evaluasi`, 152, 110);
+  doc.text(`${studentGrades.length} Sesi Evaluasi`, 152, 104);
 
   // Section 1: Grades History
-  let y = 126;
+  let y = 117;
   doc.setTextColor(15, 23, 42);
   doc.setFont("Helvetica", "bold");
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.text("RIWAYAT UJI KETERAMPILAN JARI (AKURASI)", 15, y);
+  doc.setFont("Helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text(`${studentGrades.length} RECORD`, 195, y, { align: "right" });
   doc.setDrawColor(226, 232, 240);
   doc.line(15, y + 2, 195, y + 2);
   
-  y += 8;
+  y += 6;
   doc.setFillColor(241, 245, 249);
-  doc.rect(15, y, 180, 7, 'F');
+  doc.rect(15, y, 180, 6, 'F');
   
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setFont("Helvetica", "bold");
   doc.setTextColor(71, 85, 105);
-  doc.text("Tanggal", 18, y + 5);
-  doc.text("Materi / Bab Uji Kompetensi", 50, y + 5);
-  doc.text("Skor Akurasi", 160, y + 5);
+  doc.text("Tanggal", 18, y + 4.2);
+  doc.text("Materi / Bab Uji Kompetensi", 50, y + 4.2);
+  doc.text("Skor Akurasi", 160, y + 4.2);
   
-  y += 7;
+  y += 6;
   doc.setFont("Helvetica", "normal");
   doc.setTextColor(51, 65, 85);
   
   if (studentGrades.length === 0) {
-    y += 6;
+    y += 5;
     doc.text("Belum ada riwayat uji keterampilan berhitung.", 18, y);
     y += 2;
   } else {
-    studentGrades.slice(0, 6).forEach((g) => {
-      y += 6;
+    studentGrades.slice(0, 4).forEach((g) => {
+      y += 5.2;
       doc.text(g.date, 18, y);
-      const topicTxt = g.topic.length > 50 ? g.topic.slice(0, 47) + '...' : g.topic;
+      const topicTxt = g.topic.length > 45 ? g.topic.slice(0, 42) + '...' : g.topic;
       doc.text(topicTxt, 50, y);
       doc.setFont("Helvetica", "bold");
       doc.setTextColor(5, 150, 105);
@@ -749,52 +755,128 @@ export function generateStudentPDFReport(
       doc.setFont("Helvetica", "normal");
       doc.setTextColor(51, 65, 85);
       doc.setDrawColor(241, 245, 249);
-      doc.line(15, y + 2, 195, y + 2);
+      doc.line(15, y + 1.5, 195, y + 1.5);
     });
   }
 
-  // Section 2: Teacher Notes
-  y += 12;
+  // Section 2: Penilaian Sikap & Keaktifan Siswa (Requested feature)
+  y += 9;
   doc.setTextColor(15, 23, 42);
   doc.setFont("Helvetica", "bold");
-  doc.setFontSize(10);
+  doc.setFontSize(9);
+  doc.text("PENILAIAN SIKAP & KEAKTIFAN SISWA", 15, y);
+  doc.setFont("Helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text(`${studentBehavior.length} RECORD`, 195, y, { align: "right" });
+  doc.setDrawColor(226, 232, 240);
+  doc.line(15, y + 2, 195, y + 2);
+
+  y += 6;
+  doc.setFillColor(241, 245, 249);
+  doc.rect(15, y, 180, 6, 'F');
+
+  doc.setFontSize(7.5);
+  doc.setFont("Helvetica", "bold");
+  doc.setTextColor(71, 85, 105);
+  doc.text("Tanggal", 18, y + 4.2);
+  doc.text("Materi / Sesi", 48, y + 4.2);
+  doc.text("Fokus", 100, y + 4.2, { align: "center" });
+  doc.text("Partisipasi", 125, y + 4.2, { align: "center" });
+  doc.text("Sikap", 148, y + 4.2, { align: "center" });
+  doc.text("Catatan", 168, y + 4.2);
+
+  y += 6;
+  doc.setFont("Helvetica", "normal");
+  doc.setTextColor(51, 65, 85);
+
+  if (studentBehavior.length === 0) {
+    y += 5;
+    doc.text("Belum ada data penilaian sikap & keaktifan pada periode ini.", 18, y);
+    y += 2;
+  } else {
+    studentBehavior.slice(0, 4).forEach((b) => {
+      y += 5.2;
+      doc.setFont("Helvetica", "normal");
+      doc.setTextColor(71, 85, 105);
+      doc.text(b.date, 18, y);
+      
+      const topicText = (b.topic || 'Simbol Jari').length > 25 ? (b.topic || 'Simbol Jari').slice(0, 23) + '..' : (b.topic || 'Simbol Jari');
+      doc.setTextColor(15, 23, 42);
+      doc.setFont("Helvetica", "bold");
+      doc.text(topicText, 48, y);
+
+      // Fokus (Green)
+      doc.setTextColor(5, 150, 105);
+      doc.text(b.fokus, 100, y, { align: "center" });
+
+      // Partisipasi (Blue)
+      doc.setTextColor(37, 99, 235);
+      doc.text(b.partisipasi, 125, y, { align: "center" });
+
+      // Sikap (Purple)
+      doc.setTextColor(147, 51, 234);
+      doc.text(b.sikapKeaktifan, 148, y, { align: "center" });
+
+      // Catatan
+      doc.setFont("Helvetica", "italic");
+      doc.setTextColor(100, 116, 139);
+      const noteTxt = b.notes ? (b.notes.length > 18 ? b.notes.slice(0, 16) + '..' : b.notes) : '-';
+      doc.text(noteTxt, 168, y);
+
+      doc.setDrawColor(241, 245, 249);
+      doc.line(15, y + 1.5, 195, y + 1.5);
+    });
+  }
+
+  // Section 3: Teacher Notes
+  y += 9;
+  doc.setTextColor(15, 23, 42);
+  doc.setFont("Helvetica", "bold");
+  doc.setFontSize(9);
   doc.text("CATATAN & EVALUASI BELAJAR GURU", 15, y);
+  doc.setFont("Helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text(`${studentNotes.length} RECORD`, 195, y, { align: "right" });
   doc.setDrawColor(226, 232, 240);
   doc.line(15, y + 2, 195, y + 2);
   
-  y += 8;
+  y += 6;
   doc.setFont("Helvetica", "normal");
-  doc.setFontSize(8.5);
+  doc.setFontSize(8);
   doc.setTextColor(51, 65, 85);
   
   if (studentNotes.length === 0) {
+    y += 5;
     doc.text("Belum ada catatan evaluasi tertulis dari pengajar.", 18, y);
-    y += 6;
+    y += 2;
   } else {
-    studentNotes.slice(0, 3).forEach((n) => {
+    studentNotes.slice(0, 2).forEach((n) => {
+      y += 4.5;
       doc.setFont("Helvetica", "bold");
       doc.setTextColor(180, 83, 9);
       doc.text(`Materi: ${n.topic} (${n.date})`, 18, y);
-      y += 4.5;
+      y += 4;
       
       doc.setFont("Helvetica", "italic");
       doc.setTextColor(71, 85, 105);
       const splitContent = doc.splitTextToSize(`"${n.content}" - (${n.teacherName})`, 175);
       doc.text(splitContent, 18, y);
-      y += splitContent.length * 4 + 3;
+      y += (splitContent.length - 1) * 3.5;
     });
   }
 
   // Signatures & Footer Section (Tanda Tangan)
-  y = Math.max(y + 10, 235);
+  y = Math.max(y + 8, 245);
   doc.setDrawColor(203, 213, 225);
   doc.line(15, y, 195, y);
   
-  y += 8;
+  y += 6;
   
   // Left Column: Tanda Tangan Orang Tua
   doc.setFont("Helvetica", "normal");
-  doc.setFontSize(8.5);
+  doc.setFontSize(8);
   doc.setTextColor(100, 116, 139);
   doc.text("Orang Tua / Wali Siswa", 35, y, { align: "center" });
   
@@ -802,9 +884,10 @@ export function generateStudentPDFReport(
   doc.text("Pengajar / Tutor Math Fingers", 160, y, { align: "center" });
   
   // Signature Lines & Names
-  y += 22; // Signature spacing area
+  y += 18; // Signature spacing area
   
   doc.setFont("Helvetica", "bold");
+  doc.setFontSize(8);
   doc.setTextColor(30, 41, 59);
   
   // Parent Name Line
@@ -816,9 +899,9 @@ export function generateStudentPDFReport(
   doc.line(130, y + 1, 190, y + 1);
   
   // Bottom Footer Notice
-  y += 10;
+  y += 7;
   doc.setFont("Helvetica", "italic");
-  doc.setFontSize(7.5);
+  doc.setFontSize(7);
   doc.setTextColor(148, 163, 184);
   doc.text(
     "Math Fingers - Berhitung Cepat & Akurat Tanpa Alat. Dokumen Rapor Resmi Math Fingers Digital.",

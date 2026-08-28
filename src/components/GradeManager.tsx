@@ -45,6 +45,7 @@ export function GradeManager({
   const [viewMode, setViewMode] = useState<'input' | 'leger' | 'behavior'>('input');
   const [legerSearchQuery, setLegerSearchQuery] = useState('');
   const [legerClassFilter, setLegerClassFilter] = useState<string>('All');
+  const [historyGradeClassFilter, setHistoryGradeClassFilter] = useState<string>('All');
 
   // Direct Inline Class Form states
   const [bulkTopic, setBulkTopic] = useState('');
@@ -260,7 +261,13 @@ export function GradeManager({
                           grade.studentName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStudent = studentFilter === 'All' || grade.studentId === studentFilter;
     const matchesTopic = topicFilter === 'All' || grade.topic === topicFilter;
-    return matchesSearch && matchesStudent && matchesTopic;
+    const student = students.find(s => s.id === grade.studentId);
+    const matchesClass = historyGradeClassFilter === 'All'
+      ? true
+      : historyGradeClassFilter === 'UNASSIGNED'
+        ? (!student || !student.kelas)
+        : student?.kelas === historyGradeClassFilter;
+    return matchesSearch && matchesStudent && matchesTopic && matchesClass;
   });
 
   // --- LEGER CALCULATIONS ---
@@ -661,12 +668,15 @@ export function GradeManager({
 
           {/* Actions button bar */}
           {activeStudents.length > 0 && (
-            <div className={`p-4 border-t flex justify-end shrink-0 ${isLight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-slate-950/20'}`}>
+            <div className={`p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 ${isLight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-slate-950/20'}`}>
+              <span className="text-xs font-semibold text-slate-500">
+                Siswa dipilih: <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{activeStudents.filter(s => studentGradesData[s.id]?.included).length}</strong> dari {activeStudents.length} siswa aktif
+              </span>
               <button
                 type="submit"
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm px-6 py-2.5 rounded-xl transition shadow-sm"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm px-6 py-2.5 rounded-xl transition shadow-sm w-full sm:w-auto"
               >
-                Simpan Nilai Semua Siswa
+                Simpan Nilai ({activeStudents.filter(s => studentGradesData[s.id]?.included).length} Siswa Dicentang)
               </button>
             </div>
           )}
@@ -676,11 +686,11 @@ export function GradeManager({
       {/* History Section Header */}
       <div className="pt-6 border-t border-slate-200 dark:border-slate-800/60">
         <h3 className={`text-lg font-bold mb-2 ${isLight ? 'text-slate-800' : 'text-white'}`}>Riwayat Nilai & Uji Kecepatan</h3>
-        <p className="text-xs text-slate-400">Gunakan pencarian dan filter di bawah untuk meninjau pencapaian belajar siswa.</p>
+        <p className="text-xs text-slate-400">Gunakan pencarian dan filter kelas di bawah untuk meninjau pencapaian belajar siswa.</p>
       </div>
 
       {/* Filter bar */}
-      <div className={`p-4 rounded-2xl shadow-sm border flex flex-col md:flex-row gap-4 items-center ${
+      <div className={`p-4 rounded-2xl shadow-sm border flex flex-col md:flex-row gap-3.5 items-center ${
         isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
       }`}>
         <div className="relative w-full md:flex-1">
@@ -699,8 +709,24 @@ export function GradeManager({
           />
         </div>
 
-        <div className="w-full md:w-auto flex flex-col sm:flex-row gap-3.5 items-center">
-          <div className="w-full sm:w-[180px]">
+        <div className="w-full md:w-auto flex flex-col sm:flex-row gap-2.5 items-center flex-wrap sm:flex-nowrap">
+          {/* Class Filter Dropdown for History */}
+          <div className="w-full sm:w-[150px]">
+            <CustomDropdown
+              id="filter-grade-class"
+              value={historyGradeClassFilter}
+              onChange={(val) => setHistoryGradeClassFilter(val)}
+              options={[
+                { value: 'All', label: 'Semua Kelas' },
+                ...availableBulkClasses.map(c => ({ value: c, label: `Kelas: ${c}` })),
+                ...(students.some(s => !s.kelas) ? [{ value: 'UNASSIGNED', label: 'Tanpa Kelas' }] : [])
+              ]}
+              theme={theme}
+              className="w-full"
+            />
+          </div>
+
+          <div className="w-full sm:w-[160px]">
             <CustomDropdown
               id="filter-grade-student"
               value={studentFilter}
@@ -714,7 +740,7 @@ export function GradeManager({
             />
           </div>
 
-          <div className="w-full sm:w-[180px]">
+          <div className="w-full sm:w-[160px]">
             <CustomDropdown
               id="filter-grade-topic"
               value={topicFilter}
@@ -727,6 +753,25 @@ export function GradeManager({
               className="w-full"
             />
           </div>
+
+          {(searchQuery || studentFilter !== 'All' || topicFilter !== 'All' || historyGradeClassFilter !== 'All') && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setStudentFilter('All');
+                setTopicFilter('All');
+                setHistoryGradeClassFilter('All');
+              }}
+              className={`px-3 py-2 text-xs font-bold rounded-xl border transition shrink-0 ${
+                isLight
+                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+              }`}
+            >
+              Reset
+            </button>
+          )}
         </div>
       </div>
 

@@ -203,9 +203,13 @@ export function StudentProgressReport({
       ? studentGrades.slice(0, 3).map(g => `• ${g.topic}: Skor ${g.score}/100`).join('\n')
       : 'Belum ada rekaman tes keterampilan.';
 
+    const behaviorSummary = studentBehavior.length > 0
+      ? `\n🌟 *Nilai Sikap & Keaktifan:*\n` + studentBehavior.slice(0, 2).map(b => `• ${b.topic || 'Sesi Belajar'}: Fokus (${b.fokus}), Partisipasi (${b.partisipasi}), Sikap (${b.sikapKeaktifan})`).join('\n')
+      : '';
+
     const periodText = (startDate || endDate) ? `\n📆 *Periode Laporan:* ${dateRangeLabel}` : '';
 
-    const message = `*LAPORAN PERKEMBANGAN BELAJAR - MATH FINGERS* 📊🌸\n\nHalo Ayah/Bunda dari ananda *${currentStudent.name}*,\nBerikut adalah rekap perkembangan ananda di bimbingan Jaritmatika:${periodText}\n\n📅 *Ringkasan Sesi Presensi:*\n- Kehadiran: *${attendanceRate}%* (${presentCount} dari ${totalAttendance} sesi)\n\n⚡ *Rata-Rata Keterampilan Jari:*\n- Akurasi Berhitung: *${averageScore ? `${averageScore}/100` : 'Belum Ada Tes'}*\n\n📈 *Riwayat Ujian & Tes Terakhir:*\n${gradesSummary}\n\n📝 *Catatan Pengajar & Saran Pendampingan:*\n${notesSummary}\n\n_Mari terus latih jari ananda di rumah minimal 10 menit setiap hari ya Ayah/Bunda agar refleks jari semakin lincah dan kilat! Terima kasih_ 🌸✨`;
+    const message = `*LAPORAN PERKEMBANGAN BELAJAR - MATH FINGERS* 📊🌸\n\nHalo Ayah/Bunda dari ananda *${currentStudent.name}*,\nBerikut adalah rekap perkembangan ananda di bimbingan Jaritmatika:${periodText}\n\n📅 *Ringkasan Sesi Presensi:*\n- Kehadiran: *${attendanceRate}%* (${presentCount} dari ${totalAttendance} sesi)\n\n⚡ *Rata-Rata Keterampilan Jari:*\n- Akurasi Berhitung: *${averageScore ? `${averageScore}/100` : 'Belum Ada Tes'}*\n\n📈 *Riwayat Ujian & Tes Terakhir:*\n${gradesSummary}${behaviorSummary}\n\n📝 *Catatan Pengajar & Saran Pendampingan:*\n${notesSummary}\n\n_Mari terus latih jari ananda di rumah minimal 10 menit setiap hari ya Ayah/Bunda agar refleks jari semakin lincah dan kilat! Terima kasih_ 🌸✨`;
 
     window.open(getWhatsAppLink(currentStudent.parentPhone, message), '_blank');
   };
@@ -213,10 +217,18 @@ export function StudentProgressReport({
   // Teacher signature resolution based on branch
   const teacherSignature = getTeacherSignatureName(currentStudent, currentUser, studentNotes);
 
-  // jsPDF report generation function with date range label
+  // jsPDF report generation function with date range label and behavior assessments
   const downloadPDFReport = () => {
     if (!currentStudent) return;
-    generateStudentPDFReport(currentStudent, studentAttendance, studentNotes, studentGrades, currentUser, dateRangeLabel);
+    generateStudentPDFReport(
+      currentStudent, 
+      studentAttendance, 
+      studentNotes, 
+      studentGrades, 
+      currentUser, 
+      dateRangeLabel,
+      studentBehavior
+    );
   };
 
   const handlePrint = () => {
@@ -948,39 +960,46 @@ export function StudentProgressReport({
                   )}
                 </div>
 
-                {/* Section: Behavior Assessment Summary if available */}
-                {studentBehavior.length > 0 && (
-                  <div className="space-y-3">
-                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-2 flex items-center justify-between">
-                      <span>PENILAIAN SIKAP & KEAKTIFAN SISWA</span>
-                      <span className="text-xs text-slate-500 font-normal">{studentBehavior.length} Record</span>
-                    </h4>
-                    <table className="w-full text-xs text-left border-collapse">
-                      <thead>
-                        <tr className="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
-                          <th className="py-2 px-3">Tanggal</th>
-                          <th className="py-2 px-3">Materi / Sesi</th>
-                          <th className="py-2 px-3 text-center">Fokus</th>
-                          <th className="py-2 px-3 text-center">Partisipasi</th>
-                          <th className="py-2 px-3 text-center">Sikap</th>
-                          <th className="py-2 px-3">Catatan</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {studentBehavior.slice(0, 5).map((b, idx) => (
-                          <tr key={b.id || idx} className="border-b border-slate-100">
-                            <td className="py-2 px-3 font-mono text-slate-500">{b.date}</td>
-                            <td className="py-2 px-3 font-semibold text-slate-800">{b.topic || '-'}</td>
-                            <td className="py-2 px-3 text-center font-bold text-emerald-600">{b.fokus}</td>
-                            <td className="py-2 px-3 text-center font-bold text-blue-600">{b.partisipasi}</td>
-                            <td className="py-2 px-3 text-center font-bold text-purple-600">{b.sikapKeaktifan}</td>
-                            <td className="py-2 px-3 italic text-slate-500">{b.notes || '-'}</td>
+                {/* Section: Behavior Assessment Summary (Penilaian Sikap & Keaktifan Siswa) */}
+                <div className="space-y-3">
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-2 flex items-center justify-between">
+                    <span>PENILAIAN SIKAP & KEAKTIFAN SISWA</span>
+                    <span className="text-xs text-slate-500 font-normal uppercase">{studentBehavior.length} RECORD</span>
+                  </h4>
+
+                  {studentBehavior.length === 0 ? (
+                    <p className="text-xs italic text-slate-400 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                      Belum ada data penilaian sikap & keaktifan pada periode ini.
+                    </p>
+                  ) : (
+                    <div className="overflow-x-auto rounded-xl border border-slate-200">
+                      <table className="w-full text-xs text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                            <th className="py-2.5 px-3">Tanggal</th>
+                            <th className="py-2.5 px-3">Materi / Sesi</th>
+                            <th className="py-2.5 px-3 text-center">Fokus</th>
+                            <th className="py-2.5 px-3 text-center">Partisipasi</th>
+                            <th className="py-2.5 px-3 text-center">Sikap</th>
+                            <th className="py-2.5 px-3">Catatan</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                        </thead>
+                        <tbody>
+                          {studentBehavior.slice(0, 10).map((b, idx) => (
+                            <tr key={b.id || idx} className="border-b border-slate-100 hover:bg-slate-50/50">
+                              <td className="py-2.5 px-3 font-mono text-slate-500">{b.date}</td>
+                              <td className="py-2.5 px-3 font-semibold text-slate-800">{b.topic || 'Simbol Jari'}</td>
+                              <td className="py-2.5 px-3 text-center font-bold text-emerald-600">{b.fokus}</td>
+                              <td className="py-2.5 px-3 text-center font-bold text-blue-600">{b.partisipasi}</td>
+                              <td className="py-2.5 px-3 text-center font-bold text-purple-600">{b.sikapKeaktifan}</td>
+                              <td className="py-2.5 px-3 italic text-slate-500">{b.notes || '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
 
                 {/* Signatures & Footer (Tanda Tangan Orang Tua & Pengajar) */}
                 <div className="pt-10 border-t border-slate-200 text-xs sm:text-sm">

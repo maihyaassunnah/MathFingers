@@ -19,7 +19,7 @@ interface CustomDropdownProps {
 }
 
 // Framer Motion Variants for staggered entry
-const containerVariants = {
+const containerVariants: any = {
   hidden: { 
     opacity: 0, 
     scale: 0.95, 
@@ -47,7 +47,7 @@ const containerVariants = {
   }
 };
 
-const itemVariants = {
+const itemVariants: any = {
   hidden: { opacity: 0, y: 6 },
   visible: { 
     opacity: 1, 

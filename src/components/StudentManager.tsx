@@ -1407,7 +1407,7 @@ export function StudentManager({
                           <iframe
                             className="w-full h-full"
                             src={embedUrl}
-                            title={`Video Tutorial - ${selectedCurriculumMat.title}`}
+                            title={`Video Tutorial - ${selectedCurriculumMat.materiPembelajaran || selectedCurriculumMat.level}`}
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                             allowFullScreen
                           ></iframe>

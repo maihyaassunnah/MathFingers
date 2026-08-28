@@ -39,7 +39,7 @@ export function AttendanceTracker({
   const [historyClassFilter, setHistoryClassFilter] = useState<string>('ALL');
 
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
-  const [attendanceMap, setAttendanceMap] = useState<Record<string, { status: 'present' | 'absent' | 'permission'; notes: string }>>({});
+  const [attendanceMap, setAttendanceMap] = useState<Record<string, { included: boolean; status: 'present' | 'absent' | 'permission'; notes: string }>>({});
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
@@ -114,24 +114,34 @@ export function AttendanceTracker({
     return s.name.toLowerCase().includes(recordSearchQuery.toLowerCase());
   });
 
+  // Check if all filtered students are included
+  const isAllFilteredSelected = filteredActiveStudents.length > 0 && 
+    filteredActiveStudents.every(s => attendanceMap[s.id]?.included);
+
+  const includedFilteredCount = filteredActiveStudents.filter(s => attendanceMap[s.id]?.included).length;
+
   // Load existing attendance for selectedDate safely without overwriting unsaved user edits
   useEffect(() => {
     // Only re-sync if the selected date changed, or if user hasn't modified state (isDirty=false), or after save completed
     if (lastLoadedDate !== selectedDate || !isDirty || saveStatus === 'saved') {
       const existingForDate = attendance.filter(a => a.date === selectedDate);
+      const hasExistingRecords = existingForDate.length > 0;
       
-      const initialMap: Record<string, { status: 'present' | 'absent' | 'permission'; notes: string }> = {};
+      const initialMap: Record<string, { included: boolean; status: 'present' | 'absent' | 'permission'; notes: string }> = {};
       
       activeStudents.forEach(student => {
         const record = existingForDate.find(r => r.studentId === student.id);
         if (record) {
           initialMap[student.id] = {
+            included: true,
             status: record.status,
             notes: record.notes || ''
           };
         } else {
-          // Default to 'present' for untracked active students
+          // If records exist for this date, unrecorded students are unchecked (included: false)
+          // If brand new date with no records, default to included: true for easy initial check
           initialMap[student.id] = {
+            included: !hasExistingRecords,
             status: 'present',
             notes: ''
           };
@@ -148,13 +158,46 @@ export function AttendanceTracker({
     }
   }, [selectedDate, students, attendance, saveStatus]);
 
-  const handleStatusChange = (studentId: string, status: 'present' | 'absent' | 'permission') => {
+  const handleToggleStudent = (studentId: string, included?: boolean) => {
     setAttendanceMap(prev => {
-      const current = prev[studentId] || { status: 'present', notes: '' };
+      const current = prev[studentId] || { included: false, status: 'present', notes: '' };
+      const nextIncluded = included !== undefined ? included : !current.included;
       return {
         ...prev,
         [studentId]: {
           ...current,
+          included: nextIncluded
+        }
+      };
+    });
+    setIsDirty(true);
+    setSaveStatus('idle');
+  };
+
+  const handleToggleSelectAll = (included: boolean) => {
+    setAttendanceMap(prev => {
+      const updated = { ...prev };
+      filteredActiveStudents.forEach(student => {
+        const current = updated[student.id] || { included: false, status: 'present', notes: '' };
+        updated[student.id] = {
+          ...current,
+          included
+        };
+      });
+      return updated;
+    });
+    setIsDirty(true);
+    setSaveStatus('idle');
+  };
+
+  const handleStatusChange = (studentId: string, status: 'present' | 'absent' | 'permission') => {
+    setAttendanceMap(prev => {
+      const current = prev[studentId] || { included: true, status: 'present', notes: '' };
+      return {
+        ...prev,
+        [studentId]: {
+          ...current,
+          included: true, // Auto check when status changed
           status
         }
       };
@@ -184,11 +227,12 @@ export function AttendanceTracker({
 
   const handleNoteChange = (studentId: string, notes: string) => {
     setAttendanceMap(prev => {
-      const current = prev[studentId] || { status: 'present', notes: '' };
+      const current = prev[studentId] || { included: true, status: 'present', notes: '' };
       return {
         ...prev,
         [studentId]: {
           ...current,
+          included: true, // Auto check when note added
           notes
         }
       };
@@ -199,13 +243,14 @@ export function AttendanceTracker({
 
   const handleAppendNotePill = (studentId: string, textToAppend: string) => {
     setAttendanceMap(prev => {
-      const current = prev[studentId] || { status: 'permission', notes: '' };
+      const current = prev[studentId] || { included: true, status: 'permission', notes: '' };
       const existingNote = current.notes ? current.notes.trim() : '';
       const newNote = existingNote ? `${existingNote}, ${textToAppend}` : textToAppend;
       return {
         ...prev,
         [studentId]: {
           ...current,
+          included: true,
           notes: newNote
         }
       };
@@ -220,9 +265,10 @@ export function AttendanceTracker({
 
   const handleMarkAllPresent = () => {
     const updated = { ...attendanceMap };
-    activeStudents.forEach(student => {
+    filteredActiveStudents.forEach(student => {
       updated[student.id] = {
         ...(updated[student.id] || { notes: '' }),
+        included: true,
         status: 'present'
       };
     });
@@ -232,20 +278,31 @@ export function AttendanceTracker({
   };
 
   const handleSave = async () => {
-    setSaveStatus('saving');
+    // Only save active students that are CHECKED (included: true)
+    const recordsToSave = activeStudents
+      .filter(student => attendanceMap[student.id]?.included)
+      .map(student => {
+        const state = attendanceMap[student.id];
+        return {
+          studentId: student.id,
+          studentName: student.name,
+          date: selectedDate,
+          status: state.status,
+          notes: state.notes ? state.notes.trim() : '',
+          branch: student.branch || 'Pusat'
+        };
+      });
 
-    // Save ALL active students to ensure no student records are lost regardless of current filter
-    const recordsToSave = activeStudents.map(student => {
-      const state = attendanceMap[student.id] || { status: 'present', notes: '' };
-      return {
-        studentId: student.id,
-        studentName: student.name,
-        date: selectedDate,
-        status: state.status,
-        notes: state.notes ? state.notes.trim() : '',
-        branch: student.branch || 'Pusat'
-      };
-    });
+    if (recordsToSave.length === 0) {
+      triggerToast(
+        'Belum Ada Siswa Dicentang',
+        'Centang setidaknya satu nama siswa untuk menyimpan data absensi sesi ini.',
+        'error'
+      );
+      return;
+    }
+
+    setSaveStatus('saving');
 
     try {
       await onAddAttendanceBatch(recordsToSave);
@@ -264,7 +321,7 @@ export function AttendanceTracker({
 
       triggerToast(
         'Presensi Berhasil Disimpan! 🎉',
-        `${recordsToSave.length} data kehadiran siswa tanggal ${formattedDateText} telah tersimpan ke database.`,
+        `${recordsToSave.length} data kehadiran siswa tanggal ${formattedDateText} telah tersimpan ke database. Siswa yang tidak dicentang tidak disimpan.`,
         'success'
       );
 
@@ -299,11 +356,18 @@ export function AttendanceTracker({
     window.open(waLink, '_blank', 'noreferrer');
   };
 
-  // --- HISTORY CALCULATIONS ---
-  const uniqueDates = Array.from(new Set(attendance.map(a => a.date))).sort((a, b) => b.localeCompare(a));
+  // --- HISTORY CALCULATIONS (FILTERED PER KELAS) ---
+  const classFilteredAttendance = attendance.filter(a => {
+    if (historyClassFilter === 'ALL') return true;
+    const student = students.find(s => s.id === a.studentId);
+    if (historyClassFilter === 'UNASSIGNED') return !student || !student.kelas;
+    return student?.kelas === historyClassFilter;
+  });
+
+  const uniqueDates = Array.from(new Set(classFilteredAttendance.map(a => a.date))).sort((a, b) => b.localeCompare(a));
 
   const dateStats = uniqueDates.map(date => {
-    const records = attendance.filter(a => a.date === date);
+    const records = classFilteredAttendance.filter(a => a.date === date);
     const present = records.filter(r => r.status === 'present').length;
     const absent = records.filter(r => r.status === 'absent').length;
     const permission = records.filter(r => r.status === 'permission').length;
@@ -317,8 +381,8 @@ export function AttendanceTracker({
   });
 
   const totalRecordedDays = uniqueDates.length;
-  const totalRecordedRecords = attendance.length;
-  const totalPresentRecords = attendance.filter(a => a.status === 'present').length;
+  const totalRecordedRecords = classFilteredAttendance.length;
+  const totalPresentRecords = classFilteredAttendance.filter(a => a.status === 'present').length;
   const averageAttendanceRate = totalRecordedRecords > 0 
     ? Math.round((totalPresentRecords / totalRecordedRecords) * 100) 
     : 100;
@@ -638,6 +702,62 @@ export function AttendanceTracker({
           <div className={`rounded-2xl border shadow-sm overflow-hidden ${
             isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
           }`}>
+            {/* Master Selection & Action Bar */}
+            {filteredActiveStudents.length > 0 && !loading && (
+              <div className={`px-4 py-3 border-b flex flex-wrap items-center justify-between gap-2.5 ${
+                isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/60 border-slate-800'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={isAllFilteredSelected}
+                      onChange={(e) => handleToggleSelectAll(e.target.checked)}
+                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+                    />
+                    <span className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                      {isAllFilteredSelected ? 'Batalkan Semua' : 'Centang Semua'}
+                    </span>
+                  </label>
+
+                  <div className="h-4 w-px bg-slate-300 dark:bg-slate-700 hidden sm:block" />
+
+                  <span className={`text-xs font-medium ${
+                    includedFilteredCount > 0 
+                      ? 'text-emerald-600 dark:text-emerald-400 font-semibold' 
+                      : 'text-amber-500 font-semibold'
+                  }`}>
+                    {includedFilteredCount} dari {filteredActiveStudents.length} Siswa Dicentang
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleSelectAll(true)}
+                    className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg border transition ${
+                      isLight 
+                        ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-250 shadow-2xs' 
+                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                    }`}
+                  >
+                    Pilih Semua
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleSelectAll(false)}
+                    className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg border transition ${
+                      isLight 
+                        ? 'bg-white hover:bg-slate-100 text-rose-600 border-slate-250 shadow-2xs' 
+                        : 'bg-slate-800 hover:bg-slate-700 text-rose-400 border-slate-700'
+                    }`}
+                  >
+                    Hapus Centang
+                  </button>
+                </div>
+              </div>
+            )}
+
             {loading ? (
               <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
                 {[...Array(5)].map((_, idx) => (
@@ -703,41 +823,57 @@ export function AttendanceTracker({
                     </div>
                   ) : (
                     filteredActiveStudents.map((student, index) => {
-                      const state = attendanceMap[student.id] || { status: 'present', notes: '' };
+                      const state = attendanceMap[student.id] || { included: false, status: 'present', notes: '' };
+                      const isIncluded = !!state.included;
                       const isExpanded = !!expandedStudentNotes[student.id] || state.status === 'permission' || !!state.notes;
                     
                       return (
                         <div key={student.id} className={`p-4 sm:p-5 transition duration-150 ${
-                          isLight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/20'
+                          !isIncluded 
+                            ? isLight ? 'bg-slate-50/70 opacity-60' : 'bg-slate-950/40 opacity-50'
+                            : isLight ? 'hover:bg-slate-50/90' : 'hover:bg-slate-800/20'
                         }`}>
                           {/* === MOBILE ONLY COMPACT ROW === */}
                           <div className="md:hidden flex items-center justify-between gap-3 w-full">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-[9px] font-bold text-emerald-500 font-mono tracking-wider px-1 rounded bg-emerald-500/10">
-                                  {student.level.toLowerCase().includes('dasar') 
-                                    ? 'L. DASAR' 
-                                    : `LEVEL ${student.level.match(/\d+/)?.[0] || '1'}`}
-                                </span>
-                                {student.kelas ? (
-                                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/15">
-                                    🏫 {student.kelas}
+                            <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                              <input
+                                type="checkbox"
+                                checked={isIncluded}
+                                onChange={() => handleToggleStudent(student.id)}
+                                className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600 shrink-0"
+                                title={isIncluded ? 'Batalkan pilih siswa ini' : 'Centang untuk merekam absensi siswa ini'}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-[9px] font-bold text-emerald-500 font-mono tracking-wider px-1 rounded bg-emerald-500/10">
+                                    {student.level.toLowerCase().includes('dasar') 
+                                      ? 'L. DASAR' 
+                                      : `LEVEL ${student.level.match(/\d+/)?.[0] || '1'}`}
                                   </span>
-                                ) : (
-                                  <span className="text-[9px] font-semibold px-1 rounded bg-slate-500/10 text-slate-400">
-                                    Tanpa Kelas
+                                  {student.kelas ? (
+                                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/15">
+                                      🏫 {student.kelas}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[9px] font-semibold px-1 rounded bg-slate-500/10 text-slate-400">
+                                      Tanpa Kelas
+                                    </span>
+                                  )}
+                                  {!isIncluded && (
+                                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                      Kosong (Tidak Disimpan)
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 flex-wrap mt-1">
+                                  <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 shrink-0">
+                                    {index + 1}
                                   </span>
-                                )}
-                                <span className={`text-[10px] truncate ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Wali: {student.parentName}</span>
-                              </div>
-                              <div className="flex items-center gap-2 flex-wrap mt-1">
-                                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 shrink-0">
-                                  {index + 1}
-                                </span>
-                                <h4 className={`font-bold text-sm truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</h4>
-                                <span className="text-[9px] font-mono font-bold px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15">
-                                  #{getStudentUniqueCode(student)}
-                                </span>
+                                  <h4 className={`font-bold text-sm truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</h4>
+                                  <span className="text-[9px] font-mono font-bold px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15">
+                                    #{getStudentUniqueCode(student)}
+                                  </span>
+                                </div>
                               </div>
                             </div>
 
@@ -766,11 +902,13 @@ export function AttendanceTracker({
                                 type="button"
                                 onClick={() => handleStatusCycle(student.id, state.status)}
                                 className={`w-12 h-12 rounded-full flex flex-col items-center justify-center transition-all duration-200 shadow-sm active:scale-90 shrink-0 border ${
-                                  state.status === 'present'
-                                    ? 'bg-emerald-600 border-emerald-500 text-white shadow-emerald-600/15'
-                                    : state.status === 'permission'
-                                      ? 'bg-amber-500 border-amber-400 text-white shadow-amber-500/15'
-                                      : 'bg-rose-500 border-rose-400 text-white shadow-rose-500/15'
+                                  !isIncluded
+                                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 border-slate-300 dark:border-slate-700'
+                                    : state.status === 'present'
+                                      ? 'bg-emerald-600 border-emerald-500 text-white shadow-emerald-600/15'
+                                      : state.status === 'permission'
+                                        ? 'bg-amber-500 border-amber-400 text-white shadow-amber-500/15'
+                                        : 'bg-rose-500 border-rose-400 text-white shadow-rose-500/15'
                                 }`}
                               >
                                 {state.status === 'present' && <Check size={16} className="stroke-[3]" />}
@@ -785,36 +923,50 @@ export function AttendanceTracker({
 
                           {/* === DESKTOP ONLY ROW === */}
                           <div className="hidden md:flex md:flex-row md:items-center justify-between gap-4 w-full">
-                            <div className="flex-1 flex flex-col">
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[10px] font-bold text-emerald-500 font-mono tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/10">
-                                    {student.level.toLowerCase().includes('dasar') 
-                                      ? 'LEVEL DASAR' 
-                                      : `LEVEL ${student.level.match(/\d+/)?.[0] || '1'}`}
-                                  </span>
-                                  {student.kelas ? (
-                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/15 flex items-center gap-1">
-                                      <Layers size={11} />
-                                      <span>{student.kelas}</span>
+                            <div className="flex items-center gap-3.5 flex-1">
+                              <input
+                                type="checkbox"
+                                checked={isIncluded}
+                                onChange={() => handleToggleStudent(student.id)}
+                                className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600 shrink-0"
+                                title={isIncluded ? 'Batalkan pilih siswa ini' : 'Centang untuk merekam absensi siswa ini'}
+                              />
+                              <div className="flex-1 flex flex-col">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-bold text-emerald-500 font-mono tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/10">
+                                      {student.level.toLowerCase().includes('dasar') 
+                                        ? 'LEVEL DASAR' 
+                                        : `LEVEL ${student.level.match(/\d+/)?.[0] || '1'}`}
                                     </span>
-                                  ) : (
-                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-500/10 text-slate-400 border border-slate-500/15">
-                                      Tanpa Kelas
-                                    </span>
-                                  )}
+                                    {student.kelas ? (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/15 flex items-center gap-1">
+                                        <Layers size={11} />
+                                        <span>{student.kelas}</span>
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-500/10 text-slate-400 border border-slate-500/15">
+                                        Tanpa Kelas
+                                      </span>
+                                    )}
+                                    {!isIncluded && (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                        Kosong (Tidak Disimpan)
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
+                                <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
+                                  <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 shrink-0">
+                                    {index + 1}
+                                  </span>
+                                  <h3 className={`font-bold text-base ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</h3>
+                                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15">
+                                    #{getStudentUniqueCode(student)}
+                                  </span>
+                                </div>
+                                <p className={`text-xs mt-0.5 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Wali: {student.parentName} ({student.parentPhone})</p>
                               </div>
-                              <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
-                                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 shrink-0">
-                                  {index + 1}
-                                </span>
-                                <h3 className={`font-bold text-base ${isLight ? 'text-slate-800' : 'text-white'}`}>{student.name}</h3>
-                                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15">
-                                  #{getStudentUniqueCode(student)}
-                                </span>
-                              </div>
-                              <p className={`text-xs mt-0.5 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Wali: {student.parentName} ({student.parentPhone})</p>
                             </div>
 
                             {/* Desktop Controls */}
@@ -827,7 +979,7 @@ export function AttendanceTracker({
                                     type="button"
                                     onClick={() => handleStatusChange(student.id, 'present')}
                                     className={`py-1.5 px-3 rounded-lg text-xs font-bold transition duration-150 flex items-center justify-center gap-1.5 ${
-                                      state.status === 'present'
+                                      state.status === 'present' && isIncluded
                                         ? 'bg-emerald-600 text-white shadow-md font-extrabold'
                                         : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                                     }`}
@@ -839,7 +991,7 @@ export function AttendanceTracker({
                                     type="button"
                                     onClick={() => handleStatusChange(student.id, 'permission')}
                                     className={`py-1.5 px-3 rounded-lg text-xs font-bold transition duration-150 flex items-center justify-center gap-1.5 ${
-                                      state.status === 'permission'
+                                      state.status === 'permission' && isIncluded
                                         ? 'bg-amber-500 text-white shadow-md font-extrabold'
                                         : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                                     }`}
@@ -851,7 +1003,7 @@ export function AttendanceTracker({
                                     type="button"
                                     onClick={() => handleStatusChange(student.id, 'absent')}
                                     className={`py-1.5 px-3 rounded-lg text-xs font-bold transition duration-150 flex items-center justify-center gap-1.5 ${
-                                      state.status === 'absent'
+                                      state.status === 'absent' && isIncluded
                                         ? 'bg-rose-500 text-white shadow-md font-extrabold'
                                         : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                                     }`}
@@ -967,7 +1119,7 @@ export function AttendanceTracker({
                   }`}>
                     <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                       <CheckCircle size={15} className="text-emerald-500 shrink-0" />
-                      <span>Siswa Terdata: <strong className="font-bold text-emerald-600 dark:text-emerald-400">{scheduledActiveStudents.length} Siswa</strong></span>
+                      <span>Siswa Akan Disimpan: <strong className="font-bold text-emerald-600 dark:text-emerald-400">{includedFilteredCount} Siswa Dicentang</strong> (dari {scheduledActiveStudents.length} total)</span>
                     </div>
 
                     <button
@@ -995,7 +1147,7 @@ export function AttendanceTracker({
                       ) : (
                         <>
                           <Save size={18} />
-                          <span>Simpan Semua Absensi Hari Ini</span>
+                          <span>Simpan Absensi ({includedFilteredCount} Dicentang)</span>
                         </>
                       )}
                     </button>
@@ -1008,6 +1160,82 @@ export function AttendanceTracker({
       ) : (
         // === DETAILED HISTORICAL & REKAP VIEW ===
         <div className="space-y-6">
+          {/* Quick Class Selector Bar for History */}
+          <div className={`p-4 rounded-2xl border shadow-sm space-y-2 ${
+            isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+          }`}>
+            <div className="flex items-center gap-2">
+              <Layers className="text-emerald-500" size={16} />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Pilih Riwayat & Rekap Per Kelas:
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+              <button
+                type="button"
+                onClick={() => setHistoryClassFilter('ALL')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 border ${
+                  historyClassFilter === 'ALL'
+                    ? 'bg-emerald-600 border-emerald-500 text-white shadow-md'
+                    : isLight
+                      ? 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                      : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <Users size={13} />
+                <span>Semua Kelas ({attendance.length} Total Absensi)</span>
+              </button>
+
+              {classes.map(cls => {
+                const classRecordsCount = attendance.filter(a => {
+                  const s = students.find(std => std.id === a.studentId);
+                  return s?.kelas === cls.name;
+                }).length;
+                const isSelected = historyClassFilter === cls.name;
+                return (
+                  <button
+                    key={cls.id}
+                    type="button"
+                    onClick={() => setHistoryClassFilter(cls.name)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 border ${
+                      isSelected
+                        ? 'bg-emerald-600 border-emerald-500 text-white shadow-md'
+                        : isLight
+                          ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                          : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    <Layers size={13} className={isSelected ? 'text-white' : 'text-emerald-400'} />
+                    <span>{cls.name}</span>
+                    <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-extrabold ${
+                      isSelected 
+                        ? 'bg-white/20 text-white' 
+                        : 'bg-emerald-500/10 text-emerald-400'
+                    }`}>
+                      {classRecordsCount} Data
+                    </span>
+                  </button>
+                );
+              })}
+
+              {students.some(s => !s.kelas) && (
+                <button
+                  type="button"
+                  onClick={() => setHistoryClassFilter('UNASSIGNED')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 border ${
+                    historyClassFilter === 'UNASSIGNED'
+                      ? 'bg-amber-600 border-amber-500 text-white shadow-md'
+                      : isLight
+                        ? 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:bg-slate-800'
+                  }`}
+                >
+                  <span>Tanpa Kelas</span>
+                </button>
+              )}
+            </div>
+          </div>
           {/* Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className={`p-5 rounded-2xl border shadow-sm flex items-center gap-4 ${
@@ -1317,7 +1545,14 @@ export function AttendanceTracker({
                         <tr key={record.id} className={isLight ? 'hover:bg-slate-50' : 'hover:bg-slate-900/40'}>
                           <td className="p-3">
                             <span className="font-bold block">{record.studentName}</span>
-                            <span className="text-[10px] text-slate-450 font-semibold">{student?.level || 'Math Fingers'}</span>
+                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                              <span className="text-[10px] text-slate-450 font-semibold">{student?.level || 'Math Fingers'}</span>
+                              {student?.kelas && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                                  🏫 {student.kelas}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="p-3">
                             <div className="flex justify-center gap-1">

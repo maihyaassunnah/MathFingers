@@ -982,7 +982,7 @@ export default function App() {
           activeBranch={activeBranch}
           onSelectBranch={setActiveBranch}
           studentsCount={filteredStudents.length}
-          pendingSppCount={filteredInvoices.filter(i => i.status === 'unpaid' || i.status === 'overdue').length}
+          pendingSppCount={filteredInvoices.filter(i => i.status === 'unpaid' || i.status === 'partially_paid').length}
           todayAttendanceCount={filteredAttendance.filter(a => a.date === new Date().toISOString().split('T')[0]).length}
           installedVersion={installedVersion}
           isUpdateAvailable={installedVersion !== LATEST_APP_VERSION}

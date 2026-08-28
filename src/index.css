@@ -69,4 +69,40 @@ body {
   scrollbar-width: none;  /* Firefox */
 }
 
+/* Optimized Print Styles for Cetak Rapor */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide navigation, modals, and non-printable elements */
+  nav, header, aside, .no-print, button, [role="dialog"], [role="alert"] {
+    display: none !important;
+  }
+
+  #printable-report-paper {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    page-break-inside: avoid;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 12mm 10mm 12mm 10mm;
+  }
+}
+
+
 

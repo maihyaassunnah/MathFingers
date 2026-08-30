@@ -181,13 +181,13 @@ export function LoginManager({
         setSelectedRoleUser(found);
         setSelectedBranch(found.branch || 'Pusat');
         setUsernameOrEmailInput(found.email || found.username);
-        setPasswordInput(found.password || 'admin123');
+        setPasswordInput('');
       }
     } else if (!selectedRoleUser && activeAdmins.length > 0) {
       setSelectedRoleUser(activeAdmins[0]);
       setSelectedBranch(activeAdmins[0].branch || 'Pusat');
       setUsernameOrEmailInput(activeAdmins[0].email || activeAdmins[0].username);
-      setPasswordInput(activeAdmins[0].password || 'admin123');
+      setPasswordInput('');
     }
   }, [activeAdmins]);
 
@@ -606,7 +606,7 @@ export function LoginManager({
                       type="button"
                       onClick={() => {
                         setUsernameOrEmailInput(admin.email || admin.username);
-                        setPasswordInput(admin.password || 'admin123');
+                        setPasswordInput('');
                         setSelectedRoleUser(admin);
                         setError(null);
                       }}
@@ -620,7 +620,7 @@ export function LoginManager({
                           {admin.name.split(',')[0]}
                         </div>
                         <div className="text-[9px] text-slate-400 truncate capitalize">
-                          {admin.branch} &bull; {admin.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+                          {admin.branch} &bull; {admin.role === 'super_admin' ? 'Super Admin' : admin.role === 'branch_assistant' ? 'Asisten' : 'Admin'}
                         </div>
                       </div>
                     </button>

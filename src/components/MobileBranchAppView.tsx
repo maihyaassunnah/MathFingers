@@ -100,9 +100,10 @@ export function MobileBranchAppView({
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const isUserSuperAdmin = isSuperAdmin || currentUser?.role === 'super_admin' || currentUser?.username === 'wahyudin';
+  const isAssistant = currentUser?.role === 'branch_assistant';
 
   // Derive location / branch info
-  const branchName = currentUser?.role === 'branch_admin' 
+  const branchName = (currentUser?.role === 'branch_admin' || currentUser?.role === 'branch_assistant')
     ? currentUser.branch 
     : (activeBranch && activeBranch !== 'all' ? activeBranch : 'Singkut');
   
@@ -113,7 +114,11 @@ export function MobileBranchAppView({
   const primaryServices = [
     { id: 'attendance', name: 'Presensi Siswa', sub: 'Absen Harian & QR', icon: CheckSquare, color: 'text-emerald-600', bg: isLight ? 'bg-emerald-50' : 'bg-emerald-950/40', border: 'border-emerald-200 dark:border-emerald-800' },
     { id: 'students', name: 'Data Siswa', sub: 'Buku Induk & Foto', icon: Users, color: 'text-sky-600', bg: isLight ? 'bg-sky-50' : 'bg-sky-950/40', border: 'border-sky-200 dark:border-sky-800' },
-    { id: 'spp', name: 'Tagihan SPP', sub: 'Kuitansi & Bayar', icon: Receipt, color: 'text-rose-600', bg: isLight ? 'bg-rose-50' : 'bg-rose-950/40', border: 'border-rose-200 dark:border-rose-800' },
+    ...(!isAssistant ? [
+      { id: 'spp', name: 'Tagihan SPP', sub: 'Kuitansi & Bayar', icon: Receipt, color: 'text-rose-600', bg: isLight ? 'bg-rose-50' : 'bg-rose-950/40', border: 'border-rose-200 dark:border-rose-800' }
+    ] : [
+      { id: 'simulator', name: 'Materi & Modul', sub: 'Kurikulum Resmi', icon: BookOpen, color: 'text-pink-600', bg: isLight ? 'bg-pink-50' : 'bg-pink-950/40', border: 'border-pink-200 dark:border-pink-800' }
+    ]),
     { id: 'grades', name: 'Input Nilai', sub: 'Kuis & Evaluasi', icon: Award, color: 'text-amber-600', bg: isLight ? 'bg-amber-50' : 'bg-amber-950/40', border: 'border-amber-200 dark:border-amber-800' },
     { id: 'classes', name: 'Jadwal Kelas', sub: 'Kelompok Bimbingan', icon: Layers, color: 'text-indigo-600', bg: isLight ? 'bg-indigo-50' : 'bg-indigo-950/40', border: 'border-indigo-200 dark:border-indigo-800' },
     { id: 'qr_cards', name: 'Kartu QR', sub: 'Cetak ID Member', icon: QrCode, color: 'text-teal-600', bg: isLight ? 'bg-teal-50' : 'bg-teal-950/40', border: 'border-teal-200 dark:border-teal-800' },
@@ -126,12 +131,16 @@ export function MobileBranchAppView({
       { id: 'branches_mgmt', name: 'Kelola Cabang', sub: 'Multi-Cabang & Admin', icon: Building2, color: 'text-teal-600', bg: isLight ? 'bg-teal-50' : 'bg-teal-950/40', border: 'border-teal-200 dark:border-teal-800' },
       { id: 'supabase_sql', name: 'SQL Supabase', sub: 'Editor Database', icon: Globe, color: 'text-sky-600', bg: isLight ? 'bg-sky-50' : 'bg-sky-950/40', border: 'border-sky-200 dark:border-sky-800' },
     ] : []),
-    { id: 'finance', name: 'Keuangan Cabang', sub: 'Pemasukan & Biaya', icon: Wallet, color: 'text-amber-600', bg: isLight ? 'bg-amber-50' : 'bg-amber-950/40', border: 'border-amber-200 dark:border-amber-800' },
+    ...(!isAssistant ? [
+      { id: 'finance', name: 'Keuangan Cabang', sub: 'Pemasukan & Biaya', icon: Wallet, color: 'text-amber-600', bg: isLight ? 'bg-amber-50' : 'bg-amber-950/40', border: 'border-amber-200 dark:border-amber-800' },
+      { id: 'spp_history', name: 'Riwayat SPP', sub: 'Log Transaksi', icon: History, color: 'text-orange-600', bg: isLight ? 'bg-orange-50' : 'bg-orange-950/40', border: 'border-orange-200 dark:border-orange-800' },
+    ] : []),
     { id: 'alumni', name: 'Alumni Lulus', sub: 'Arsip Sertifikat', icon: GraduationCap, color: 'text-blue-600', bg: isLight ? 'bg-blue-50' : 'bg-blue-950/40', border: 'border-blue-200 dark:border-blue-800' },
-    { id: 'simulator', name: 'Materi & Modul', sub: 'Kurikulum Resmi', icon: BookOpen, color: 'text-pink-600', bg: isLight ? 'bg-pink-50' : 'bg-pink-950/40', border: 'border-pink-200 dark:border-pink-800' },
+    ...(!isAssistant ? [
+      { id: 'simulator', name: 'Materi & Modul', sub: 'Kurikulum Resmi', icon: BookOpen, color: 'text-pink-600', bg: isLight ? 'bg-pink-50' : 'bg-pink-950/40', border: 'border-pink-200 dark:border-pink-800' }
+    ] : []),
     { id: 'journal_history', name: 'Riwayat Jurnal', sub: 'Arsip Mengajar', icon: History, color: 'text-cyan-600', bg: isLight ? 'bg-cyan-50' : 'bg-cyan-950/40', border: 'border-cyan-200 dark:border-cyan-800' },
-    { id: 'spp_history', name: 'Riwayat SPP', sub: 'Log Transaksi', icon: History, color: 'text-orange-600', bg: isLight ? 'bg-orange-50' : 'bg-orange-950/40', border: 'border-orange-200 dark:border-orange-800' },
-    { id: 'settings', name: 'Pengaturan Cabang', sub: 'Rekening & TTD', icon: Settings, color: 'text-slate-600', bg: isLight ? 'bg-slate-100' : 'bg-slate-800', border: 'border-slate-300 dark:border-slate-700' },
+    { id: 'settings', name: 'Pengaturan Cabang', sub: 'Profil & Tampilan', icon: Settings, color: 'text-slate-600', bg: isLight ? 'bg-slate-100' : 'bg-slate-800', border: 'border-slate-300 dark:border-slate-700' },
   ];
 
   const allDisplayServices = showAllServices 
@@ -285,7 +294,7 @@ export function MobileBranchAppView({
           <div className="min-w-0">
             <div className="flex items-center gap-1">
               <span className={`text-xs font-black truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                Cabang {branchName}
+                Cabang {branchName} {isAssistant && <span className="text-purple-400 font-bold text-[10px]">(Asisten)</span>}
               </span>
             </div>
             <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[145px] sm:max-w-[200px]">
@@ -497,7 +506,11 @@ export function MobileBranchAppView({
                       {currentSlide.primaryBtnText && (
                         <button
                           type="button"
-                          onClick={() => onNavigate(currentSlide.primaryBtnAction || 'attendance')}
+                          onClick={() => {
+                            const action = currentSlide.primaryBtnAction || 'attendance';
+                            const safeAction = (isAssistant && (action === 'spp' || action === 'finance' || action === 'spp_history')) ? 'attendance' : action;
+                            onNavigate(safeAction);
+                          }}
                           className="px-3.5 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-sm transition"
                         >
                           <Zap size={13} className="fill-current" />
@@ -508,7 +521,11 @@ export function MobileBranchAppView({
                       {currentSlide.secondaryBtnText && (
                         <button
                           type="button"
-                          onClick={() => onNavigate(currentSlide.secondaryBtnAction || 'spp')}
+                          onClick={() => {
+                            const action = currentSlide.secondaryBtnAction || 'spp';
+                            const safeAction = (isAssistant && (action === 'spp' || action === 'finance' || action === 'spp_history')) ? 'students' : action;
+                            onNavigate(safeAction);
+                          }}
                           className="px-3.5 py-2 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 text-white backdrop-blur-md font-bold text-xs flex items-center gap-1.5 border border-white/20 transition"
                         >
                           <Calendar size={13} />

@@ -661,38 +661,19 @@ export function useMathFinggersDb() {
   };
 
   useEffect(() => {
-    // Initial Load
+    // Initial Load once on mount
     loadData();
 
-    // Re-sync automatically when network reconnects
+    // Re-sync automatically only when network reconnects from offline state
     const handleOnline = () => {
       console.log('Online status detected: Triggering Supabase background sync...');
       loadData(true);
     };
 
-    // Optional background sync on window focus (debounced)
-    let lastFocusTime = Date.now();
-    const handleFocus = () => {
-      if (Date.now() - lastFocusTime > 60000 && navigator.onLine) {
-        lastFocusTime = Date.now();
-        loadData(true);
-      }
-    };
-
     window.addEventListener('online', handleOnline);
-    window.addEventListener('focus', handleFocus);
-
-    // Periodic background sync every 60s when online
-    const interval = setInterval(() => {
-      if (typeof navigator !== 'undefined' && navigator.onLine && supabase) {
-        loadData(true);
-      }
-    }, 60000);
 
     return () => {
       window.removeEventListener('online', handleOnline);
-      window.removeEventListener('focus', handleFocus);
-      clearInterval(interval);
     };
   }, []);
 

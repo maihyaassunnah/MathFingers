@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Student, Attendance, Invoice, Grade, AppSettings, DashboardTask, Branch, AdminUser } from '../types';
+import { Student, Attendance, Invoice, Grade, TeacherNote, AppSettings, DashboardTask, Branch, AdminUser } from '../types';
 import { formatRupiah, getWhatsAppLink, getStudentUniqueCode } from '../utils';
 import { MathFingerLogo } from './MathFingerLogo';
 import { MobileBranchAppView } from './MobileBranchAppView';
@@ -53,6 +53,7 @@ interface DashboardOverviewProps {
   attendance: Attendance[];
   invoices: Invoice[];
   grades: Grade[];
+  notes?: TeacherNote[];
   settings: AppSettings;
   dashboardTasks: DashboardTask[];
   onAddDashboardTask: (text: string) => void;
@@ -68,6 +69,7 @@ interface DashboardOverviewProps {
   allAttendance?: Attendance[];
   allInvoices?: Invoice[];
   allGrades?: Grade[];
+  allNotes?: TeacherNote[];
   currentUser?: AdminUser | null;
   onOpenUpdateModal?: () => void;
   isUpdateAvailable?: boolean;
@@ -80,6 +82,7 @@ export function DashboardOverview({
   attendance, 
   invoices, 
   grades, 
+  notes = [],
   settings,
   dashboardTasks,
   onAddDashboardTask,
@@ -95,6 +98,7 @@ export function DashboardOverview({
   allAttendance = [],
   allInvoices = [],
   allGrades = [],
+  allNotes = [],
   currentUser = null,
   onOpenUpdateModal,
   isUpdateAvailable = false,
@@ -226,7 +230,8 @@ export function DashboardOverview({
   const recentGrades = grades.slice(0, 3);
 
   const isLight = theme === 'light';
-  const isBranchAdmin = currentUser?.role === 'branch_admin' || activeUser?.role === 'branch_admin';
+  const isBranchAdmin = currentUser?.role === 'branch_admin' || activeUser?.role === 'branch_admin' || currentUser?.role === 'branch_assistant' || activeUser?.role === 'branch_assistant';
+  const isBranchAssistant = currentUser?.role === 'branch_assistant' || activeUser?.role === 'branch_assistant';
 
   // Calculate per-branch statistics for super admins
   const targetBranches = (activeBranch && activeBranch !== 'all')
@@ -1006,45 +1011,86 @@ export function DashboardOverview({
           </div>
         </motion.div>
 
-        {/* Metric 3: Tagihan SPP */}
-        <motion.div 
-          whileHover={{ scale: 1.02, y: -2 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => onNavigate('spp')} 
-          className={`p-4 sm:p-5 rounded-2xl border flex items-center gap-3.5 sm:gap-4 cursor-pointer transition-all duration-300 group ${
-            isLight 
-              ? 'bg-white border-slate-200/80 shadow-sm hover:shadow-md hover:border-rose-400' 
-              : 'bg-slate-900 border-slate-800 shadow-sm hover:shadow-rose-950/40 hover:border-rose-500/40'
-          }`}
-        >
-          <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-br from-rose-500/20 to-pink-500/10 border border-rose-500/25 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-            <Receipt size={22} className="group-hover:scale-110 transition-transform" />
-          </div>
-          <div className="min-w-0">
-            <span className={`text-[10px] sm:text-xs font-black tracking-wider uppercase block truncate ${
-              isLight ? 'text-slate-800' : 'text-slate-400'
-            }`}>
-              Tagihan SPP
-            </span>
-            <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className={`text-xl sm:text-2xl font-black ${
-                isLight ? 'text-slate-900' : 'text-white'
+        {/* Metric 3: Tagihan SPP (or Jurnal Guru for Assistant) */}
+        {isBranchAssistant ? (
+          <motion.div 
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => onNavigate('notes')} 
+            className={`p-4 sm:p-5 rounded-2xl border flex items-center gap-3.5 sm:gap-4 cursor-pointer transition-all duration-300 group ${
+              isLight 
+                ? 'bg-white border-slate-200/80 shadow-sm hover:shadow-md hover:border-purple-400' 
+                : 'bg-slate-900 border-slate-800 shadow-sm hover:shadow-purple-950/40 hover:border-purple-500/40'
+            }`}
+          >
+            <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-br from-purple-500/20 to-indigo-500/10 border border-purple-500/25 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+              <FileText size={22} className="group-hover:scale-110 transition-transform" />
+            </div>
+            <div className="min-w-0">
+              <span className={`text-[10px] sm:text-xs font-black tracking-wider uppercase block truncate ${
+                isLight ? 'text-slate-800' : 'text-slate-400'
               }`}>
-                {unpaidInvoices.length}
+                Jurnal Guru
               </span>
-              <span className={`text-[11px] font-bold ${
-                isLight ? 'text-rose-700' : 'text-rose-400'
+              <div className="flex items-baseline gap-1.5 mt-0.5">
+                <span className={`text-xl sm:text-2xl font-black ${
+                  isLight ? 'text-slate-900' : 'text-white'
+                }`}>
+                  {notes.length}
+                </span>
+                <span className={`text-[11px] font-bold ${
+                  isLight ? 'text-purple-700' : 'text-purple-400'
+                }`}>
+                  Catatan
+                </span>
+              </div>
+              <span className={`text-[10px] font-bold block truncate mt-0.5 ${
+                isLight ? 'text-slate-600' : 'text-slate-400'
               }`}>
-                Tagihan
+                Bimbingan Pembelajaran
               </span>
             </div>
-            <span className={`text-[10px] font-bold block truncate mt-0.5 ${
-              isLight ? 'text-rose-700' : 'text-rose-400'
-            }`}>
-              {unpaidAmount > 0 ? formatRupiah(unpaidAmount) : 'Semua Lunas!'}
-            </span>
-          </div>
-        </motion.div>
+          </motion.div>
+        ) : (
+          <motion.div 
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => onNavigate('spp')} 
+            className={`p-4 sm:p-5 rounded-2xl border flex items-center gap-3.5 sm:gap-4 cursor-pointer transition-all duration-300 group ${
+              isLight 
+                ? 'bg-white border-slate-200/80 shadow-sm hover:shadow-md hover:border-rose-400' 
+                : 'bg-slate-900 border-slate-800 shadow-sm hover:shadow-rose-950/40 hover:border-rose-500/40'
+            }`}
+          >
+            <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-br from-rose-500/20 to-pink-500/10 border border-rose-500/25 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+              <Receipt size={22} className="group-hover:scale-110 transition-transform" />
+            </div>
+            <div className="min-w-0">
+              <span className={`text-[10px] sm:text-xs font-black tracking-wider uppercase block truncate ${
+                isLight ? 'text-slate-800' : 'text-slate-400'
+              }`}>
+                Tagihan SPP
+              </span>
+              <div className="flex items-baseline gap-1.5 mt-0.5">
+                <span className={`text-xl sm:text-2xl font-black ${
+                  isLight ? 'text-slate-900' : 'text-white'
+                }`}>
+                  {unpaidInvoices.length}
+                </span>
+                <span className={`text-[11px] font-bold ${
+                  isLight ? 'text-rose-700' : 'text-rose-400'
+                }`}>
+                  Tagihan
+                </span>
+              </div>
+              <span className={`text-[10px] font-bold block truncate mt-0.5 ${
+                isLight ? 'text-rose-700' : 'text-rose-400'
+              }`}>
+                {unpaidAmount > 0 ? formatRupiah(unpaidAmount) : 'Semua Lunas!'}
+              </span>
+            </div>
+          </motion.div>
+        )}
 
         {/* Metric 4: Rata-Rata Kelas */}
         <motion.div 
@@ -1504,7 +1550,7 @@ export function DashboardOverview({
                   <motion.button
                     whileHover={{ x: 4, scale: 1.01 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => onNavigate('spp')}
+                    onClick={() => onNavigate(isBranchAssistant ? 'notes' : 'spp')}
                     className={`flex items-center justify-between p-3 rounded-xl border transition text-left group ${
                       isLight ? 'border-slate-100 bg-slate-50 hover:bg-slate-100/70' : 'border-slate-800/80 bg-slate-950/30 hover:bg-slate-800/40'
                     }`}
@@ -1514,8 +1560,12 @@ export function DashboardOverview({
                         isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
                       }`}>3</div>
                       <div>
-                        <div className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>Keuangan & Tagihan SPP</div>
-                        <div className="text-[10px] text-slate-400">Lunas/Belum bayar & kuitansi</div>
+                        <div className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>
+                          {isBranchAssistant ? 'Jurnal Mengajar Guru' : 'Keuangan & Tagihan SPP'}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          {isBranchAssistant ? 'Catatan materi & bimbingan' : 'Lunas/Belum bayar & kuitansi'}
+                        </div>
                       </div>
                     </div>
                     <Play size={12} className="text-slate-550 group-hover:text-emerald-550 group-hover:translate-x-0.5 transition-transform" />

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { networkMonitor } from './services/networkMonitor';
 
 // Open or upgrade IndexedDB for offline request queue
 export function openSyncDb(): Promise<IDBDatabase> {
@@ -150,23 +151,53 @@ async function enqueueRequest(url: string, method: string, init?: RequestInit) {
   }
 }
 
-// Intercept write queries to enqueue them when offline or network fails
+// Intercept queries and mutations to monitor live telemetry payload sizes and queue offline writes
 const customFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
   const url = typeof input === 'string' ? input : (input instanceof URL ? input.toString() : input.url);
-  const method = init?.method || 'GET';
+  const method = (init?.method || 'GET').toUpperCase();
+  const startTime = performance.now();
+  const tableName = networkMonitor.extractTableName(url);
 
-  // Only intercept write mutations to Supabase PostgREST api
-  const isSupabaseWrite = url.includes('supabase.co') && ['POST', 'PATCH', 'PUT', 'DELETE'].includes(method.toUpperCase());
-
-  if (!isSupabaseWrite) {
-    return fetch(input, init);
+  // Extract request body string & size
+  let requestBodyStr: string | null = null;
+  let requestSizeBytes = 0;
+  if (init?.body) {
+    try {
+      requestBodyStr = await getBodyString(init.body);
+      if (requestBodyStr) {
+        requestSizeBytes = new Blob([requestBodyStr]).size;
+      }
+    } catch {
+      // Ignore conversion error
+    }
   }
 
-  // If navigator reports offline, skip network and queue immediately
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+  // Only intercept write mutations to Supabase PostgREST api for offline queuing
+  const isSupabaseWrite = url.includes('supabase.co') && ['POST', 'PATCH', 'PUT', 'DELETE'].includes(method);
+
+  // If navigator reports offline, skip network and queue write mutations immediately
+  if (isSupabaseWrite && typeof navigator !== 'undefined' && !navigator.onLine) {
     console.log('[Supabase Fetch] Offline detected, intercepting and queueing request:', method, url);
     await enqueueRequest(url, method, init);
-    const status = method.toUpperCase() === 'POST' ? 201 : 204;
+    const status = method === 'POST' ? 201 : 204;
+
+    networkMonitor.recordRequest({
+      timestamp: Date.now(),
+      url,
+      endpoint: url.replace(/^https?:\/\/[^/]+/, ''),
+      table: tableName,
+      method,
+      status,
+      statusText: 'Queued Offline',
+      durationMs: Math.round(performance.now() - startTime),
+      requestSizeBytes,
+      responseSizeBytes: 42,
+      requestBodyPreview: requestBodyStr,
+      responseBodyPreview: JSON.stringify({ queued: true }),
+      isError: false,
+      queued: true
+    });
+
     return new Response(JSON.stringify({ queued: true }), {
       status,
       headers: { 'Content-Type': 'application/json' }
@@ -175,17 +206,101 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit): Promis
 
   try {
     const response = await fetch(input, init);
-    // If response is a network failure status or server-side transient issue, we can also choose to queue it.
-    // However, for typical offline sync, a standard fetch exception is thrown by the browser which goes to the catch block.
-    return response;
-  } catch (err) {
-    console.warn('[Supabase Fetch] Network failure or offline transition. Queueing request:', err);
-    await enqueueRequest(url, method, init);
-    const status = method.toUpperCase() === 'POST' ? 201 : 204;
-    return new Response(JSON.stringify({ queued: true }), {
-      status,
-      headers: { 'Content-Type': 'application/json' }
+    const durationMs = Math.round(performance.now() - startTime);
+
+    // Clone response to compute exact payload size in bytes without consuming original response stream
+    let responseSizeBytes = 0;
+    let responseBodyPreview: string | null = null;
+    let largeFields: Array<{ field: string; sizeBytes: number; preview: string }> = [];
+
+    try {
+      const resClone = response.clone();
+      const text = await resClone.text();
+      responseSizeBytes = new Blob([text]).size;
+      responseBodyPreview = text.length > 500 ? `${text.substring(0, 500)}...` : text;
+
+      if (text.startsWith('{') || text.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(text);
+          largeFields = networkMonitor.analyzeLargeFields(parsed);
+        } catch {
+          // Ignore JSON parse error
+        }
+      }
+    } catch {
+      // Fallback to Content-Length header if clone text read fails
+      const cl = response.headers.get('content-length');
+      if (cl) responseSizeBytes = parseInt(cl, 10) || 0;
+    }
+
+    // Record telemetry in Network Monitor
+    networkMonitor.recordRequest({
+      timestamp: Date.now(),
+      url,
+      endpoint: url.replace(/^https?:\/\/[^/]+/, ''),
+      table: tableName,
+      method,
+      status: response.status,
+      statusText: response.statusText,
+      durationMs,
+      requestSizeBytes,
+      responseSizeBytes,
+      requestBodyPreview: requestBodyStr,
+      responseBodyPreview,
+      detectedLargeFields: largeFields,
+      isError: !response.ok
     });
+
+    return response;
+  } catch (err: any) {
+    const durationMs = Math.round(performance.now() - startTime);
+
+    if (isSupabaseWrite) {
+      console.warn('[Supabase Fetch] Network failure or offline transition. Queueing request:', err);
+      await enqueueRequest(url, method, init);
+      const status = method === 'POST' ? 201 : 204;
+
+      networkMonitor.recordRequest({
+        timestamp: Date.now(),
+        url,
+        endpoint: url.replace(/^https?:\/\/[^/]+/, ''),
+        table: tableName,
+        method,
+        status,
+        statusText: 'Failed -> Queued Offline',
+        durationMs,
+        requestSizeBytes,
+        responseSizeBytes: 42,
+        requestBodyPreview: requestBodyStr,
+        responseBodyPreview: JSON.stringify({ queued: true }),
+        isError: true,
+        queued: true
+      });
+
+      return new Response(JSON.stringify({ queued: true }), {
+        status,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Record failed fetch
+    networkMonitor.recordRequest({
+      timestamp: Date.now(),
+      url,
+      endpoint: url.replace(/^https?:\/\/[^/]+/, ''),
+      table: tableName,
+      method,
+      status: 0,
+      statusText: err.message || 'Network Error',
+      durationMs,
+      requestSizeBytes,
+      responseSizeBytes: 0,
+      requestBodyPreview: requestBodyStr,
+      responseBodyPreview: null,
+      isError: true
+    });
+
+    throw err;
   }
 };
 

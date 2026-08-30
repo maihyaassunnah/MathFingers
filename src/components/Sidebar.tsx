@@ -84,6 +84,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}&backgroundColor=0d9488,0284c7,4f46e5`;
   };
 
+  const isAssistant = currentUser?.role === 'branch_assistant';
+
   // Grouped Navigation Items
   const navGroups = [
     {
@@ -106,14 +108,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { id: 'report', name: 'Rapor Siswa', icon: TrendingUp }
       ]
     },
-    {
+    ...(!isAssistant ? [{
       title: 'KEUANGAN',
       items: [
         { id: 'spp', name: 'Pembayaran SPP', icon: Receipt, badge: pendingSppCount > 0 ? pendingSppCount : undefined, badgeColor: 'bg-amber-400 text-slate-950' },
         { id: 'spp_history', name: 'Riwayat SPP', icon: History },
         { id: 'finance', name: 'Arus Keuangan', icon: Wallet }
       ]
-    },
+    }] : []),
     {
       title: 'AKUN & SISTEM',
       items: [
@@ -473,6 +475,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     {isSuperAdmin ? (
                       <span className="text-amber-500 font-bold flex items-center gap-0.5">
                         <ShieldCheck size={10} /> Super Admin
+                      </span>
+                    ) : isAssistant ? (
+                      <span className="text-purple-400 font-bold flex items-center gap-0.5">
+                        <UserCheck size={10} /> Asisten {currentUser?.branch || 'Pusat'}
                       </span>
                     ) : (
                       <span className="text-emerald-500 font-bold flex items-center gap-0.5">

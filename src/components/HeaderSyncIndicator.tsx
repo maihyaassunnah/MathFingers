@@ -10,8 +10,11 @@ import {
   ShieldCheck,
   Zap,
   Clock,
-  ChevronDown
+  ChevronDown,
+  Activity
 } from 'lucide-react';
+import { SupabaseNetworkMonitor } from './SupabaseNetworkMonitor';
+import { networkMonitor, formatBytes } from '../services/networkMonitor';
 
 interface HeaderSyncIndicatorProps {
   isSyncing: boolean;
@@ -35,11 +38,20 @@ export const HeaderSyncIndicator: React.FC<HeaderSyncIndicatorProps> = ({
   compact = false
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isNetworkModalOpen, setIsNetworkModalOpen] = useState(false);
+  const [sessionEgress, setSessionEgress] = useState<number>(0);
   const [timeAgo, setTimeAgo] = useState<string>('Baru saja');
   const popoverRef = useRef<HTMLDivElement>(null);
 
   const isLight = theme === 'light';
   const isOnline = !isOfflineFallback && pingLatency !== null && typeof navigator !== 'undefined' ? navigator.onLine : false;
+
+  useEffect(() => {
+    const unsub = networkMonitor.subscribe((_, stats) => {
+      setSessionEgress(stats.totalEgressBytes);
+    });
+    return () => unsub();
+  }, []);
 
   // Format relative time for last sync
   useEffect(() => {
@@ -263,6 +275,16 @@ export const HeaderSyncIndicator: React.FC<HeaderSyncIndicatorProps> = ({
                 </span>
               </div>
 
+              <div className="flex items-center justify-between py-1 px-2 rounded-lg bg-sky-500/5 border border-sky-500/15">
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <Activity size={13} className="text-sky-400" />
+                  Egress Sesi Ini:
+                </span>
+                <span className="font-bold text-[11px] text-sky-500 dark:text-sky-400 font-mono">
+                  {formatBytes(sessionEgress)}
+                </span>
+              </div>
+
               <div className="flex items-start gap-2 p-2 rounded-lg bg-emerald-500/5 border border-emerald-500/15 text-[11px] text-slate-600 dark:text-slate-300">
                 <ShieldCheck size={14} className="text-emerald-500 shrink-0 mt-0.5" />
                 <p className="leading-snug">
@@ -271,23 +293,51 @@ export const HeaderSyncIndicator: React.FC<HeaderSyncIndicatorProps> = ({
               </div>
             </div>
 
-            {/* Manual Sync Trigger Button */}
-            <button
-              type="button"
-              onClick={handleSyncClick}
-              disabled={isSyncing}
-              className={`w-full mt-1 py-2 px-3 rounded-xl font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-98 ${
-                isSyncing
-                  ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed border border-transparent'
-                  : 'bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/30 shadow-emerald-600/20'
-              }`}
-            >
-              <RefreshCw size={13} className={isSyncing ? 'animate-spin' : ''} />
-              <span>{isSyncing ? 'Menyinkronkan Data...' : 'Sinkronkan Sekarang'}</span>
-            </button>
+            {/* Actions Button Bar */}
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                onClick={handleSyncClick}
+                disabled={isSyncing}
+                className={`w-full py-2 px-3 rounded-xl font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-98 ${
+                  isSyncing
+                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed border border-transparent'
+                    : 'bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/30 shadow-emerald-600/20'
+                }`}
+              >
+                <RefreshCw size={13} className={isSyncing ? 'animate-spin' : ''} />
+                <span>{isSyncing ? 'Menyinkronkan Data...' : 'Sinkronkan Sekarang'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsOpen(false);
+                  setIsNetworkModalOpen(true);
+                }}
+                className={`w-full py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all border cursor-pointer ${
+                  isLight
+                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                    : 'bg-slate-800 hover:bg-slate-750 text-slate-200 border-slate-700'
+                }`}
+              >
+                <Activity size={13} className="text-sky-400" />
+                <span>Buka Network & Egress Monitor</span>
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Network Monitor Modal */}
+      {isNetworkModalOpen && (
+        <SupabaseNetworkMonitor
+          theme={theme}
+          isOpen={isNetworkModalOpen}
+          onClose={() => setIsNetworkModalOpen(false)}
+        />
+      )}
     </div>
   );
 };

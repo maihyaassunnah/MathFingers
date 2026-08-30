@@ -276,7 +276,7 @@ export function SettingsManager({
   onOpenUpdateModal
 }: SettingsManagerProps) {
   const [targetBranch, setTargetBranch] = useState<string>(
-    currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : 'Semua')
+    (currentUser?.role === 'branch_admin' || currentUser?.role === 'branch_assistant') ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : 'Semua')
   );
 
   const [bankName, setBankName] = useState(settings.bankName);
@@ -596,7 +596,7 @@ export function SettingsManager({
   };
 
   const getBranchText = () => {
-    if (currentUser?.role === 'branch_admin') {
+    if (currentUser?.role === 'branch_admin' || currentUser?.role === 'branch_assistant') {
       return currentUser.branch;
     }
     return activeBranch === 'all' ? 'Semua Cabang' : activeBranch;
@@ -711,31 +711,33 @@ export function SettingsManager({
     ];
     XLSX.utils.book_append_sheet(wb, wsJurnal, "Jurnal Harian Guru");
 
-    // 5. Sheet 5: Pembayaran SPP
-    const wsSPPAoa = [
-      ["LAPORAN RIWAYAT TRANSAKSI & PEMBAYARAN SPP"],
-      [`Cabang: ${branchName} | Tanggal Ekspor: ${new Date().toLocaleDateString('id-ID')}`],
-      [],
-      ["No", "No. Invoice", "Nama Siswa", "Bulan Tagihan", "Jumlah Tagihan (IDR)", "Jumlah Dibayar (IDR)", "Metode Pembayaran", "Status Tagihan", "Cabang"]
-    ];
-    invoices.forEach((inv, idx) => {
-      wsSPPAoa.push([
-        (idx + 1).toString(),
-        inv.invoiceNo || '',
-        inv.studentName || '',
-        inv.month || '',
-        inv.amount.toString(),
-        (inv.amountPaid || (inv.status === 'paid' ? inv.amount : 0)).toString(),
-        inv.paymentMethod || 'Transfer',
-        inv.status === 'paid' ? 'Lunas' : inv.status === 'partially_paid' ? 'Sisa Tagihan' : 'Belum Bayar',
-        inv.branch || 'Pusat'
-      ]);
-    });
-    const wsSPP = XLSX.utils.aoa_to_sheet(wsSPPAoa);
-    wsSPP['!cols'] = [
-      { wch: 6 }, { wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 18 }, { wch: 15 }, { wch: 15 }
-    ];
-    XLSX.utils.book_append_sheet(wb, wsSPP, "Keuangan SPP");
+    // 5. Sheet 5: Pembayaran SPP (Only for non-assistant)
+    if (currentUser?.role !== 'branch_assistant') {
+      const wsSPPAoa = [
+        ["LAPORAN RIWAYAT TRANSAKSI & PEMBAYARAN SPP"],
+        [`Cabang: ${branchName} | Tanggal Ekspor: ${new Date().toLocaleDateString('id-ID')}`],
+        [],
+        ["No", "No. Invoice", "Nama Siswa", "Bulan Tagihan", "Jumlah Tagihan (IDR)", "Jumlah Dibayar (IDR)", "Metode Pembayaran", "Status Tagihan", "Cabang"]
+      ];
+      invoices.forEach((inv, idx) => {
+        wsSPPAoa.push([
+          (idx + 1).toString(),
+          inv.invoiceNo || '',
+          inv.studentName || '',
+          inv.month || '',
+          inv.amount.toString(),
+          (inv.amountPaid || (inv.status === 'paid' ? inv.amount : 0)).toString(),
+          inv.paymentMethod || 'Transfer',
+          inv.status === 'paid' ? 'Lunas' : inv.status === 'partially_paid' ? 'Sisa Tagihan' : 'Belum Bayar',
+          inv.branch || 'Pusat'
+        ]);
+      });
+      const wsSPP = XLSX.utils.aoa_to_sheet(wsSPPAoa);
+      wsSPP['!cols'] = [
+        { wch: 6 }, { wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 18 }, { wch: 15 }, { wch: 15 }
+      ];
+      XLSX.utils.book_append_sheet(wb, wsSPP, "Keuangan SPP");
+    }
 
     // 6. Sheet 6: Nilai Evaluasi
     const wsNilaiAoa = [
@@ -970,21 +972,23 @@ export function SettingsManager({
     ]);
     drawTable(headersJurnal, widthsJurnal, rowsJurnal, "Belum ada entri catatan jurnal pengajaran.");
 
-    // 5. Section: Riwayat Pembayaran SPP
-    drawSectionTitle("SEKSI 5: LAPORAN KEUANGAN & PEMBAYARAN SPP", invoices.length);
-    const headersSPP = ["No", "No. Invoice", "Nama Siswa", "Bulan", "Tagihan", "Dibayar", "Status", "Metode"];
-    const widthsSPP = [18, 26, 52, 94, 114, 134, 154, 174];
-    const rowsSPP = invoices.map((inv, idx) => [
-      (idx + 1).toString(),
-      inv.invoiceNo || '',
-      inv.studentName || '',
-      inv.month || '',
-      formatRupiahValue(inv.amount),
-      formatRupiahValue(inv.amountPaid || (inv.status === 'paid' ? inv.amount : 0)),
-      inv.status === 'paid' ? 'Lunas' : inv.status === 'partially_paid' ? 'Sebagian' : 'Belum Bayar',
-      inv.paymentMethod || 'Transfer'
-    ]);
-    drawTable(headersSPP, widthsSPP, rowsSPP, "Belum ada transaksi SPP tercatat.");
+    // 5. Section: Riwayat Pembayaran SPP (Omit for assistant)
+    if (currentUser?.role !== 'branch_assistant') {
+      drawSectionTitle("SEKSI 5: LAPORAN KEUANGAN & PEMBAYARAN SPP", invoices.length);
+      const headersSPP = ["No", "No. Invoice", "Nama Siswa", "Bulan", "Tagihan", "Dibayar", "Status", "Metode"];
+      const widthsSPP = [18, 26, 52, 94, 114, 134, 154, 174];
+      const rowsSPP = invoices.map((inv, idx) => [
+        (idx + 1).toString(),
+        inv.invoiceNo || '',
+        inv.studentName || '',
+        inv.month || '',
+        formatRupiahValue(inv.amount),
+        formatRupiahValue(inv.amountPaid || (inv.status === 'paid' ? inv.amount : 0)),
+        inv.status === 'paid' ? 'Lunas' : inv.status === 'partially_paid' ? 'Sebagian' : 'Belum Bayar',
+        inv.paymentMethod || 'Transfer'
+      ]);
+      drawTable(headersSPP, widthsSPP, rowsSPP, "Belum ada transaksi SPP tercatat.");
+    }
 
     // 6. Section: Nilai Evaluasi & Refleks Jari
     drawSectionTitle("SEKSI 6: RIWAYAT KUIS & KLASIFIKASI REFLEKS JARI", grades.length);
@@ -1048,7 +1052,7 @@ export function SettingsManager({
               <CustomDropdown
                 value={targetBranch}
                 onChange={(val) => setTargetBranch(val)}
-                disabled={currentUser?.role === 'branch_admin'}
+                disabled={currentUser?.role === 'branch_admin' || currentUser?.role === 'branch_assistant'}
                 options={[
                   { value: 'Semua', label: 'Semua Cabang (Global Default)' },
                   ...(branches || []).map((b) => ({ value: b.name, label: `Cabang ${b.name}` })),

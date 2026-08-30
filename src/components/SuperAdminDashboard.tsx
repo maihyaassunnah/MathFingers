@@ -158,8 +158,8 @@ export function SuperAdminDashboard({
     const bUnpaid = bInvoices.filter(i => i.status === 'unpaid').reduce((sum, inv) => sum + (inv.amount || 0), 0);
     const bUnpaidCount = bInvoices.filter(i => i.status === 'unpaid').length;
 
-    // Assigned branch admin
-    const assignedAdmins = adminUsers.filter(u => u.branch === branch.name && u.role === 'branch_admin');
+    // Assigned branch admin & assistants
+    const assignedAdmins = adminUsers.filter(u => u.branch === branch.name && (u.role === 'branch_admin' || u.role === 'branch_assistant'));
 
     return {
       id: branch.id,
@@ -533,7 +533,7 @@ export function SuperAdminDashboard({
             <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Cabang</span>
           </div>
           <div className={`flex items-center justify-between text-[11px] mt-2 pt-2 border-t ${isLight ? 'text-slate-600 border-slate-100' : 'text-slate-400 border-slate-800/80'}`}>
-            <span>{adminUsers.filter(u => u.role === 'branch_admin').length} Admin Bertugas</span>
+            <span>{adminUsers.filter(u => u.role === 'branch_admin' || u.role === 'branch_assistant').length} Admin & Asisten</span>
             <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-0.5">Kelola <ChevronRight size={12} /></span>
           </div>
         </motion.div>
@@ -945,9 +945,11 @@ export function SuperAdminDashboard({
                           <h5 className={`font-bold text-xs truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>
                             {admin.name}
                           </h5>
-                          {admin.role === 'super_admin' && (
+                          {admin.role === 'super_admin' ? (
                             <span className="text-[9px] font-black px-1.5 py-0.2 bg-amber-400 text-slate-950 rounded">Pusat</span>
-                          )}
+                          ) : admin.role === 'branch_assistant' ? (
+                            <span className="text-[9px] font-black px-1.5 py-0.2 bg-purple-500/20 text-purple-600 dark:text-purple-300 border border-purple-500/30 rounded">Asisten</span>
+                          ) : null}
                         </div>
                         <p className={`text-[11px] truncate mt-0.5 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
                           @{admin.username} • <span className="font-bold text-emerald-600 dark:text-emerald-400">Cabang {admin.branch}</span>

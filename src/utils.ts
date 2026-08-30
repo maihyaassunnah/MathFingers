@@ -124,9 +124,9 @@ export function getStudentUniqueCode(student: Student): string {
 
 /**
  * Resize and compress an image file before converting to Data URL.
- * Keeps localStorage lightweight (reduces ~5MB photo down to ~15-30KB).
+ * Keeps database and localStorage lightweight (reduces ~5MB photo down to ~8-15KB).
  */
-export function compressImageFile(file: File, maxWidth: number = 300, quality: number = 0.8): Promise<string> {
+export function compressImageFile(file: File, maxWidth: number = 220, quality: number = 0.65): Promise<string> {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -150,9 +150,13 @@ export function compressImageFile(file: File, maxWidth: number = 300, quality: n
           return;
         }
 
+        // Draw on white background in case source is transparent PNG
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
-        const mimeType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
-        const compressedDataUrl = canvas.toDataURL(mimeType, quality);
+
+        // Always encode to image/jpeg for reliable compression (PNG canvas dataURL ignores quality parameter)
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
         resolve(compressedDataUrl);
       };
       img.onerror = () => {

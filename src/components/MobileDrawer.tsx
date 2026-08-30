@@ -167,7 +167,11 @@ export function MobileDrawer({
                 <div className="flex-1 min-w-0">
                   <h4 className={`text-xs font-extrabold truncate ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{currentUser?.name}</h4>
                   <span className="text-[10px] text-slate-400 block truncate">
-                    {currentUser?.role === 'super_admin' ? 'Super Admin' : `Admin Cabang ${currentUser?.branch}`}
+                    {currentUser?.role === 'super_admin' 
+                      ? 'Super Admin' 
+                      : currentUser?.role === 'branch_assistant'
+                        ? `Asisten Cabang ${currentUser?.branch}`
+                        : `Admin Cabang ${currentUser?.branch}`}
                   </span>
                 </div>
               </div>

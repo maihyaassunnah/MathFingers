@@ -42,7 +42,7 @@ export function BranchesManager({
   const [adminUsername, setAdminUsername] = useState('');
   const [adminName, setAdminName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
-  const [adminRole, setAdminRole] = useState<'super_admin' | 'branch_admin'>('branch_admin');
+  const [adminRole, setAdminRole] = useState<'super_admin' | 'branch_admin' | 'branch_assistant'>('branch_admin');
   const [adminBranch, setAdminBranch] = useState('Pusat');
   const [adminPassword, setAdminPassword] = useState('');
   const [adminAvatarUrl, setAdminAvatarUrl] = useState('');
@@ -343,14 +343,22 @@ export function BranchesManager({
                       </span>
                     </td>
                     <td className="p-4">
-                      <span className={`inline-flex items-center gap-1.5 font-bold px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider ${
-                        isSuper 
-                          ? 'bg-indigo-500/10 text-indigo-500' 
-                          : 'bg-amber-500/10 text-amber-500'
-                      }`}>
-                        <Shield size={10} />
-                        <span>{isSuper ? 'Super Admin' : 'Admin Cabang'}</span>
-                      </span>
+                      {admin.role === 'super_admin' ? (
+                        <span className="inline-flex items-center gap-1.5 font-bold px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+                          <Shield size={10} />
+                          <span>Super Admin</span>
+                        </span>
+                      ) : admin.role === 'branch_assistant' ? (
+                        <span className="inline-flex items-center gap-1.5 font-bold px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30" title="Asisten Operasional Cabang (Tanpa Menu Keuangan)">
+                          <Shield size={10} />
+                          <span>Asisten Cabang (Non-Keuangan)</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 font-bold px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                          <Shield size={10} />
+                          <span>Admin Cabang</span>
+                        </span>
+                      )}
                     </td>
                     <td className={`p-4 font-mono ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>{admin.password || '••••••'}</td>
                     <td className="p-4 text-right space-x-1.5">
@@ -667,8 +675,9 @@ export function BranchesManager({
                     value={adminRole}
                     onChange={(val) => setAdminRole(val as any)}
                     options={[
-                      { value: 'branch_admin', label: 'Admin Cabang' },
-                      { value: 'super_admin', label: 'Super Admin' }
+                      { value: 'branch_admin', label: 'Admin Cabang (Akses Penuh Cabang)' },
+                      { value: 'branch_assistant', label: 'Asisten Admin Cabang (Tanpa Menu Keuangan)' },
+                      { value: 'super_admin', label: 'Super Admin (Pusat & Semua Akses)' }
                     ]}
                     theme={theme}
                     className="w-full"

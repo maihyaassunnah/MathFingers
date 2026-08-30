@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
-import { Database, Terminal, Check, Copy, AlertTriangle, Play, HelpCircle, Code, List, Info, RefreshCw, Award, ArrowRight, Camera, Sliders } from 'lucide-react';
+import { Database, Terminal, Check, Copy, AlertTriangle, Play, HelpCircle, Code, List, Info, RefreshCw, Award, ArrowRight, Camera, Sliders, Activity } from 'lucide-react';
 import { Student, Branch, AdminUser } from '../types';
+import { SupabaseNetworkMonitor } from './SupabaseNetworkMonitor';
 
 interface SupabaseSqlEditorProps {
   theme?: string;
@@ -23,7 +24,7 @@ export function SupabaseSqlEditor({
   onDeleteStudent
 }: SupabaseSqlEditorProps) {
   const isLight = theme === 'light';
-  const [activeTab, setActiveTab] = useState<'guide' | 'create' | 'alter' | 'test'>('guide');
+  const [activeTab, setActiveTab] = useState<'guide' | 'create' | 'alter' | 'test' | 'monitor'>('guide');
   const [selectedTable, setSelectedTable] = useState<string>('all');
   const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
 
@@ -293,11 +294,11 @@ DROP POLICY IF EXISTS "Allow public read-write for demo" ON branches;
 CREATE POLICY "Allow public read-write for demo" ON branches FOR ALL USING (true) WITH CHECK (true);
 
 
--- 8. TABEL ADMIN_USERS (Akun Super Admin & Admin Cabang)
+-- 8. TABEL ADMIN_USERS (Akun Super Admin, Admin Cabang & Asisten Admin)
 CREATE TABLE IF NOT EXISTS admin_users (
   username TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('super_admin', 'branch_admin')),
+  role TEXT NOT NULL CHECK (role IN ('super_admin', 'branch_admin', 'branch_assistant')),
   branch TEXT NOT NULL,
   email TEXT,
   password TEXT,
@@ -700,7 +701,7 @@ CREATE POLICY "Allow public read-write for demo" ON branches FOR ALL USING (true
 CREATE TABLE IF NOT EXISTS admin_users (
   username TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('super_admin', 'branch_admin')),
+  role TEXT NOT NULL CHECK (role IN ('super_admin', 'branch_admin', 'branch_assistant')),
   branch TEXT NOT NULL,
   email TEXT,
   password TEXT,
@@ -1254,6 +1255,23 @@ CREATE INDEX IF NOT EXISTS idx_behavior_date ON behavior_assessments(date);`
             <List size={16} />
             <span>Status Skema Live</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('monitor')}
+            className={`w-full p-3.5 rounded-xl border font-bold text-xs tracking-wide text-left transition flex items-center gap-2.5 ${
+              activeTab === 'monitor'
+                ? 'bg-sky-500 border-transparent text-white'
+                : isLight ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50' : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-850'
+            }`}
+          >
+            <Activity size={16} />
+            <span className="flex items-center gap-1.5">
+              <span>Monitor Lalu Lintas & Egress</span>
+              <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase bg-sky-500/20 text-sky-400 border border-sky-500/30">
+                Live
+              </span>
+            </span>
+          </button>
         </div>
 
         {/* Console / Editor Body */}
@@ -1563,6 +1581,14 @@ CREATE INDEX IF NOT EXISTS idx_behavior_date ON behavior_assessments(date);`
           )}
 
 
+
+          {/* TAB 5: Network Monitor & Egress Tracker */}
+          {activeTab === 'monitor' && (
+            <SupabaseNetworkMonitor 
+              theme={theme === 'light' ? 'light' : 'dark'} 
+              isEmbedded={true} 
+            />
+          )}
 
         </div>
       </div>

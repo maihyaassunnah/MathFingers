@@ -172,7 +172,7 @@ export interface Branch {
 export interface AdminUser {
   username: string; // unik, sbg ID
   name: string;
-  role: 'super_admin' | 'branch_admin';
+  role: 'super_admin' | 'branch_admin' | 'branch_assistant';
   branch: string; // nama cabang (misal "Pusat", "Bandung")
   password?: string;
   avatarUrl?: string;

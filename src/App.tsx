@@ -69,7 +69,6 @@ export default function App() {
 
   useEffect(() => {
     let active = true;
-    let intervalId: any;
 
     const checkPing = async () => {
       if (!supabase) {
@@ -91,12 +90,17 @@ export default function App() {
       }
     };
 
+    // Check ping once on boot and whenever network reconnects
     checkPing();
-    intervalId = setInterval(checkPing, 5000);
+
+    const handleOnline = () => {
+      checkPing();
+    };
+    window.addEventListener('online', handleOnline);
 
     return () => {
       active = false;
-      clearInterval(intervalId);
+      window.removeEventListener('online', handleOnline);
     };
   }, []);
   const [selfAttendanceClass, setSelfAttendanceClass] = useState<string>('');
@@ -185,7 +189,7 @@ export default function App() {
 
   useEffect(() => {
     if (currentUser) {
-      if (currentUser.role === 'branch_admin') {
+      if (currentUser.role === 'branch_admin' || currentUser.role === 'branch_assistant') {
         setActiveBranch(currentUser.branch);
         // Check version specifically for this branch account
         const branchKey = `math_finggers_installed_version_branch_${currentUser.branch}`;
@@ -208,7 +212,9 @@ export default function App() {
       // Ensure activeTab is always one of the valid tabs for the role
       const validTabIds = currentUser.role === 'super_admin'
         ? ['overview', 'students', 'classes', 'qr_cards', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'finance', 'grades', 'report', 'branches_mgmt', 'supabase_sql', 'settings', 'simulator']
-        : ['overview', 'students', 'classes', 'qr_cards', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'finance', 'grades', 'report', 'settings', 'simulator'];
+        : currentUser.role === 'branch_assistant'
+          ? ['overview', 'students', 'classes', 'qr_cards', 'alumni', 'attendance', 'notes', 'journal_history', 'grades', 'report', 'settings', 'simulator']
+          : ['overview', 'students', 'classes', 'qr_cards', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'finance', 'grades', 'report', 'settings', 'simulator'];
       if (!validTabIds.includes(activeTab)) {
         setActiveTab('overview');
       }
@@ -336,9 +342,11 @@ export default function App() {
   const filteredExpenses = expenses.filter(e => isBranchMatched(e.branch));
 
   // Multi-branch aware writers
+  const isBranchUser = currentUser?.role === 'branch_admin' || currentUser?.role === 'branch_assistant';
+
   const handleAddManualIncome = async (incomeData: any) => {
     const defaultBranchName = branches[0]?.name || 'Pusat';
-    const branchToSet = incomeData.branch || (currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName));
+    const branchToSet = incomeData.branch || (isBranchUser ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName));
     await addManualIncome({
       ...incomeData,
       branch: branchToSet
@@ -347,7 +355,7 @@ export default function App() {
 
   const handleAddExpense = async (expenseData: any) => {
     const defaultBranchName = branches[0]?.name || 'Pusat';
-    const branchToSet = expenseData.branch || (currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName));
+    const branchToSet = expenseData.branch || (isBranchUser ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName));
     await addExpense({
       ...expenseData,
       branch: branchToSet
@@ -356,7 +364,7 @@ export default function App() {
 
   const handleAddStudent = async (studentData: any) => {
     const defaultBranchName = branches[0]?.name || 'Pusat';
-    const branchToSet = studentData.branch || (currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName));
+    const branchToSet = studentData.branch || (isBranchUser ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName));
     await addStudent({
       ...studentData,
       branch: branchToSet
@@ -365,7 +373,7 @@ export default function App() {
 
   const handleAddClass = async (classData: any) => {
     const defaultBranchName = branches[0]?.name || 'Pusat';
-    const branchToSet = classData.branch || (currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName));
+    const branchToSet = classData.branch || (isBranchUser ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName));
     await addClassGroup({
       ...classData,
       branch: branchToSet
@@ -374,7 +382,7 @@ export default function App() {
 
   const handleAddAttendanceBatch = async (records: any[]) => {
     const defaultBranchName = branches[0]?.name || 'Pusat';
-    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
+    const branchToSet = isBranchUser ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
     const updatedRecords = records.map(r => ({
       ...r,
       branch: branchToSet
@@ -433,7 +441,7 @@ export default function App() {
 
   const handleAddTeacherNote = async (noteData: any) => {
     const defaultBranchName = branches[0]?.name || 'Pusat';
-    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
+    const branchToSet = isBranchUser ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
     await addTeacherNote({
       ...noteData,
       branch: branchToSet
@@ -442,7 +450,7 @@ export default function App() {
 
   const handleAddTeacherNotesBatch = async (notesData: any[]) => {
     const defaultBranchName = branches[0]?.name || 'Pusat';
-    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
+    const branchToSet = isBranchUser ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
     const updatedNotes = notesData.map(n => ({
       ...n,
       branch: branchToSet
@@ -452,7 +460,7 @@ export default function App() {
 
   const handleCreateInvoice = async (invoiceData: any) => {
     const defaultBranchName = branches[0]?.name || 'Pusat';
-    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
+    const branchToSet = isBranchUser ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
     await createInvoice({
       ...invoiceData,
       branch: branchToSet
@@ -461,7 +469,7 @@ export default function App() {
 
   const handleCreateInvoicesBatch = async (invoicesData: any[]) => {
     const defaultBranchName = branches[0]?.name || 'Pusat';
-    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
+    const branchToSet = isBranchUser ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
     const updatedInvoices = invoicesData.map(inv => ({
       ...inv,
       branch: inv.branch || branchToSet
@@ -471,7 +479,7 @@ export default function App() {
 
   const handleAddGrade = async (gradeData: any) => {
     const defaultBranchName = branches[0]?.name || 'Pusat';
-    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
+    const branchToSet = isBranchUser ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
     await addGrade({
       ...gradeData,
       branch: branchToSet
@@ -480,7 +488,7 @@ export default function App() {
 
   const handleAddBehaviorAssessment = async (assessmentData: any) => {
     const defaultBranchName = branches[0]?.name || 'Pusat';
-    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
+    const branchToSet = isBranchUser ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
     await addBehaviorAssessment({
       ...assessmentData,
       branch: assessmentData.branch || branchToSet
@@ -489,7 +497,7 @@ export default function App() {
 
   const handleAddBatchBehaviorAssessments = async (items: any[]) => {
     const defaultBranchName = branches[0]?.name || 'Pusat';
-    const branchToSet = currentUser?.role === 'branch_admin' ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
+    const branchToSet = isBranchUser ? currentUser.branch : (activeBranch !== 'all' ? activeBranch : defaultBranchName);
     const updatedItems = items.map(it => ({
       ...it,
       branch: it.branch || branchToSet
@@ -498,6 +506,7 @@ export default function App() {
   };
 
   const isSuperAdmin = currentUser?.role === 'super_admin';
+  const isAssistant = currentUser?.role === 'branch_assistant';
 
   const navigationItems = isSuperAdmin
     ? [
@@ -519,23 +528,38 @@ export default function App() {
         { id: 'supabase_sql', name: 'SQL Editor Supabase', icon: Database },
         { id: 'settings', name: 'Pengaturan & Backup', icon: Settings },
       ]
-    : [
-        { id: 'overview', name: 'Dashboard Cabang', icon: Home },
-        { id: 'students', name: 'Siswa', icon: Users },
-        { id: 'classes', name: 'Kelas', icon: Layers },
-        { id: 'qr_cards', name: 'Kartu QR Siswa', icon: QrCode },
-        { id: 'alumni', name: 'Alumni / Lulus', icon: GraduationCap },
-        { id: 'attendance', name: 'Absensi', icon: CheckSquare },
-        { id: 'notes', name: 'Jurnal Guru', icon: FileText },
-        { id: 'journal_history', name: 'Riwayat Jurnal', icon: History },
-        { id: 'spp', name: 'Pembayaran SPP', icon: Receipt },
-        { id: 'spp_history', name: 'Riwayat Pembayaran', icon: History },
-        { id: 'finance', name: 'Keuangan', icon: Wallet },
-        { id: 'grades', name: 'Input Nilai', icon: Award },
-        { id: 'simulator', name: 'Kurikulum', icon: BookOpen },
-        { id: 'report', name: 'Rapor Perkembangan', icon: TrendingUp },
-        { id: 'settings', name: 'Pengaturan Cabang', icon: Settings },
-      ];
+    : isAssistant
+      ? [
+          { id: 'overview', name: 'Dashboard Cabang', icon: Home },
+          { id: 'students', name: 'Siswa', icon: Users },
+          { id: 'classes', name: 'Kelas', icon: Layers },
+          { id: 'qr_cards', name: 'Kartu QR Siswa', icon: QrCode },
+          { id: 'alumni', name: 'Alumni / Lulus', icon: GraduationCap },
+          { id: 'attendance', name: 'Absensi', icon: CheckSquare },
+          { id: 'notes', name: 'Jurnal Guru', icon: FileText },
+          { id: 'journal_history', name: 'Riwayat Jurnal', icon: History },
+          { id: 'grades', name: 'Input Nilai', icon: Award },
+          { id: 'simulator', name: 'Kurikulum', icon: BookOpen },
+          { id: 'report', name: 'Rapor Perkembangan', icon: TrendingUp },
+          { id: 'settings', name: 'Pengaturan Cabang', icon: Settings },
+        ]
+      : [
+          { id: 'overview', name: 'Dashboard Cabang', icon: Home },
+          { id: 'students', name: 'Siswa', icon: Users },
+          { id: 'classes', name: 'Kelas', icon: Layers },
+          { id: 'qr_cards', name: 'Kartu QR Siswa', icon: QrCode },
+          { id: 'alumni', name: 'Alumni / Lulus', icon: GraduationCap },
+          { id: 'attendance', name: 'Absensi', icon: CheckSquare },
+          { id: 'notes', name: 'Jurnal Guru', icon: FileText },
+          { id: 'journal_history', name: 'Riwayat Jurnal', icon: History },
+          { id: 'spp', name: 'Pembayaran SPP', icon: Receipt },
+          { id: 'spp_history', name: 'Riwayat Pembayaran', icon: History },
+          { id: 'finance', name: 'Keuangan', icon: Wallet },
+          { id: 'grades', name: 'Input Nilai', icon: Award },
+          { id: 'simulator', name: 'Kurikulum', icon: BookOpen },
+          { id: 'report', name: 'Rapor Perkembangan', icon: TrendingUp },
+          { id: 'settings', name: 'Pengaturan Cabang', icon: Settings },
+        ];
 
   const visibleMobileTabIds = isSuperAdmin 
     ? ['overview', 'branches_mgmt', 'settings']
@@ -601,6 +625,7 @@ export default function App() {
             attendance={filteredAttendance} 
             invoices={filteredInvoices} 
             grades={filteredGrades} 
+            notes={filteredNotes}
             settings={currentBranchSettings}
             dashboardTasks={dashboardTasks}
             onAddDashboardTask={addDashboardTask}
@@ -613,6 +638,7 @@ export default function App() {
             activeBranch={activeBranch}
             allStudents={students}
             allAttendance={attendance}
+            allNotes={notes}
             allInvoices={invoices}
             allGrades={grades}
             currentUser={currentUser}
@@ -713,6 +739,9 @@ export default function App() {
           />
         );
       case 'spp':
+        if (isAssistant) {
+          return null;
+        }
         return (
           <SppInvoiceManager 
             students={filteredStudents} 
@@ -726,6 +755,9 @@ export default function App() {
           />
         );
       case 'spp_history':
+        if (isAssistant) {
+          return null;
+        }
         return (
           <SppHistory 
             students={filteredStudents} 
@@ -734,6 +766,9 @@ export default function App() {
           />
         );
       case 'finance':
+        if (isAssistant) {
+          return null;
+        }
         return (
           <FinanceManager 
             students={filteredStudents}
@@ -1325,7 +1360,7 @@ export default function App() {
             className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs rounded-2xl shadow-xl border border-amber-300 transition-all cursor-pointer"
           >
             <Sparkles size={16} className="text-slate-950" />
-            <span>Update Versi Cabang ({currentUser.role === 'branch_admin' ? currentUser.branch : 'Sistem'})</span>
+            <span>Update Versi Cabang ({currentUser.role === 'super_admin' ? 'Sistem' : currentUser.branch})</span>
           </button>
         </div>
       )}

@@ -27,7 +27,8 @@ import {
   CheckCircle2, 
   Building2, 
   ShieldCheck, 
-  UserCheck
+  UserCheck,
+  FileSpreadsheet
 } from 'lucide-react';
 import { MathFingerLogo } from './MathFingerLogo';
 
@@ -122,6 +123,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { id: 'alumni', name: 'Alumni / Lulus', icon: GraduationCap },
         ...(isSuperAdmin ? [
           { id: 'branches_mgmt', name: 'Cabang & Admin', icon: Building },
+          { id: 'google_sheets_sync', name: 'Database Sheets', icon: FileSpreadsheet },
           { id: 'supabase_sql', name: 'SQL Supabase', icon: Database }
         ] : []),
         { id: 'settings', name: 'Pengaturan', icon: Settings }

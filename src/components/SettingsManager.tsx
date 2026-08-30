@@ -2314,7 +2314,40 @@ export function SettingsManager({
         </div>
 
         {/* Consolidated Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
+          {/* Google Sheets Realtime DB Card */}
+          <div className={`p-5 rounded-2xl border flex flex-col justify-between space-y-4 md:col-span-3 ${
+            isLight ? 'bg-emerald-50/60 border-emerald-200' : 'bg-emerald-950/20 border-emerald-800/40'
+          }`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <FileSpreadsheet size={20} className="text-emerald-500" />
+                  <h4 className="text-sm font-black tracking-tight text-emerald-950 dark:text-emerald-200">
+                    Database Utama Google Sheets (Sinkronisasi Dua Arah)
+                  </h4>
+                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950">
+                    Realtime Sync
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 max-w-3xl leading-relaxed">
+                  Hubungkan Google Spreadsheet akun Google Anda sebagai basis data utama. Data siswa, presensi, SPP, jurnal, dan nilai dapat langsung Anda lihat, edit rumus, atau bagikan secara transparan di Google Drive.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const modalBtn = document.getElementById('open-google-sheets-modal-btn');
+                  if (modalBtn) modalBtn.click();
+                }}
+                className="py-2.5 px-5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white transition flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 shrink-0"
+              >
+                <RefreshCw size={14} />
+                <span>Buka Pengelola Database Sheets</span>
+              </button>
+            </div>
+          </div>
+
           {/* Excel Card */}
           <div className={`p-5 rounded-2xl border flex flex-col justify-between space-y-4 ${
             isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/40 border-slate-800'
@@ -2322,7 +2355,7 @@ export function SettingsManager({
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <FileSpreadsheet size={18} className="text-emerald-500" />
-                <h4 className="text-sm font-bold tracking-tight">Dokumen Excel (.xlsx) Multi-Sheet</h4>
+                <h4 className="text-sm font-bold tracking-tight">Dokumen Excel (.xlsx) Offline</h4>
               </div>
               <p className="text-[11px] text-slate-400 leading-relaxed">
                 Mengunduh satu file Excel terformat rapi yang berisi **6 sheet terpisah**: Siswa Aktif, Alumni & Lulus, Absensi Siswa, Jurnal Harian Guru, Keuangan SPP, dan Nilai & Refleks Jari.

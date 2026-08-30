@@ -278,10 +278,17 @@ export function LoginManager({
       }, 500);
     } catch (err: any) {
       console.warn('Firebase signInWithPopup:', err);
+      const errMsg = err?.message || '';
       if (err?.code === 'auth/popup-blocked') {
         setGoogleAuthError('Popup login Google terhalang oleh pengaturan browser. Harap izinkan popup di browser Anda.');
-      } else if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
-        setGoogleAuthError('Proses login Google dibatalkan.');
+      } else if (
+        err?.code === 'auth/popup-closed-by-user' || 
+        err?.code === 'auth/cancelled-popup-request' || 
+        errMsg.includes('Popup window closed') || 
+        errMsg.includes('popup-closed') || 
+        errMsg.includes('closed-by-user')
+      ) {
+        setGoogleAuthError('Jendela login Google ditutup. Silakan klik tombol login Google lagi untuk melanjutkan.');
       } else if (err?.code === 'auth/unauthorized-domain') {
         setGoogleAuthError('Domain aplikasi belum terdaftar di Authorized Domains Firebase Authentication.');
       } else {

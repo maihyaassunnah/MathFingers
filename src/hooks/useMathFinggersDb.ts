@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '../supabase';
 import { Student, Attendance, TeacherNote, Invoice, Installment, Grade, LearningMaterial, AppSettings, DashboardTask, Branch, AdminUser, ClassGroup, FinanceIncome, FinanceExpense, StudentBehaviorAssessment } from '../types';
 import { SEED_MATERIALS, generateInvoiceNo, updateDynamicPwaIcon } from '../utils';
+import { googleSheetsService } from '../services/googleSheetsService';
 
 // Helper to load localStorage fallbacks
 const getLocalData = <T>(key: string, defaultVal: T): T => {
@@ -98,6 +99,8 @@ export function useMathFinggersDb() {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(() => new Date());
   const syncCounterRef = useRef<number>(0);
+  const isInitialDataLoaded = useRef<boolean>(false);
+  const isApplyingPulledData = useRef<boolean>(false);
 
   const startSync = useCallback(() => {
     syncCounterRef.current += 1;
@@ -432,6 +435,9 @@ export function useMathFinggersDb() {
       if (!isBackground) {
         setLoading(false);
       }
+      setTimeout(() => {
+        isInitialDataLoaded.current = true;
+      }, 500);
     }
   };
 
@@ -616,6 +622,10 @@ export function useMathFinggersDb() {
     } else {
       setMaterials(localMats);
     }
+
+    setTimeout(() => {
+      isInitialDataLoaded.current = true;
+    }, 500);
   };
 
   const seedDefaultMaterialsToSupabase = async () => {
@@ -676,6 +686,42 @@ export function useMathFinggersDb() {
       window.removeEventListener('online', handleOnline);
     };
   }, []);
+
+  // REAL-TIME AUTO-SYNC KE GOOGLE SHEETS
+  // Setiap kali ada penambahan / pengubahan data siswa, kelas, presensi, jurnal, invoice, kuis, kas dll,
+  // data terbaru langsung dikirimkan secara otomatis ke Google Spreadsheet yang terhubung.
+  useEffect(() => {
+    if (!isInitialDataLoaded.current) return;
+    if (isApplyingPulledData.current) return;
+
+    if (googleSheetsService.isAutoSyncActive()) {
+      googleSheetsService.triggerAutoSync({
+        students,
+        classes,
+        attendance,
+        notes,
+        invoices,
+        grades,
+        behaviorAssessments,
+        manualIncomes,
+        expenses,
+        branches,
+        adminUsers
+      }, 1500);
+    }
+  }, [
+    students,
+    classes,
+    attendance,
+    notes,
+    invoices,
+    grades,
+    behaviorAssessments,
+    manualIncomes,
+    expenses,
+    branches,
+    adminUsers
+  ]);
 
   // Explicit manual trigger for Background Sync
   const syncData = useCallback(async () => {
@@ -1788,6 +1834,106 @@ export function useMathFinggersDb() {
     }
   };
 
+  // Apply Pulled Data Directly from Google Sheets
+  const applyGoogleSheetsData = async (data: {
+    students?: Student[];
+    classes?: ClassGroup[];
+    attendance?: Attendance[];
+    notes?: TeacherNote[];
+    invoices?: Invoice[];
+    grades?: Grade[];
+    behaviorAssessments?: StudentBehaviorAssessment[];
+    manualIncomes?: FinanceIncome[];
+    expenses?: FinanceExpense[];
+    branches?: Branch[];
+    adminUsers?: AdminUser[];
+  }) => {
+    isApplyingPulledData.current = true;
+    try {
+      if (data.students && data.students.length > 0) {
+        setStudents(data.students);
+        saveLocalData('students', data.students);
+        if (supabase) {
+          try { await supabase.from('students').upsert(data.students); } catch (e) { console.warn(e); }
+        }
+      }
+      if (data.classes && data.classes.length > 0) {
+        setClasses(data.classes);
+        saveLocalData('classes', data.classes);
+        if (supabase) {
+          try { await supabase.from('classes').upsert(data.classes); } catch (e) { console.warn(e); }
+        }
+      }
+      if (data.attendance && data.attendance.length > 0) {
+        setAttendance(data.attendance);
+        saveLocalData('attendance', data.attendance);
+        if (supabase) {
+          try { await supabase.from('attendance').upsert(data.attendance); } catch (e) { console.warn(e); }
+        }
+      }
+      if (data.notes && data.notes.length > 0) {
+        setNotes(data.notes);
+        saveLocalData('notes', data.notes);
+        if (supabase) {
+          try { await supabase.from('notes').upsert(data.notes); } catch (e) { console.warn(e); }
+        }
+      }
+      if (data.invoices && data.invoices.length > 0) {
+        setInvoices(data.invoices);
+        saveLocalData('invoices', data.invoices);
+        if (supabase) {
+          try { await supabase.from('invoices').upsert(data.invoices); } catch (e) { console.warn(e); }
+        }
+      }
+      if (data.grades && data.grades.length > 0) {
+        setGrades(data.grades);
+        saveLocalData('grades', data.grades);
+        if (supabase) {
+          try { await supabase.from('grades').upsert(data.grades); } catch (e) { console.warn(e); }
+        }
+      }
+      if (data.behaviorAssessments && data.behaviorAssessments.length > 0) {
+        setBehaviorAssessments(data.behaviorAssessments);
+        saveLocalData('behavior_assessments', data.behaviorAssessments);
+        if (supabase) {
+          try { await supabase.from('behavior_assessments').upsert(data.behaviorAssessments); } catch (e) { console.warn(e); }
+        }
+      }
+      if (data.manualIncomes && data.manualIncomes.length > 0) {
+        setManualIncomes(data.manualIncomes);
+        saveLocalData('finance_incomes', data.manualIncomes);
+        if (supabase) {
+          try { await supabase.from('finance_incomes').upsert(data.manualIncomes); } catch (e) { console.warn(e); }
+        }
+      }
+      if (data.expenses && data.expenses.length > 0) {
+        setExpenses(data.expenses);
+        saveLocalData('finance_expenses', data.expenses);
+        if (supabase) {
+          try { await supabase.from('finance_expenses').upsert(data.expenses); } catch (e) { console.warn(e); }
+        }
+      }
+      if (data.branches && data.branches.length > 0) {
+        setBranches(data.branches);
+        saveLocalData('branches', data.branches);
+        if (supabase) {
+          try { await supabase.from('branches').upsert(data.branches); } catch (e) { console.warn(e); }
+        }
+      }
+      if (data.adminUsers && data.adminUsers.length > 0) {
+        setAdminUsers(data.adminUsers);
+        saveLocalData('admin_users', data.adminUsers);
+        if (supabase) {
+          try { await supabase.from('admin_users').upsert(data.adminUsers); } catch (e) { console.warn(e); }
+        }
+      }
+    } finally {
+      setTimeout(() => {
+        isApplyingPulledData.current = false;
+      }, 2500);
+    }
+  };
+
   return {
     students,
     attendance,
@@ -1854,6 +2000,7 @@ export function useMathFinggersDb() {
     addExpense,
     updateExpense,
     deleteExpense,
-    importBackupData
+    importBackupData,
+    applyGoogleSheetsData
   };
 }

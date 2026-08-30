@@ -23,6 +23,7 @@ import { ClassManager } from './components/ClassManager';
 import FinanceManager from './components/FinanceManager';
 import { StudentSelfAttendanceView } from './components/StudentSelfAttendanceView';
 import { StudentQrCards } from './components/StudentQrCards';
+import { GoogleSheetsSyncModal } from './components/GoogleSheetsSyncModal';
 import { AppUpdateModal, LATEST_APP_VERSION } from './components/AppUpdateModal';
 import { MobileBottomNavigation } from './components/MobileBottomNavigation';
 import { MobileDrawer } from './components/MobileDrawer';
@@ -177,6 +178,7 @@ export default function App() {
   }, [theme]);
 
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState<boolean>(false);
+  const [isGoogleSheetsModalOpen, setIsGoogleSheetsModalOpen] = useState<boolean>(false);
   const [installedVersion, setInstalledVersion] = useState<string>(() => {
     return localStorage.getItem('math_finggers_installed_version') || 'v2.5.0';
   });
@@ -211,7 +213,7 @@ export default function App() {
 
       // Ensure activeTab is always one of the valid tabs for the role
       const validTabIds = currentUser.role === 'super_admin'
-        ? ['overview', 'students', 'classes', 'qr_cards', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'finance', 'grades', 'report', 'branches_mgmt', 'supabase_sql', 'settings', 'simulator']
+        ? ['overview', 'students', 'classes', 'qr_cards', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'finance', 'grades', 'report', 'branches_mgmt', 'google_sheets_sync', 'supabase_sql', 'settings', 'simulator']
         : currentUser.role === 'branch_assistant'
           ? ['overview', 'students', 'classes', 'qr_cards', 'alumni', 'attendance', 'notes', 'journal_history', 'grades', 'report', 'settings', 'simulator']
           : ['overview', 'students', 'classes', 'qr_cards', 'alumni', 'attendance', 'notes', 'journal_history', 'spp', 'spp_history', 'finance', 'grades', 'report', 'settings', 'simulator'];
@@ -287,7 +289,8 @@ export default function App() {
     addExpense,
     updateExpense,
     deleteExpense,
-    importBackupData
+    importBackupData,
+    applyGoogleSheetsData
   } = useMathFinggersDb();
 
   // Sync existing attendance when scanned student or scan date changes
@@ -864,6 +867,49 @@ export default function App() {
             onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
           />
         );
+      case 'google_sheets_sync':
+        return (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2">
+                  <span>Sinkronisasi Google Sheets</span>
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/30">
+                    Database Utama
+                  </span>
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Kelola Google Spreadsheet master sebagai basis data utama & sinkronkan data dua arah secara langsung.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsGoogleSheetsModalOpen(true)}
+                className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 transition"
+              >
+                <span>Buka Panel Sinkronisasi Sheets</span>
+              </button>
+            </div>
+            
+            <GoogleSheetsSyncModal
+              isOpen={true}
+              onClose={() => setActiveTab('overview')}
+              theme={theme}
+              students={students}
+              classes={classes}
+              attendance={attendance}
+              notes={notes}
+              invoices={invoices}
+              grades={grades}
+              behaviorAssessments={behaviorAssessments}
+              manualIncomes={manualIncomes}
+              expenses={expenses}
+              branches={branches}
+              adminUsers={adminUsers}
+              onApplyPulledData={applyGoogleSheetsData}
+            />
+          </div>
+        );
       case 'supabase_sql':
         return (
           <SupabaseSqlEditor 
@@ -1411,6 +1457,33 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Hidden button for opening Google Sheets modal from Settings or other components */}
+      <button 
+        id="open-google-sheets-modal-btn"
+        type="button"
+        style={{ display: 'none' }}
+        onClick={() => setIsGoogleSheetsModalOpen(true)}
+      />
+
+      {/* Google Sheets Sync Modal (Globally Accessible) */}
+      <GoogleSheetsSyncModal
+        isOpen={isGoogleSheetsModalOpen}
+        onClose={() => setIsGoogleSheetsModalOpen(false)}
+        theme={theme}
+        students={students}
+        classes={classes}
+        attendance={attendance}
+        notes={notes}
+        invoices={invoices}
+        grades={grades}
+        behaviorAssessments={behaviorAssessments}
+        manualIncomes={manualIncomes}
+        expenses={expenses}
+        branches={branches}
+        adminUsers={adminUsers}
+        onApplyPulledData={applyGoogleSheetsData}
+      />
 
     </div>
   );

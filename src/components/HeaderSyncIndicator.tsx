@@ -11,10 +11,12 @@ import {
   Zap,
   Clock,
   ChevronDown,
-  Activity
+  Activity,
+  FileSpreadsheet
 } from 'lucide-react';
 import { SupabaseNetworkMonitor } from './SupabaseNetworkMonitor';
 import { networkMonitor, formatBytes } from '../services/networkMonitor';
+import { googleSheetsService, GoogleSheetsConfig } from '../services/googleSheetsService';
 
 interface HeaderSyncIndicatorProps {
   isSyncing: boolean;
@@ -41,6 +43,8 @@ export const HeaderSyncIndicator: React.FC<HeaderSyncIndicatorProps> = ({
   const [isNetworkModalOpen, setIsNetworkModalOpen] = useState(false);
   const [sessionEgress, setSessionEgress] = useState<number>(0);
   const [timeAgo, setTimeAgo] = useState<string>('Baru saja');
+  const [sheetsConfig, setSheetsConfig] = useState<GoogleSheetsConfig | null>(() => googleSheetsService.loadConfig());
+  const [sheetsSyncStatus, setSheetsSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>(sheetsConfig?.syncStatus || 'idle');
   const popoverRef = useRef<HTMLDivElement>(null);
 
   const isLight = theme === 'light';
@@ -51,6 +55,15 @@ export const HeaderSyncIndicator: React.FC<HeaderSyncIndicatorProps> = ({
       setSessionEgress(stats.totalEgressBytes);
     });
     return () => unsub();
+  }, []);
+
+  // Listen to Google Sheets auto-sync events
+  useEffect(() => {
+    const unsubSheets = googleSheetsService.subscribe((status, config) => {
+      setSheetsSyncStatus(status);
+      setSheetsConfig(config);
+    });
+    return () => unsubSheets();
   }, []);
 
   // Format relative time for last sync
@@ -285,10 +298,39 @@ export const HeaderSyncIndicator: React.FC<HeaderSyncIndicatorProps> = ({
                 </span>
               </div>
 
+              {/* Google Sheets Realtime Status */}
+              {sheetsConfig?.spreadsheetId && (
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                      <FileSpreadsheet size={13} className="text-emerald-500" />
+                      Google Sheets Live
+                    </span>
+                    {sheetsSyncStatus === 'syncing' ? (
+                      <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-500 flex items-center gap-1">
+                        <RefreshCw size={9} className="animate-spin" />
+                        Mengirim...
+                      </span>
+                    ) : (
+                      <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
+                        <CheckCircle2 size={9} />
+                        Auto-Sync Aktif
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                    {sheetsConfig.spreadsheetTitle || 'Spreadsheet Terhubung'}
+                  </p>
+                  <p className="text-[9px] text-emerald-700 dark:text-emerald-300/80 leading-tight">
+                    ⚡ Data baru/edit langsung terkirim otomatis ke Spreadsheet.
+                  </p>
+                </div>
+              )}
+
               <div className="flex items-start gap-2 p-2 rounded-lg bg-emerald-500/5 border border-emerald-500/15 text-[11px] text-slate-600 dark:text-slate-300">
                 <ShieldCheck size={14} className="text-emerald-500 shrink-0 mt-0.5" />
                 <p className="leading-snug">
-                  Background sync bekerja otomatis setiap penambahan, pengeditan, presensi, maupun pembayaran baru.
+                  Background sync bekerja otomatis setiap penambahan data, pengeditan, presensi, jurnal, nilai maupun pembayaran.
                 </p>
               </div>
             </div>

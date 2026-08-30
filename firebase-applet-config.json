@@ -1,10 +1,11 @@
 {
-  "projectId": "titanium-geography-l8gvj",
-  "appId": "1:955782554527:web:02a5e32337fe939eea93aa",
-  "apiKey": "AIzaSyCikuTsWBRvzBb4u9JeoaPjWv42eFkzoTE",
-  "authDomain": "titanium-geography-l8gvj.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-9ae46a5b-bd73-45d6-b38d-16d398ebebb7",
-  "storageBucket": "titanium-geography-l8gvj.firebasestorage.app",
-  "messagingSenderId": "955782554527",
-  "measurementId": ""
+  "projectId": "websitema-815ae",
+  "appId": "1:566740632732:web:1ee3e0243b922a1b0ed959",
+  "apiKey": "AIzaSyAPui72ZvJKPn1gfY9d7vg-H30NX1eplNQ",
+  "authDomain": "websitema-815ae.firebaseapp.com",
+  "storageBucket": "websitema-815ae.firebasestorage.app",
+  "messagingSenderId": "566740632732",
+  "measurementId": "",
+  "oAuthClientId": "566740632732-e4isns6dpiamjvv48p6jsnq7jdt8rvse.apps.googleusercontent.com",
+  "recaptchaSiteKey": ""
 }

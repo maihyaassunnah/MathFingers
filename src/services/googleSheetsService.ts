@@ -778,8 +778,10 @@ class GoogleSheetsService {
     // Format Baris Data Baru
     const dataBatch: any[] = [];
 
+    if (!data) return;
+
     // 1. Students Rows
-    const studentRows = data.students.map(s => [
+    const studentRows = (data.students || []).map(s => [
       s.id, s.name, s.parentName, s.parentPhone, s.joinDate, s.level,
       s.status, s.keterangan || '', s.tempatLahir || '', s.tanggalLahir || '',
       s.jenisPaket || '', s.jenisKelamin || '', s.alamat || '', s.branch || 'Pusat',

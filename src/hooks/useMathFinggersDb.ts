@@ -31,10 +31,23 @@ const saveLocalData = <T>(key: string, data: T) => {
     localStorage.setItem(`math_finggers_${key}`, JSON.stringify(data));
   } catch (e: any) {
     if (e?.name === 'QuotaExceededError' || e?.code === 22 || e?.code === 1014) {
-      console.warn(`localStorage quota exceeded for key: math_finggers_${key}. Attempting compact save...`);
       try {
-        if (key === 'all_settings_map' && typeof data === 'object' && data !== null) {
-          // Remove heavy base64 image strings if quota exceeded for localStorage fallback
+        if (Array.isArray(data)) {
+          // If array data exceeds quota, save compact version (e.g. last 150 items, strip heavy base64 images)
+          const compactArray = data.slice(-150).map(item => {
+            if (item && typeof item === 'object') {
+              const cleaned: any = { ...item };
+              Object.keys(cleaned).forEach(k => {
+                if (typeof cleaned[k] === 'string' && cleaned[k].length > 1000 && cleaned[k].startsWith('data:')) {
+                  cleaned[k] = '';
+                }
+              });
+              return cleaned;
+            }
+            return item;
+          });
+          localStorage.setItem(`math_finggers_${key}`, JSON.stringify(compactArray));
+        } else if (key === 'all_settings_map' && typeof data === 'object' && data !== null) {
           const lightweightMap: Record<string, any> = {};
           Object.entries(data as Record<string, any>).forEach(([k, v]) => {
             if (v && typeof v === 'object') {
@@ -42,12 +55,12 @@ const saveLocalData = <T>(key: string, data: T) => {
             }
           });
           localStorage.setItem(`math_finggers_${key}`, JSON.stringify(lightweightMap));
-        } else if (key === 'settings' && typeof data === 'object' && data !== null) {
-          const lightweightSettings = { ...(data as any), invoiceLogo: undefined, invoiceSignature: undefined, appIcon: undefined };
-          localStorage.setItem(`math_finggers_${key}`, JSON.stringify(lightweightSettings));
+        } else if (typeof data === 'object' && data !== null) {
+          const lightweightObj = { ...(data as any), invoiceLogo: undefined, invoiceSignature: undefined, appIcon: undefined };
+          localStorage.setItem(`math_finggers_${key}`, JSON.stringify(lightweightObj));
         }
       } catch {
-        // Silently catch secondary storage errors
+        // Silently catch storage quota limits - primary data is persisted in Supabase database
       }
     } else {
       console.warn('Could not save to localStorage:', e?.message || e);

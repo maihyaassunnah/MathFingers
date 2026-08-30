@@ -30,8 +30,12 @@ export function triggerSync() {
       }
       
       // Also trigger the standard background sync registration if available
-      if ('sync' in reg) {
-        (reg as any).sync.register('supabase-sync').catch(() => {});
+      if ('sync' in reg && typeof (reg as any).sync?.register === 'function') {
+        try {
+          (reg as any).sync.register('supabase-sync').catch(() => {});
+        } catch {
+          // Silently ignore background sync registration errors when restricted by browser
+        }
       }
     });
   }

@@ -9,12 +9,18 @@ import {
   AlertCircle, 
   Sparkles, 
   FolderSync, 
-  Unlink, 
   Copy, 
   Key, 
   HelpCircle,
   Database,
-  ArrowRight
+  ArrowRight,
+  Lock,
+  ShieldCheck,
+  Globe,
+  Settings,
+  ChevronDown,
+  ChevronUp,
+  LogIn
 } from 'lucide-react';
 import { 
   googleSheetsService, 
@@ -27,7 +33,6 @@ interface GoogleSheetsSyncModalProps {
   isOpen: boolean;
   onClose: () => void;
   theme?: 'light' | 'dark';
-  // App data for initial / sync operations
   students: Student[];
   classes: ClassGroup[];
   attendance: Attendance[];
@@ -73,26 +78,97 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
 }) => {
   const [config, setConfig] = useState<GoogleSheetsConfig | null>(() => googleSheetsService.loadConfig());
   const [customSheetId, setCustomSheetId] = useState('');
+  const [customClientId, setCustomClientId] = useState(() => googleSheetsService.getCustomClientId());
+  const [directToken, setDirectToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [activeAction, setActiveAction] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
-  const [isCopied, setIsCopied] = useState(false);
+  const [isCopiedUrl, setIsCopiedUrl] = useState(false);
+  const [isCopiedOrigin, setIsCopiedOrigin] = useState(false);
+  const [showDomainSettings, setShowDomainSettings] = useState(false);
+  const [hasAuthToken, setHasAuthToken] = useState(() => googleSheetsService.hasValidToken());
 
   const isLight = theme === 'light';
+  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://mathfingers.my.id';
+  const effectiveClientId = googleSheetsService.getEffectiveClientId();
 
   useEffect(() => {
     if (isOpen) {
       const current = googleSheetsService.loadConfig();
       setConfig(current);
+      setHasAuthToken(googleSheetsService.hasValidToken());
+      setCustomClientId(googleSheetsService.getCustomClientId());
       if (current?.spreadsheetId) {
         setCustomSheetId(current.spreadsheetId);
       }
     }
   }, [isOpen]);
 
+  // Listener status sinkronisasi realtime
+  useEffect(() => {
+    const unsubscribe = googleSheetsService.subscribe((_status, cfg, error) => {
+      setConfig(cfg);
+      setHasAuthToken(googleSheetsService.hasValidToken());
+      if (error) {
+        setStatusMessage({ type: 'error', text: error });
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   if (!isOpen) return null;
 
-  // 1. Buat Spreadsheet Master Baru di Google Drive
+  // 1. Otorisasi Login Google
+  const handleAuthorizeGoogle = async () => {
+    try {
+      setIsLoading(true);
+      setActiveAction('auth');
+      setStatusMessage({ type: 'info', text: 'Membuka jendela otorisasi Google...' });
+      
+      await googleSheetsService.requestOAuthToken();
+      setHasAuthToken(true);
+      setStatusMessage({ 
+        type: 'success', 
+        text: 'Akun Google berhasil diotorisasi! Akses Google Sheets aktif.' 
+      });
+    } catch (err: any) {
+      console.error(err);
+      const msg = err?.message || 'Gagal otorisasi Google.';
+      setStatusMessage({ type: 'error', text: msg });
+      if (msg.includes('origin_mismatch') || msg.includes('400')) {
+        setShowDomainSettings(true);
+      }
+    } finally {
+      setIsLoading(false);
+      setActiveAction(null);
+    }
+  };
+
+  // 2. Simpan Custom Client ID
+  const handleSaveCustomClientId = () => {
+    googleSheetsService.setCustomClientId(customClientId);
+    setStatusMessage({
+      type: 'success',
+      text: 'Custom Google Client ID berhasil disimpan. Silakan klik tombol "Login / Otorisasi Google".'
+    });
+  };
+
+  // 3. Simpan Manual Direct Access Token (Bypass instan)
+  const handleApplyDirectToken = () => {
+    if (!directToken.trim()) {
+      setStatusMessage({ type: 'error', text: 'Masukkan Access Token yang valid.' });
+      return;
+    }
+    googleSheetsService.setAccessToken(directToken.trim(), 3600);
+    setHasAuthToken(true);
+    setDirectToken('');
+    setStatusMessage({
+      type: 'success',
+      text: 'Access Token manual berhasil diterapkan! Anda kini dapat melakukan Push/Pull data ke Google Sheets.'
+    });
+  };
+
+  // 4. Buat Spreadsheet Master Baru di Google Drive
   const handleCreateNewSheet = async () => {
     try {
       setIsLoading(true);
@@ -118,23 +194,25 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
       });
 
       setConfig(newConfig);
+      setHasAuthToken(true);
       setStatusMessage({ 
         type: 'success', 
-        text: 'Google Spreadsheet Master berhasil dibuat dan seluruh data awal berhasil disinkronkan!' 
+        text: 'Google Spreadsheet Master berhasil dibuat, dikunci permanen, dan seluruh data awal telah tersinkron!' 
       });
     } catch (err: any) {
       console.error(err);
-      setStatusMessage({ 
-        type: 'error', 
-        text: err?.message || 'Gagal membuat Google Spreadsheet baru.' 
-      });
+      const msg = err?.message || 'Gagal membuat Google Spreadsheet baru.';
+      setStatusMessage({ type: 'error', text: msg });
+      if (msg.includes('origin_mismatch')) {
+        setShowDomainSettings(true);
+      }
     } finally {
       setIsLoading(false);
       setActiveAction(null);
     }
   };
 
-  // 2. Hubungkan Spreadsheet yang Sudah Ada (Pakai ID / URL)
+  // 5. Hubungkan Spreadsheet yang Sudah Ada (Pakai ID / URL) & Kunci Permanen
   const handleConnectExisting = async () => {
     let cleanId = customSheetId.trim();
     // Ekstrak ID jika pengguna menempelkan URL lengkap
@@ -164,14 +242,16 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
       const newConfig: GoogleSheetsConfig = {
         spreadsheetId: cleanId,
         spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${cleanId}/edit`,
-        spreadsheetTitle: metadata.title || 'Google Sheets Math Fingers',
+        spreadsheetTitle: metadata.title || 'Google Sheets Math Fingers Master',
         autoSyncEnabled: true,
+        isPermanent: true,
         lastSyncedAt: new Date().toISOString(),
         syncStatus: 'success'
       };
 
       googleSheetsService.saveConfig(newConfig);
       setConfig(newConfig);
+      setHasAuthToken(true);
 
       if (onApplyPulledData) {
         onApplyPulledData(data);
@@ -179,21 +259,22 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
 
       setStatusMessage({ 
         type: 'success', 
-        text: `Berhasil terhubung ke "${metadata.title}"! Struktur 11 tab sheet telah divalidasi dan data (${data.students.length} siswa, ${data.invoices.length} tagihan SPP) berhasil disinkronkan.` 
+        text: `Berhasil terhubung ke "${metadata.title}"! ID Spreadsheet telah dikunci permanen dan seluruh data (${data.students.length} siswa, ${data.invoices.length} tagihan SPP) telah disinkronkan.` 
       });
     } catch (err: any) {
       console.error(err);
-      setStatusMessage({ 
-        type: 'error', 
-        text: `Gagal terhubung: ${err?.message || 'Pastikan file dibagikan atau akun Google Anda memiliki akses edit.'}` 
-      });
+      const msg = err?.message || 'Pastikan file dibagikan atau akun Google Anda memiliki akses edit.';
+      setStatusMessage({ type: 'error', text: `Gagal terhubung: ${msg}` });
+      if (msg.includes('origin_mismatch')) {
+        setShowDomainSettings(true);
+      }
     } finally {
       setIsLoading(false);
       setActiveAction(null);
     }
   };
 
-  // 3. PUSH: Kirim / Timpa Data dari Aplikasi ke Google Sheets
+  // 6. PUSH: Kirim / Timpa Data dari Aplikasi ke Google Sheets
   const handlePushData = async () => {
     if (!config?.spreadsheetId) return;
     try {
@@ -217,6 +298,7 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
 
       const updated = googleSheetsService.loadConfig();
       setConfig(updated);
+      setHasAuthToken(true);
 
       setStatusMessage({ 
         type: 'success', 
@@ -224,17 +306,18 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
       });
     } catch (err: any) {
       console.error(err);
-      setStatusMessage({ 
-        type: 'error', 
-        text: err?.message || 'Gagal mengirim data ke Google Sheets.' 
-      });
+      const msg = err?.message || 'Gagal mengirim data ke Google Sheets.';
+      setStatusMessage({ type: 'error', text: msg });
+      if (msg.includes('origin_mismatch')) {
+        setShowDomainSettings(true);
+      }
     } finally {
       setIsLoading(false);
       setActiveAction(null);
     }
   };
 
-  // 4. PULL: Tarik Data dari Google Sheets ke Aplikasi
+  // 7. PULL: Tarik Data dari Google Sheets ke Aplikasi
   const handlePullData = async () => {
     if (!config?.spreadsheetId) return;
     try {
@@ -250,6 +333,7 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
 
       const updated = googleSheetsService.loadConfig();
       setConfig(updated);
+      setHasAuthToken(true);
 
       setStatusMessage({ 
         type: 'success', 
@@ -257,46 +341,43 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
       });
     } catch (err: any) {
       console.error(err);
-      setStatusMessage({ 
-        type: 'error', 
-        text: err?.message || 'Gagal mengambil data dari Google Sheets.' 
-      });
+      const msg = err?.message || 'Gagal mengambil data dari Google Sheets.';
+      setStatusMessage({ type: 'error', text: msg });
+      if (msg.includes('origin_mismatch')) {
+        setShowDomainSettings(true);
+      }
     } finally {
       setIsLoading(false);
       setActiveAction(null);
     }
   };
 
-  // 5. Putuskan Hubungan Spreadsheet
-  const handleDisconnect = () => {
-    if (window.confirm('Apakah Anda yakin ingin memutuskan tautan ke Google Sheets? Data di spreadsheet dan lokal Anda tidak akan dihapus.')) {
-      googleSheetsService.clearConfig();
-      setConfig(null);
-      setCustomSheetId('');
-      setStatusMessage({ type: 'info', text: 'Tautan Google Sheets telah dilepas.' });
-    }
-  };
-
   const handleCopyLink = () => {
     if (config?.spreadsheetUrl) {
       navigator.clipboard.writeText(config.spreadsheetUrl);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
+      setIsCopiedUrl(true);
+      setTimeout(() => setIsCopiedUrl(false), 2000);
     }
+  };
+
+  const handleCopyOrigin = () => {
+    navigator.clipboard.writeText(currentOrigin);
+    setIsCopiedOrigin(true);
+    setTimeout(() => setIsCopiedOrigin(false), 2000);
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fade-in">
       <div 
-        className={`w-full max-w-2xl rounded-3xl border shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-colors ${
+        className={`w-full max-w-2xl rounded-3xl border shadow-2xl overflow-hidden flex flex-col max-h-[92vh] transition-colors ${
           isLight 
             ? 'bg-white border-slate-200 text-slate-900' 
             : 'bg-slate-900 border-slate-800 text-white'
         }`}
       >
         {/* Header Modal */}
-        <div className={`p-6 border-b flex items-center justify-between ${
-          isLight ? 'bg-emerald-50/60 border-emerald-100' : 'bg-emerald-950/20 border-emerald-900/30'
+        <div className={`p-5 sm:p-6 border-b flex items-center justify-between ${
+          isLight ? 'bg-emerald-50/70 border-emerald-100' : 'bg-emerald-950/20 border-emerald-900/30'
         }`}>
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-600/30">
@@ -304,13 +385,13 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-lg font-black tracking-tight">Sinkronisasi Dua Arah Google Sheets</h3>
+                <h3 className="text-lg font-black tracking-tight">Sinkronisasi Google Sheets</h3>
                 <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                   Realtime DB
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Jadikan Google Spreadsheet sebagai penyimpanan basis data utama & rekap langsung di Google Drive Anda.
+                Integrasi spreadsheet master otomatis untuk penyimpanan rekap data Math Fingers.
               </p>
             </div>
           </div>
@@ -325,7 +406,7 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-6">
+        <div className="p-5 sm:p-6 overflow-y-auto space-y-5">
           
           {/* Status Message Banner */}
           {statusMessage && (
@@ -340,25 +421,186 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
               {statusMessage.type === 'error' && <AlertCircle size={18} className="shrink-0 mt-0.5" />}
               {statusMessage.type === 'info' && <RefreshCw size={18} className="shrink-0 mt-0.5 animate-spin" />}
               <div className="flex-1">
-                <span className="font-semibold">{statusMessage.text}</span>
+                <span className="font-semibold leading-relaxed">{statusMessage.text}</span>
               </div>
             </div>
           )}
 
-          {/* KONDISI 1: SUDAH TERHUBUNG KE SPREADSHEET */}
+          {/* Otorisasi Google Bar */}
+          <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+            hasAuthToken 
+              ? (isLight ? 'bg-emerald-50/50 border-emerald-200' : 'bg-emerald-950/20 border-emerald-800/40')
+              : (isLight ? 'bg-amber-50/50 border-amber-200' : 'bg-amber-950/20 border-amber-800/40')
+          }`}>
+            <div className="flex items-center gap-2.5">
+              <div className={`w-3 h-3 rounded-full ${hasAuthToken ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+              <div>
+                <span className="text-xs font-bold block">
+                  {hasAuthToken ? 'Akun Google Terotorisasi' : 'Perlu Izin Akses Akun Google'}
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  {hasAuthToken 
+                    ? 'Koneksi ke Google Drive & Sheets aktif' 
+                    : 'Diperlukan untuk membaca & menulis data ke spreadsheet'}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleAuthorizeGoogle}
+                disabled={isLoading}
+                className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs"
+              >
+                {isLoading && activeAction === 'auth' ? (
+                  <RefreshCw size={13} className="animate-spin" />
+                ) : (
+                  <LogIn size={13} />
+                )}
+                <span>{hasAuthToken ? 'Perbarui Izin' : 'Login Google'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDomainSettings(!showDomainSettings)}
+                className={`p-1.5 rounded-xl border text-xs transition ${
+                  showDomainSettings 
+                    ? 'bg-slate-800 text-emerald-400 border-emerald-500/40' 
+                    : 'border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+                title="Pengaturan Domain & OAuth Client ID"
+              >
+                <Settings size={14} />
+              </button>
+            </div>
+          </div>
+
+          {/* Section: Pengaturan Domain & Solusi Error origin_mismatch */}
+          {showDomainSettings && (
+            <div className={`p-4 sm:p-5 rounded-2xl border space-y-4 text-xs animate-fade-in ${
+              isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/60 border-slate-800'
+            }`}>
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-200">
+                  <Globe size={16} className="text-emerald-500" />
+                  <span>Pengaturan Domain & Google Cloud OAuth</span>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-400 font-mono">
+                  {currentOrigin}
+                </span>
+              </div>
+
+              {/* Panduan Origin Mismatch */}
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[11px] leading-relaxed space-y-2">
+                <p className="font-bold flex items-center gap-1.5">
+                  <AlertCircle size={14} className="shrink-0" />
+                  <span>Jika muncul Error 400: origin_mismatch pada {currentOrigin}:</span>
+                </p>
+                <ol className="list-decimal list-inside space-y-1 text-slate-600 dark:text-slate-300 pl-1">
+                  <li>Buka <strong>Google Cloud Console</strong> &gt; <strong>APIs &amp; Services</strong> &gt; <strong>Credentials</strong>.</li>
+                  <li>Klik <strong>OAuth 2.0 Client IDs</strong> proyek Anda.</li>
+                  <li>Pada bagian <strong>Authorized JavaScript origins</strong>, klik <strong>+ ADD URI</strong> lalu tempelkan origin domain:</li>
+                </ol>
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="text"
+                    readOnly
+                    value={currentOrigin}
+                    className={`flex-1 px-2.5 py-1.5 rounded-lg border text-[11px] font-mono select-all ${
+                      isLight ? 'bg-white border-slate-300' : 'bg-slate-900 border-slate-700'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCopyOrigin}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold text-[11px] flex items-center gap-1 shrink-0"
+                  >
+                    <Copy size={11} />
+                    <span>{isCopiedOrigin ? 'Tersalin!' : 'Salin Origin'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Custom Client ID Input */}
+              <div className="space-y-2 pt-1">
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block">
+                  Custom Google OAuth Client ID (Opsional):
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Contoh: 123456-abcde.apps.googleusercontent.com"
+                    value={customClientId}
+                    onChange={(e) => setCustomClientId(e.target.value)}
+                    className={`flex-1 px-3 py-2 border rounded-xl text-xs font-mono focus:outline-none ${
+                      isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveCustomClientId}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shrink-0"
+                  >
+                    Simpan Client ID
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-500">
+                  Client ID aktif: <span className="font-mono">{effectiveClientId}</span>
+                </p>
+              </div>
+
+              {/* Direct Access Token Bypass */}
+              <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                  <Key size={13} className="text-emerald-500" />
+                  <span>Bypass Instan dengan Direct Access Token:</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    placeholder="Tempelkan Google OAuth Access Token (ya29...)"
+                    value={directToken}
+                    onChange={(e) => setDirectToken(e.target.value)}
+                    className={`flex-1 px-3 py-2 border rounded-xl text-xs font-mono focus:outline-none ${
+                      isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyDirectToken}
+                    disabled={!directToken.trim()}
+                    className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shrink-0 disabled:opacity-50"
+                  >
+                    Terapkan Token
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* KONDISI 1: SUDAH TERHUBUNG & TERKUNCI PERMANEN */}
           {config?.spreadsheetId ? (
             <div className="space-y-5">
               
-              {/* Connected Info Card */}
+              {/* Connected & Permanently Locked Card */}
               <div className={`p-5 rounded-2xl border ${
                 isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/40 border-slate-800'
               }`}>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                      Spreadsheet Terhubung & Aktif
+                    <span className="p-1 rounded-md bg-emerald-500/20 text-emerald-500">
+                      <Lock size={14} />
                     </span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                          ID Spreadsheet Master Terkunci (Permanen)
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-500 text-[10px] font-bold">
+                          🔒 Permanen
+                        </span>
+                      </div>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -368,7 +610,7 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
                       title="Salin Tautan"
                     >
                       <Copy size={12} />
-                      <span>{isCopied ? 'Tersalin!' : 'Salin URL'}</span>
+                      <span>{isCopiedUrl ? 'Tersalin!' : 'Salin URL'}</span>
                     </button>
                     <a
                       href={config.spreadsheetUrl}
@@ -376,22 +618,39 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
                       rel="noopener noreferrer"
                       className="px-3 py-1 text-[11px] font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center gap-1.5 shadow-xs"
                     >
-                      <span>Buka di Google Sheets</span>
+                      <span>Buka Spreadsheet</span>
                       <ExternalLink size={12} />
                     </a>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 text-xs">
-                  <div>
-                    <span className="text-slate-400 block text-[11px]">Nama Spreadsheet:</span>
-                    <span className="font-bold">{config.spreadsheetTitle || 'Math Fingers Master DB'}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[11px]">Terakhir Disinkronkan:</span>
-                    <span className="font-mono text-emerald-600 dark:text-emerald-400">
-                      {config.lastSyncedAt ? new Date(config.lastSyncedAt).toLocaleString('id-ID') : 'Baru saja'}
+                {/* Read-Only Locked Spreadsheet ID Display */}
+                <div className="pt-3 space-y-3">
+                  <div className="space-y-1">
+                    <span className="text-slate-400 text-[11px] font-medium block">
+                      Spreadsheet ID Terkunci:
                     </span>
+                    <div className={`p-2.5 rounded-xl border flex items-center gap-2 ${
+                      isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+                    }`}>
+                      <Lock size={14} className="text-emerald-500 shrink-0" />
+                      <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200 truncate flex-1 select-all">
+                        {config.spreadsheetId}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-xs">
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Nama Dokumen:</span>
+                      <span className="font-bold">{config.spreadsheetTitle || 'Database Master Math Fingers'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Terakhir Sinkron:</span>
+                      <span className="font-mono text-emerald-600 dark:text-emerald-400">
+                        {config.lastSyncedAt ? new Date(config.lastSyncedAt).toLocaleString('id-ID') : 'Baru saja'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -409,7 +668,7 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
                       <span>Kirim ke Google Sheets (Push)</span>
                     </div>
                     <p className="text-[11px] text-slate-500 leading-relaxed">
-                      Unggah seluruh data lokal saat ini (siswa, absensi, tagihan SPP, nilai) ke dalam sheet.
+                      Unggah seluruh data lokal saat ini (siswa, absensi, tagihan SPP, nilai) ke dalam sheet master.
                     </p>
                   </div>
                   <button
@@ -456,7 +715,7 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
                 <div className="flex items-center justify-between font-bold text-slate-600 dark:text-slate-300">
                   <span className="flex items-center gap-1.5">
                     <Database size={14} className="text-emerald-500" />
-                    <span>Struktur Sheet yang Tersinkron Otomatis:</span>
+                    <span>11 Tab Sheet Tersinkron Permanen:</span>
                   </span>
                   <span className="text-[10px] text-slate-400 font-mono">11 Tab Terhubung</span>
                 </div>
@@ -472,23 +731,18 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
                 </div>
               </div>
 
-              {/* Disconnect Action */}
-              <div className="pt-2 flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleDisconnect}
-                  disabled={isLoading}
-                  className="px-4 py-2 rounded-xl text-red-500 hover:bg-red-500/10 text-xs font-bold transition flex items-center gap-1.5 border border-red-500/20"
-                >
-                  <Unlink size={13} />
-                  <span>Putuskan Sambungan Spreadsheet</span>
-                </button>
+              {/* Permanent Notice Banner */}
+              <div className="p-3.5 rounded-xl bg-slate-800/40 border border-slate-700/60 flex items-center gap-2.5 text-xs text-slate-400">
+                <ShieldCheck size={16} className="text-emerald-500 shrink-0" />
+                <span>
+                  Spreadsheet ID dikunci secara permanen untuk menjaga konsistensi dan integritas data sinkronisasi antar perangkat.
+                </span>
               </div>
 
             </div>
           ) : (
             
-            /* KONDISI 2: BELUM TERHUBUNG - PILIHAN INISIALISASI */
+            /* KONDISI 2: BELUM TERHUBUNG - PILIHAN INISIALISASI & KUNCI PERMANEN */
             <div className="space-y-6">
               
               {/* Opsi 1: Otomatis Buat Spreadsheet Master Baru */}
@@ -503,7 +757,7 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
                     <h4 className="text-sm font-black">Buat Spreadsheet Master Otomatis</h4>
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Sistem akan membuat file Google Spreadsheet baru di Google Drive Anda secara instan dengan 11 tab sheet (*Data_Siswa, Presensi, SPP, Jurnal, Nilai, dll.*) beserta format header kolom yang sudah terstandar.
+                    Sistem akan membuat file Google Spreadsheet baru di Google Drive Anda secara instan dengan 11 tab sheet (*Data_Siswa, Presensi, SPP, Jurnal, Nilai, dll.*) dan langsung menguncinya sebagai basis data permanen.
                   </p>
                   
                   <button
@@ -520,7 +774,7 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
                     ) : (
                       <>
                         <Sparkles size={15} />
-                        <span>Buat Spreadsheet & Ekspor Data Sekarang</span>
+                        <span>Buat Spreadsheet Master & Kunci Permanen</span>
                         <ArrowRight size={15} />
                       </>
                     )}
@@ -534,18 +788,18 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
               }`}>
                 <div>
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Atau Hubungkan File Google Spreadsheet yang Sudah Ada:
+                    Atau Masukkan Spreadsheet ID / Link Google Sheet yang Sudah Ada:
                   </h4>
                   <p className="text-[11px] text-slate-500 mt-1">
-                    Tempelkan link (URL) atau Spreadsheet ID Google Sheet Anda yang telah memiliki hak akses edit.
+                    Tempelkan link (URL) atau Spreadsheet ID Google Sheet Anda.
                   </p>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="Contoh: https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdB.../edit"
+                      placeholder="Contoh: 1BxiMVs0XRA5nFMdKvBdB... atau https://docs.google.com/spreadsheets/d/..."
                       value={customSheetId}
                       onChange={(e) => setCustomSheetId(e.target.value)}
                       className={`flex-1 px-3.5 py-2.5 border rounded-xl text-xs font-mono focus:outline-none ${
@@ -556,15 +810,22 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
                       type="button"
                       onClick={handleConnectExisting}
                       disabled={isLoading || !customSheetId.trim()}
-                      className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition disabled:opacity-50 shrink-0 flex items-center gap-1.5"
+                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition disabled:opacity-50 shrink-0 flex items-center gap-1.5 shadow-md shadow-emerald-600/20"
                     >
                       {isLoading && activeAction === 'connect' ? (
                         <RefreshCw size={14} className="animate-spin" />
                       ) : (
-                        <FolderSync size={14} />
+                        <Lock size={14} />
                       )}
-                      <span>Hubungkan</span>
+                      <span>Hubungkan &amp; Kunci Permanen</span>
                     </button>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[11px] flex items-center gap-2">
+                    <ShieldCheck size={15} className="shrink-0" />
+                    <span>
+                      <strong>Catatan:</strong> Setelah ID Spreadsheet dimasukkan dan berhasil terhubung, ID ini akan <strong>dikunci permanen</strong> dan tidak dapat diubah lagi demi menjaga integritas data aplikasi.
+                    </span>
                   </div>
                 </div>
               </div>

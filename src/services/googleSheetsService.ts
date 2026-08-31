@@ -15,6 +15,8 @@ export interface GoogleSheetsConfig {
   spreadsheetUrl: string;
   spreadsheetTitle: string;
   autoSyncEnabled: boolean;
+  isPermanent?: boolean;
+  customClientId?: string;
   lastSyncedAt?: string;
   syncStatus?: 'idle' | 'syncing' | 'success' | 'error';
   errorMessage?: string;
@@ -22,6 +24,7 @@ export interface GoogleSheetsConfig {
 
 const STORAGE_CONFIG_KEY = 'math_finggers_google_sheets_config';
 const OAUTH_TOKEN_KEY = 'math_finggers_google_oauth_token';
+const CUSTOM_CLIENT_ID_KEY = 'math_finggers_google_client_id';
 
 export const SHEET_NAMES = {
   STUDENTS: 'Data_Siswa',
@@ -200,14 +203,47 @@ class GoogleSheetsService {
     return this.config;
   }
 
-  // Simpan konfigurasi
+  // Simpan konfigurasi (otomatis dikunci permanen)
   public saveConfig(config: GoogleSheetsConfig) {
-    this.config = config;
-    localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(config));
+    // Otomatis tandai sebagai permanen & terkunci
+    const permanentConfig: GoogleSheetsConfig = {
+      ...config,
+      isPermanent: true
+    };
+    this.config = permanentConfig;
+    localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(permanentConfig));
+  }
+
+  // Pengaturan Custom Google OAuth Client ID (untuk domain custom seperti mathfingers.my.id)
+  public getCustomClientId(): string {
+    return this.config?.customClientId || localStorage.getItem(CUSTOM_CLIENT_ID_KEY) || '';
+  }
+
+  public setCustomClientId(clientId: string) {
+    const trimmed = clientId.trim();
+    if (trimmed) {
+      localStorage.setItem(CUSTOM_CLIENT_ID_KEY, trimmed);
+    } else {
+      localStorage.removeItem(CUSTOM_CLIENT_ID_KEY);
+    }
+    if (this.config) {
+      this.config.customClientId = trimmed || undefined;
+      this.saveConfig(this.config);
+    }
+  }
+
+  public getEffectiveClientId(): string {
+    const custom = this.getCustomClientId();
+    if (custom) return custom;
+    return (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || firebaseConfig.oAuthClientId || '566740632732-e4isns6dpiamjvv48p6jsnq7jdt8rvse.apps.googleusercontent.com';
   }
 
   // Hapus konfigurasi
-  public clearConfig() {
+  public clearConfig(force: boolean = false) {
+    if (this.config?.isPermanent && !force) {
+      console.warn('Google Sheets config is locked permanently.');
+      return;
+    }
     this.config = null;
     localStorage.removeItem(STORAGE_CONFIG_KEY);
   }
@@ -229,12 +265,14 @@ class GoogleSheetsService {
   }
 
   public setAccessToken(token: string, expiresInSeconds: number = 3600) {
-    this.accessToken = token;
+    const cleanToken = token.trim();
+    this.accessToken = cleanToken;
     this.tokenExpiresAt = Date.now() + (expiresInSeconds * 1000);
     localStorage.setItem(OAUTH_TOKEN_KEY, JSON.stringify({
-      token,
+      token: cleanToken,
       expiresAt: this.tokenExpiresAt
     }));
+    this.notifySubscribers('idle');
   }
 
   public getAccessToken(): string | null {
@@ -257,21 +295,23 @@ class GoogleSheetsService {
       // Periksa apakah Google Identity Services tersedia di window
       const google = (window as any).google;
       if (!google?.accounts?.oauth2) {
-        reject(new Error('Google Identity Services library belum dimuat. Silakan muat ulang halaman.'));
+        reject(new Error('Google Identity Services library belum dimuat. Silakan muat ulang halaman atau periksa koneksi internet Anda.'));
         return;
       }
 
-      // OAuth client id di AI Studio dialirkan via konfigurasi / environment
-      const effectiveClientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || firebaseConfig.oAuthClientId || '566740632732-e4isns6dpiamjvv48p6jsnq7jdt8rvse.apps.googleusercontent.com';
+      const effectiveClientId = this.getEffectiveClientId();
+      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'domain aplikasi';
       
       const client = google.accounts.oauth2.initTokenClient({
         client_id: effectiveClientId,
         scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file',
         callback: (response: any) => {
           if (response.error) {
-            const errDesc = response.error_description || response.error;
+            const errDesc = response.error_description || response.error || '';
             if (errDesc.includes('popup_closed') || errDesc.includes('closed') || response.error === 'popup_closed_by_user') {
               reject(new Error('Jendela popup Google ditutup. Silakan klik kembali untuk mengizinkan akses.'));
+            } else if (errDesc.includes('origin_mismatch') || errDesc.includes('400')) {
+              reject(new Error(`Otorisasi Google Ditolak (Error origin_mismatch). Domain Anda (${currentOrigin}) belum didaftarkan di Authorized JavaScript Origins pada Google Cloud Console untuk Client ID (${effectiveClientId}). Masukkan Google Client ID domain Anda di pengaturan atau tempelkan Access Token secara langsung.`));
             } else {
               reject(new Error(errDesc));
             }
@@ -288,13 +328,19 @@ class GoogleSheetsService {
           const msg = err?.message || String(err || '');
           if (msg.includes('popup_closed') || msg.includes('Popup window closed') || msg.includes('closed')) {
             reject(new Error('Jendela popup Google ditutup. Silakan klik kembali jika ingin melanjutkan.'));
+          } else if (msg.includes('origin_mismatch')) {
+            reject(new Error(`Otorisasi Google Ditolak (Error origin_mismatch). Domain Anda (${currentOrigin}) belum terdaftar di Authorized JavaScript Origins Google Cloud Console. Silakan masukkan Google Client ID domain Anda atau tempel Access Token.`));
           } else {
             reject(new Error(msg || 'Autentikasi Google dibatalkan atau ditolak.'));
           }
         }
       });
 
-      client.requestAccessToken({ prompt: '' });
+      try {
+        client.requestAccessToken({ prompt: '' });
+      } catch (reqErr: any) {
+        reject(new Error(reqErr?.message || 'Gagal membuka jendela otorisasi Google.'));
+      }
     });
   }
 

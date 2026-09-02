@@ -43,11 +43,21 @@ self.addEventListener('activate', (event) => {
 
 // Fetch Event with dynamic network-falling-back-to-cache and runtime caching
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests and skip Supabase/Firebase/External API requests to prevent cache issues
-  if (event.request.method !== 'GET' || 
-      event.request.url.includes('supabase.co') || 
-      event.request.url.includes('firestore.googleapis.com') ||
-      event.request.url.includes('chrome-extension://')) {
+  const url = event.request.url;
+
+  // Skip non-GET, API requests, Vite dev scripts, and external services
+  if (
+    event.request.method !== 'GET' || 
+    url.includes('/@vite/') ||
+    url.includes('/@fs/') ||
+    url.includes('/src/') ||
+    url.includes('node_modules') ||
+    url.includes('supabase.co') || 
+    url.includes('firestore.googleapis.com') ||
+    url.includes('accounts.google.com') ||
+    url.includes('apis.google.com') ||
+    url.includes('chrome-extension://')
+  ) {
     return;
   }
 
